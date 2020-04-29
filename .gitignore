@@ -1,0 +1,5 @@
+*~
+*.o
+*.pyc
+data_bus_proxy/data_bus_proxy
+data_bus_proxy/print_version

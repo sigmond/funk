@@ -1,0 +1,6 @@
+#ifndef DATA_BUS_PROXY_VERSION_H
+#define DATA_BUS_PROXY_VERSION_H
+
+#define DATA_BUS_PROXY_VERSION "1.0.0"
+
+#endif
