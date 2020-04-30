@@ -1,0 +1,99 @@
+#!/usr/bin/python
+"""                                                                            
+Grab MIDI events and send to message bus
+
+"""
+from __future__ import print_function, division
+import sys
+import argparse
+import mido
+import zmq
+import time
+from mido import MidiFile, Message, tempo2bpm
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    arg = parser.add_argument
+
+    arg('-i', '--data-bus-in',
+        dest='data_bus_in',
+        default='ipc:///tmp/data_bus_proxy_out',
+        help='path to input socket')
+
+    arg('-o', '--data-bus-out',
+        dest='data_bus_out',
+        default='ipc:///tmp/data_bus_proxy_in',
+        help='path to output socket')
+
+    arg('-p', '--midi-port-in',
+        dest='midi_port_in',
+        default='Hammerfall DSP:HDSP MIDI 2 24:32',
+        help='midi input port')
+
+    arg('-m', '--print-messages',
+        dest='print_messages',
+        action='store_true',
+        default=False,
+        help='Print messages as they are played back')
+
+    arg('-q', '--quiet',
+        dest='quiet',
+        action='store_true',
+        default=False,
+        help='print nothing')
+
+    return parser.parse_args()
+
+
+def connect_publisher(path):
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+    socket.connect (path)
+    return socket
+
+def subscribe(socket, topic):
+    socket.setsockopt(zmq.SUBSCRIBE, topic)
+
+def open_input(port):
+    return mido.open_input(port)
+
+
+def send_rec_msg(socket, midi_msg):
+    print('Sending midi message')
+    socket.send_string('rec', flags=zmq.SNDMORE)
+    socket.send_pyobj(midi_msg)
+    
+def send_ctrl_msg(socket, ctrl_msg):
+    print('Sending ctrl message')
+    socket.send_string('ctrl', flags=zmq.SNDMORE)
+    socket.send_json(ctrl_msg)
+    
+
+
+
+def main():
+    try:
+        inport = mido.open_input(args.midi_port_in)
+    except:
+        print('Error opening input port %s' % args.midi_port_in)
+        exit(-1)
+    
+    socket = connect_publisher(args.data_bus_out)
+    time.sleep(1)
+    
+    while 1:
+        try:
+            midi_message = inport.receive()
+            send_rec_msg(socket, midi_message)
+        except:
+            inport.close()
+            exit(0)
+    
+
+args = parse_args()
+
+if args.quiet:
+    def print(*args):
+        pass
+
+main()

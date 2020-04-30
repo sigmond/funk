@@ -1,0 +1,98 @@
+#!/usr/bin/python
+"""                                                                            
+Send ticks to message bus
+
+"""
+from __future__ import print_function, division
+import sys
+import argparse
+import mido
+import zmq
+import time
+from mido import MidiFile, Message, tempo2bpm, tick2second
+from numpy import datetime64
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    arg = parser.add_argument
+
+    arg('-i', '--data-bus-in',
+        dest='data_bus_in',
+        default='ipc:///tmp/data_bus_proxy_out',
+        help='path to input socket')
+
+    arg('-o', '--data-bus-out',
+        dest='data_bus_out',
+        default='ipc:///tmp/data_bus_proxy_in',
+        help='path to output socket')
+
+    arg('-m', '--print-messages',
+        dest='print_messages',
+        action='store_true',
+        default=False,
+        help='Print messages as they are played back')
+
+    arg('-q', '--quiet',
+        dest='quiet',
+        action='store_true',
+        default=False,
+        help='print nothing')
+
+    return parser.parse_args()
+
+
+def connect_subscriber(path):
+    context = zmq.Context()
+    socket = context.socket(zmq.SUB)
+    socket.connect (path)
+    return socket
+
+def connect_publisher(path):
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+    socket.connect (path)
+    return socket
+
+def subscribe(socket, topic):
+    socket.setsockopt(zmq.SUBSCRIBE, topic)
+
+def send_tick_msg(socket, tick):
+##    print('Sending tick message %d' % tick)
+    socket.send_string('tick', flags=zmq.SNDMORE)
+    socket.send_pyobj(tick)
+    
+    
+
+DEFAULT_TEMPO = 500000
+DEFAULT_TICKS_PER_BEAT = 480
+
+def main():
+    ticks_per_beat = DEFAULT_TICKS_PER_BEAT
+    tempo = DEFAULT_TEMPO
+    
+    socket = connect_publisher(args.data_bus_out)
+    tick_time = tick2second(1, ticks_per_beat, tempo)
+    print ("tick_time = %f" % tick_time)
+    tick = 0
+
+    now = time.time()
+    print ("Now = %.20f" % now)
+    
+    while 1:
+        try:
+            send_tick_msg(socket, tick)
+            time.sleep(tick_time)
+            tick = tick + 1
+            now = time.time()
+            print ("Now = %.20f" % now)
+        except:
+            exit(0)
+    
+
+args = parse_args()
+
+if args.quiet:
+    def print(*args):
+        pass
+
+main()

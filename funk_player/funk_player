@@ -1,6 +1,6 @@
 #!/usr/bin/python
 """                                                                            
-Play MIDI file on output port.
+Play MIDI file object to message bus
 
 Example:
 
@@ -28,11 +28,6 @@ def parse_args():
         default='ipc:///tmp/data_bus_proxy_in',
         help='path to output socket')
 
-    arg('-p', '--midi-port-out',
-        dest='midi_port_out',
-        default='Hammerfall DSP:HDSP MIDI 2 24:32',
-        help='midi output port')
-
     arg('-m', '--print-messages',
         dest='print_messages',
         action='store_true',
@@ -54,6 +49,12 @@ def connect_subscriber(path):
     socket.connect (path)
     return socket
 
+def connect_publisher(path):
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+    socket.connect (path)
+    return socket
+
 def subscribe(socket, topic):
     socket.setsockopt(zmq.SUBSCRIBE, topic)
 
@@ -63,22 +64,8 @@ def open_output(port):
 def reset_output(output):
     output.reset()
 
-
-def handle_midi_msg(port, topic, midi_msg):
-    print('Got midi message')
-    port.send(midi_msg)
-    
-    
-def handle_ctrl_msg(topic, ctrl_msg):
-    print('Got ctrl message')
-    sys.stdout.write('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg) + '\n')
-    sys.stdout.flush()
-    
-
-def play_file(output, filename, print_messages):
-    midi_file = MidiFile(filename) 
-
-    print('Playing {}.'.format(midi_file.filename))
+def play_file(socket, midi_file, print_messages):
+    print('Playing')
     length = midi_file.length
     print('Song length: {} minutes, {} seconds.'.format(
             int(length / 60),
@@ -93,7 +80,8 @@ def play_file(output, filename, print_messages):
             sys.stdout.flush()
 
         if isinstance(message, Message):
-            output.send(message)
+            socket.send_string('play', flags=zmq.SNDMORE)
+            socket.send_pyobj(message)
         elif message.type == 'set_tempo':
             print('Tempo changed to {:.1f} BPM.'.format(
                 tempo2bpm(message.tempo)))
@@ -101,56 +89,49 @@ def play_file(output, filename, print_messages):
     print()
 
 
-def main():
-    try:
-        outport = mido.open_output(args.midi_port_out)
-    except:
-        print('Error opening output port %s' % args.midi_port_out)
-        exit(-1)
+def handle_midi_msg(topic, midi_msg, socket):
+    print('Got midi message')
+    sys.stdout.write('topic ' + repr(topic) + ' msg ' + repr(midi_msg) + '\n')
+    sys.stdout.flush()
+    sys.stdout.write('socket ' + repr(socket) + '\n')
+    sys.stdout.flush()
+    if topic == 'file':
+        print ('calling play')
+        play_file(socket, midi_msg, true)
         
+def handle_ctrl_msg(topic, ctrl_msg):
+    print('Got ctrl message')
+    sys.stdout.write('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg) + '\n')
+    sys.stdout.flush()
+    
+def main():
     midi_socket = connect_subscriber(args.data_bus_in)
     ctrl_socket = connect_subscriber(args.data_bus_in)
+    pub_socket = connect_publisher(args.data_bus_out)
     
-    subscribe(midi_socket, 'play')
-    subscribe(midi_socket, 'rec')
+    subscribe(midi_socket, 'file')
     subscribe(ctrl_socket, 'ctrl')
-## Poll loop:
-## Receive events for playing on midi_socket
-## - events on 'play' topic should be queued up and sent to played according to timestamp
-## - events on 'rec' topic (if enabled by control) should be played immediately (typically loopback from keyboard)
-## Receive control-messages on ctrl_socket
-## - it is important that control messages are handled asap (e.g. stop play or panic)
-## - typical ctrl messages: add_port (name), del_port (name), start, stop, loop (on/off), panic
+    
     subpoller = zmq.Poller()
     subpoller.register(midi_socket, zmq.POLLIN)
     subpoller.register(ctrl_socket, zmq.POLLIN)
-    
-    while 1:
-        clientsock = dict(subpoller.poll(1))
 
-        if clientsock:
-            if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
-                topic = midi_socket.recv()
-                midi_msg = midi_socket.recv_pyobj()
-                handle_midi_msg(outport, topic, midi_msg) 
-            if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
-                topic = ctrl_socket.recv()
-                ctrl_msg = ctrl_socket.recv()
-                handle_ctrl_msg(topic, ctrl_msg) 
-    
-    
-##    try:
-##        with mido.open_output(args.output_port) as output:
-##            print('Using output {!r}.'.format(output.name))
-##            output.reset()
-##            try:
-##                for filename in args.files:
-##                    play_file(output, filename, args.print_messages)
-##            finally:
-##                print()
-##                output.reset()
-##    except KeyboardInterrupt:
-##        pass
+    while 1:
+        try:
+            clientsock = dict(subpoller.poll(None))
+
+            if clientsock:
+                if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
+                    topic = midi_socket.recv()
+                    midi_msg = midi_socket.recv_pyobj()
+                    handle_midi_msg(topic, midi_msg, pub_socket)
+                if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
+                    topic = ctrl_socket.recv()
+                    ctrl_msg = ctrl_socket.recv_json()
+                    handle_ctrl_msg(topic, ctrl_msg)
+        except:
+            pass
+##            exit(0)
 
 args = parse_args()
 
