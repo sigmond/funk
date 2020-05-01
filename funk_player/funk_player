@@ -64,7 +64,8 @@ def open_output(port):
 def reset_output(output):
     output.reset()
 
-def play_file(socket, midi_file, print_messages):
+def play_file(midi_file, tick, print_messages):
+    playing = True
     print('Playing')
     length = midi_file.length
     print('Song length: {} minutes, {} seconds.'.format(
@@ -75,17 +76,27 @@ def play_file(socket, midi_file, print_messages):
         print('  {:2d}: {!r}'.format(i, track.name.strip()))
 
     for message in midi_file.play(meta_messages=True):
+        try:
+            topic = ctrl_socket.recv(flags=NOBLOCK)
+            ctrl_msg = ctrl_socket.recv_pyobj(flags=NOBLOCK)
+            if handle_ctrl_msg(topic, ctrl_msg) == 'stop':
+                playing = False
+                return
+        except:
+            pass
+        
         if print_messages:
             print(repr(message))
 
         if isinstance(message, Message):
-            socket.send_string('play', flags=zmq.SNDMORE)
-            socket.send_pyobj(message)
+            pub_socket.send_string('play', flags=zmq.SNDMORE)
+            pub_socket.send_pyobj(message)
         elif message.type == 'set_tempo':
             print('Tempo changed to {:.1f} BPM.'.format(
                 tempo2bpm(message.tempo)))
 
     print()
+    playing = False
 
 
 def track2file(track):
@@ -94,49 +105,60 @@ def track2file(track):
     return midi_file
 
 
-def handle_midi_msg(topic, midi_msg, socket):
-    print('Got midi message')
-    print('topic ' + repr(topic) + ' msg ' + repr(midi_msg))
-    print('socket ' + repr(socket))
-    if topic == 'track':
+def handle_play_command(msg):
+    print('Got play command')
+    if msg['type'] == 'track':
         print ('converting to file')
-        midi_file = track2file(midi_msg)
+        midi_file = track2file(msg['midi_obj'])
         print('midi_file ' + repr(midi_file))
         print ('calling play')
-        play_file(socket, midi_file, True)
-    elif topic == 'file':
+        play_file(pub_socket, midi_file, msg['tick'], args.print_messages)
+    elif msg['type'] == 'file':
         print ('calling play')
-        play_file(socket, midi_msg, True)
+        play_file(pub_socket, msg['midi_obj'], msg['tick'], args.print_messages)
+
+    return ''
         
-def handle_ctrl_msg(topic, ctrl_msg):
+def handle_stop_command(msg):
+    print('Got stop command, playing = ' + repr(playing))
+    return 'stop'
+        
+def handle_ctrl_msg(topic, msg):
     print('Got ctrl message')
-    print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
+    print('topic ' + repr(topic) + ' msg ' + repr(msg))
+    if topic == 'player':
+        if msg['command'] == 'play':
+            return handle_play_command(msg)
+        elif msg['command'] == 'stop':
+            return handle_stop_command(msg)
+        else:
+            print('Unknown player command ' + repr(msg['command'])
+    elif topic == 'all':
+        if ctrl_msg['command'] == 'quit':
+            print ('Quitting')
+            exit(0)
+    
     
 def main():
-    midi_socket = connect_subscriber(args.data_bus_in)
     ctrl_socket = connect_subscriber(args.data_bus_in)
     pub_socket = connect_publisher(args.data_bus_out)
     
-    subscribe(midi_socket, 'file')
-    subscribe(midi_socket, 'track')
-    subscribe(ctrl_socket, 'ctrl')
+    subscribe(ctrl_socket, 'all')
+    subscribe(ctrl_socket, 'player')
     
     subpoller = zmq.Poller()
-    subpoller.register(midi_socket, zmq.POLLIN)
     subpoller.register(ctrl_socket, zmq.POLLIN)
+
+    playing = False
 
     while 1:
         try:
             clientsock = dict(subpoller.poll(None))
 
             if clientsock:
-                if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
-                    topic = midi_socket.recv()
-                    midi_msg = midi_socket.recv_pyobj()
-                    handle_midi_msg(topic, midi_msg, pub_socket)
                 if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
                     topic = ctrl_socket.recv()
-                    ctrl_msg = ctrl_socket.recv_json()
+                    ctrl_msg = ctrl_socket.recv_pyobj()
                     handle_ctrl_msg(topic, ctrl_msg)
         except:
             exit(0)

@@ -63,10 +63,6 @@ def send_rec_msg(socket, midi_msg):
     socket.send_string('rec', flags=zmq.SNDMORE)
     socket.send_pyobj(midi_msg)
     
-def send_ctrl_msg(socket, ctrl_msg):
-    print('Sending ctrl message')
-    socket.send_string('ctrl', flags=zmq.SNDMORE)
-    socket.send_json(ctrl_msg)
     
 
 
@@ -78,13 +74,18 @@ def main():
         print('Error opening input port %s' % args.midi_port_in)
         exit(-1)
     
-    socket = connect_publisher(args.data_bus_out)
+    ctrl_socket = connect_subscriber(args.data_bus_in)
+    pub_socket = connect_publisher(args.data_bus_out)
+    
+    subscribe(ctrl_socket, 'all')
+    subscribe(ctrl_socket, 'capturer')    
+
     time.sleep(1)
     
     while 1:
         try:
             midi_message = inport.receive()
-            send_rec_msg(socket, midi_message)
+            send_rec_msg(pub_socket, midi_message)
         except:
             inport.close()
             exit(0)

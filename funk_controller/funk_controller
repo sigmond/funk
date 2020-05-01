@@ -1,6 +1,6 @@
 #!/usr/bin/python
 """                                                                            
-Record MIDI events from message bus
+Send control sequences to other entities
 
 """
 from __future__ import print_function, division
@@ -11,9 +11,6 @@ import zmq
 import time
 import io
 from mido import MidiFile, Message, tempo2bpm, MidiTrack, second2tick
-
-DEFAULT_TEMPO = 500000
-DEFAULT_TICKS_PER_BEAT = 480
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -28,16 +25,6 @@ def parse_args():
         dest='data_bus_out',
         default='ipc:///tmp/data_bus_proxy_in',
         help='path to output socket')
-
-    arg('-b', '--ticks-per-beat',
-        dest='ticks_per_beat',
-        default=DEFAULT_TICKS_PER_BEAT,
-        help='ticks per beat')
-
-    arg('-t', '--tempo',
-        dest='tempo',
-        default=DEFAULT_TEMPO,
-        help='microseconds per beat')
 
     arg('-q', '--quiet',
         dest='quiet',
@@ -63,78 +50,94 @@ def connect_publisher(path):
 def subscribe(socket, topic):
     socket.setsockopt(zmq.SUBSCRIBE, topic)
 
-
-def handle_midi_msg(topic, midi_msg, track, delta_ticks):
-    print('Got midi message, delta_ticks = %d' % delta_ticks)
-    if topic == 'rec':
-        midi_msg.time = delta_ticks
-        track.append(midi_msg)    
+def send_ctrl_msg(socket, topic, ctrl_msg):
+    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg)
+    socket.send_string(topic, flags=zmq.SNDMORE)
+    socket.send_pyobj(ctrl_msg)
     
+
+def handle_play(msg):
+    if msg['what'] == 'disc':
+        midi_obj = MidiFile(msg['path'])
+        obj = dict('command': 'play',
+                   'tick': msg['tick'],
+                   'type': 'file',
+                   'midi_obj': midi_obj
+                   )
+    elif msg['what'] == 'file':
+        topic = 'file'
+        obj = dict('command': 'play',
+                   'tick': msg['tick'],
+                   'type': 'file',
+                   'midi_obj': msg['midi_obj']
+                   )
+    elif msg['what'] == 'track':
+        obj = dict('command': 'play',
+                   'tick': msg['tick'],
+                   'type': 'track',
+                   'midi_obj': msg['midi_obj']
+                   )
+
+    send_ctrl_msg(pub_socket, 'player', obj)
+
+def handle_stop(msg):
+    obj = dict('command': 'stop')
+    send_ctrl_msg(pub_socket, 'player', obj)
+    send_ctrl_msg(pub_socket, 'recorder', obj)
+    
+def handle_record(msg):
+    if msg['what'] == 'new':
+        obj = dict('command': 'new')
+    elif msg['what'] == 'deliver':
+        obj = dict('command': 'deliver')
+    send_ctrl_msg(pub_socket, 'recorder', obj)
+    
+def handle_loopback(msg):
+    send_ctrl_msg(pub_socket, 'capturer', obj)
+    
+
 def handle_ctrl_msg(topic, ctrl_msg):
     print('Got ctrl message')
     print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
-        
+    if topic == 'controller':
+        if ctrl_msg['command'] == 'play':
+            handle_play(ctrl_msg)
+        if ctrl_msg['command'] == 'stop':
+            handle_stop(ctrl_msg)
+        elif ctrl_msg['command'] == 'record':
+            handle_record(ctrl_msg)
+        elif ctrl_msg['command'] == 'loopback':
+            handle_loopback(ctrl_msg)
+        else:
+            print('Unknown controller command ' + repr(ctrl_msg['command'])
+    elif topic == 'all':
+            if ctrl_msg['command'] == 'quit':
+                print ('Quitting')
+                exit(0)
     
-    
-def new_file(track, type=1):
-    midi_file = mido.MidiFile(type=type)
-    midi_file.tracks.append(track)
-    return midi_file
-
 
 
 
 def main():
-    tempo = args.tempo
-    ticks_per_beat = args.ticks_per_beat
-    
-    midi_socket = connect_subscriber(args.data_bus_in)
     ctrl_socket = connect_subscriber(args.data_bus_in)
     pub_socket = connect_publisher(args.data_bus_out)
     
-    subscribe(midi_socket, 'rec')
     subscribe(ctrl_socket, 'all')
-    subscribe(ctrl_socket, 'recorder')    
+    subscribe(ctrl_socket, 'controller')
     
-## Poll loop:
-## Receive events from message bus for recording
-## - events on 'rec' topic (if enabled by control) should be stored in a track
-## Receive control-messages on ctrl_socket
-## - typical ctrl messages: rec, stop, retrieve, reset
     subpoller = zmq.Poller()
-    subpoller.register(midi_socket, zmq.POLLIN)
     subpoller.register(ctrl_socket, zmq.POLLIN)
-
-    track = MidiTrack()
-    track.name = 'Capture'
-    midi_file = new_file(track)
-    
-    last_seconds = time.time()
     
     while 1:
         try:
             clientsock = dict(subpoller.poll(None))
 
             if clientsock:
-                if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
-                    now = time.time()
-                    delta_ticks = int(round(second2tick(now - last_seconds, ticks_per_beat, tempo)))
-                    last_seconds = now
-                    topic = midi_socket.recv()
-                    midi_msg = midi_socket.recv_pyobj()
-                    handle_midi_msg(topic, midi_msg, track, delta_ticks)
                 if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
                     topic = ctrl_socket.recv()
                     ctrl_msg = ctrl_socket.recv_pyobj()
                     handle_ctrl_msg(topic, ctrl_msg)
         except:
-##            print('file ' + repr(midi_file))
-##            pub_socket.send_string('file', flags=zmq.SNDMORE)
-##            pub_socket.send_pyobj(midi_file)
-            
-            print('track ' + repr(track))
-            pub_socket.send_string('track', flags=zmq.SNDMORE)
-            pub_socket.send_pyobj(track)
             exit(0)
     
 

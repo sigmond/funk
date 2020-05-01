@@ -89,7 +89,8 @@ def main():
     
     subscribe(midi_socket, 'play')
     subscribe(midi_socket, 'rec')
-    subscribe(ctrl_socket, 'ctrl')
+    subscribe(ctrl_socket, 'all')
+    subscribe(ctrl_socket, 'outputter')
 ## Poll loop:
 ## Receive events for playing on midi_socket
 ## - events on 'play' topic should be queued up and sent to played according to timestamp
