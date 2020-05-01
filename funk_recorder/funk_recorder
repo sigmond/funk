@@ -71,24 +71,46 @@ def subscribe(socket, topic):
 
 
 def handle_midi_msg(topic, midi_msg, track, delta_ticks):
-    print('Got midi message, delta_ticks = %f' % delta_ticks)
+    print('Got midi message, delta_ticks = %d' % delta_ticks)
     if topic == 'rec':
         midi_msg.time = delta_ticks
-        track.append(midi_msg)
-        sys.stdout.write('topic ' + repr(topic) + ' track ' + repr(track) + '\n')
-        sys.stdout.write('msg ' + repr(midi_msg) + '\n')
-        sys.stdout.flush()
-    
+        track.append(midi_msg)    
     
 def handle_ctrl_msg(topic, ctrl_msg):
     print('Got ctrl message')
-    sys.stdout.write('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg) + '\n')
-    sys.stdout.flush()
+    print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
         
     
     
-def new_track(name = 'Capture'):
-    return MidiTrack(name)
+def new_file(track, type=1):
+    midi_file = mido.MidiFile(type=type)
+    midi_file.tracks.append(track)
+    return midi_file
+
+def play_file(socket, midi_file, print_messages):
+    print('Playing')
+    length = midi_file.length
+    print('Song length: {} minutes, {} seconds.'.format(
+            int(length / 60),
+            int(length % 60)))
+    print('Tracks:')
+    for i, track in enumerate(midi_file.tracks):
+        print('  {:2d}: {!r}'.format(i, track.name.strip()))
+
+    for message in midi_file.play(meta_messages=True):
+        if print_messages:
+            print(repr(message))
+
+        if isinstance(message, Message):
+            socket.send_string('play', flags=zmq.SNDMORE)
+            socket.send_pyobj(message)
+        elif message.type == 'set_tempo':
+            print('Tempo changed to {:.1f} BPM.'.format(
+                tempo2bpm(message.tempo)))
+
+    print()
+
+
 
 def main():
     tempo = args.tempo
@@ -110,8 +132,10 @@ def main():
     subpoller.register(midi_socket, zmq.POLLIN)
     subpoller.register(ctrl_socket, zmq.POLLIN)
 
-    track = new_track()
-
+    track = MidiTrack()
+    track.name = 'Capture'
+    midi_file = new_file(track)
+    
     last_seconds = time.time()
     
     while 1:
@@ -121,7 +145,7 @@ def main():
             if clientsock:
                 if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
                     now = time.time()
-                    delta_ticks = second2tick(now - last_seconds, ticks_per_beat, tempo)
+                    delta_ticks = int(round(second2tick(now - last_seconds, ticks_per_beat, tempo)))
                     last_seconds = now
                     topic = midi_socket.recv()
                     midi_msg = midi_socket.recv_pyobj()
@@ -131,14 +155,10 @@ def main():
                     ctrl_msg = ctrl_socket.recv_json()
                     handle_ctrl_msg(topic, ctrl_msg)
         except:
-            file_object = io.BytesIO()
-            mid = MidiFile(type=2)
-            mid.tracks.append(track)
-            mid.save(file=file_object)
-            sys.stdout.write('file ' + repr(mid) + '\n')
-            sys.stdout.flush()
+            print('file ' + repr(midi_file))
+##            play_file(pub_socket, midi_file, True)
             pub_socket.send_string('file', flags=zmq.SNDMORE)
-            pub_socket.send_pyobj(mid)
+            pub_socket.send_pyobj(midi_file)
             exit(0)
     
 

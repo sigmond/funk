@@ -76,8 +76,7 @@ def play_file(socket, midi_file, print_messages):
 
     for message in midi_file.play(meta_messages=True):
         if print_messages:
-            sys.stdout.write(repr(message) + '\n')
-            sys.stdout.flush()
+            print(repr(message))
 
         if isinstance(message, Message):
             socket.send_string('play', flags=zmq.SNDMORE)
@@ -89,20 +88,30 @@ def play_file(socket, midi_file, print_messages):
     print()
 
 
+def track2file(track):
+    midi_file = MidiFile(type=2)
+    midi_file.tracks.append(track)
+    return midi_file
+
+
 def handle_midi_msg(topic, midi_msg, socket):
     print('Got midi message')
-    sys.stdout.write('topic ' + repr(topic) + ' msg ' + repr(midi_msg) + '\n')
-    sys.stdout.flush()
-    sys.stdout.write('socket ' + repr(socket) + '\n')
-    sys.stdout.flush()
-    if topic == 'file':
+    print('topic ' + repr(topic) + ' msg ' + repr(midi_msg))
+    print('socket ' + repr(socket))
+    if topic == 'track':
+        print ('converting to file')
+        midi_file = track2file(track)
+        print('midi_file ' + repr(midi_msg))
+        return
         print ('calling play')
-        play_file(socket, midi_msg, true)
+        play_file(socket, file, True)
+    elif topic == 'file':
+        print ('calling play')
+        play_file(socket, midi_msg, True)
         
 def handle_ctrl_msg(topic, ctrl_msg):
     print('Got ctrl message')
-    sys.stdout.write('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg) + '\n')
-    sys.stdout.flush()
+    print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
     
 def main():
     midi_socket = connect_subscriber(args.data_bus_in)
@@ -110,6 +119,7 @@ def main():
     pub_socket = connect_publisher(args.data_bus_out)
     
     subscribe(midi_socket, 'file')
+    subscribe(midi_socket, 'track')
     subscribe(ctrl_socket, 'ctrl')
     
     subpoller = zmq.Poller()
@@ -130,8 +140,7 @@ def main():
                     ctrl_msg = ctrl_socket.recv_json()
                     handle_ctrl_msg(topic, ctrl_msg)
         except:
-            pass
-##            exit(0)
+            exit(0)
 
 args = parse_args()
 
