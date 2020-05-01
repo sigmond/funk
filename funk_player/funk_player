@@ -89,7 +89,7 @@ def play_file(socket, midi_file, print_messages):
 
 
 def track2file(track):
-    midi_file = MidiFile(type=2)
+    midi_file = MidiFile(type=1)
     midi_file.tracks.append(track)
     return midi_file
 
@@ -100,11 +100,10 @@ def handle_midi_msg(topic, midi_msg, socket):
     print('socket ' + repr(socket))
     if topic == 'track':
         print ('converting to file')
-        midi_file = track2file(track)
-        print('midi_file ' + repr(midi_msg))
-        return
+        midi_file = track2file(midi_msg)
+        print('midi_file ' + repr(midi_file))
         print ('calling play')
-        play_file(socket, file, True)
+        play_file(socket, midi_file, True)
     elif topic == 'file':
         print ('calling play')
         play_file(socket, midi_msg, True)

@@ -155,10 +155,13 @@ def main():
                     ctrl_msg = ctrl_socket.recv_json()
                     handle_ctrl_msg(topic, ctrl_msg)
         except:
-            print('file ' + repr(midi_file))
-##            play_file(pub_socket, midi_file, True)
-            pub_socket.send_string('file', flags=zmq.SNDMORE)
-            pub_socket.send_pyobj(midi_file)
+##            print('file ' + repr(midi_file))
+##            pub_socket.send_string('file', flags=zmq.SNDMORE)
+##            pub_socket.send_pyobj(midi_file)
+            
+            print('track ' + repr(track))
+            pub_socket.send_string('track', flags=zmq.SNDMORE)
+            pub_socket.send_pyobj(track)
             exit(0)
     
 
