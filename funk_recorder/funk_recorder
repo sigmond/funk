@@ -69,11 +69,40 @@ def handle_midi_msg(topic, midi_msg, track, delta_ticks):
     if topic == 'rec':
         midi_msg.time = delta_ticks
         track.append(midi_msg)    
-    
-def handle_ctrl_msg(topic, ctrl_msg):
+
+def handle_record_command(msg):
+    track = MidiTrack()
+    track.name = 'Capture'
+    midi_file = new_file(track)
+    last_seconds = time.time()
+    recording = True
+            
+def handle_stop_command(msg):
+    recording = False
+    send_midi_msg(pub_socket, 'recorded', track)
+    midi_file = None
+    track = None
+            
+def handle_ctrl_msg(topic, msg):
     print('Got ctrl message')
-    print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
+    print('topic ' + repr(topic) + ' msg ' + repr(msg))
+    if topic == 'recorder':
+        if msg['command'] == 'record':
+            handle_record_command(msg)
+        elif msg['command'] == 'stop':
+            return handle_stop_command(msg)
+        else:
+            print('Unknown player command ' + repr(msg['command']))
+    elif topic == 'all':
+        if ctrl_msg['command'] == 'quit':
+            print ('Quitting')
+            exit(0)
+
         
+def send_midi_msg(socket, topic, midi_msg):
+    print('Sending midi message [' + repr(topic) + '] ' + repr(midi_msg))
+    socket.send_string(topic, flags=zmq.SNDMORE)
+    socket.send_pyobj(midi_msg)
     
     
 def new_file(track, type=1):
@@ -92,22 +121,17 @@ def main():
     ctrl_socket = connect_subscriber(args.data_bus_in)
     pub_socket = connect_publisher(args.data_bus_out)
     
-    subscribe(midi_socket, 'rec')
+    subscribe(midi_socket, 'midi_rec')
     subscribe(ctrl_socket, 'all')
     subscribe(ctrl_socket, 'recorder')    
     
-## Poll loop:
-## Receive events from message bus for recording
-## - events on 'rec' topic (if enabled by control) should be stored in a track
-## Receive control-messages on ctrl_socket
-## - typical ctrl messages: rec, stop, retrieve, reset
     subpoller = zmq.Poller()
     subpoller.register(midi_socket, zmq.POLLIN)
     subpoller.register(ctrl_socket, zmq.POLLIN)
 
-    track = MidiTrack()
-    track.name = 'Capture'
-    midi_file = new_file(track)
+    recording = False
+    track = None
+    midi_file = None
     
     last_seconds = time.time()
     
@@ -117,24 +141,19 @@ def main():
 
             if clientsock:
                 if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
-                    now = time.time()
-                    delta_ticks = int(round(second2tick(now - last_seconds, ticks_per_beat, tempo)))
-                    last_seconds = now
-                    topic = midi_socket.recv()
-                    midi_msg = midi_socket.recv_pyobj()
-                    handle_midi_msg(topic, midi_msg, track, delta_ticks)
+                    if recording:
+                        now = time.time()
+                        delta_ticks = int(round(second2tick(now - last_seconds, ticks_per_beat, tempo)))
+                        last_seconds = now
+                        topic = midi_socket.recv()
+                        midi_msg = midi_socket.recv_pyobj()
+                        handle_midi_msg(topic, midi_msg, track, delta_ticks)
                 if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
                     topic = ctrl_socket.recv()
                     ctrl_msg = ctrl_socket.recv_pyobj()
                     handle_ctrl_msg(topic, ctrl_msg)
-        except:
-##            print('file ' + repr(midi_file))
-##            pub_socket.send_string('file', flags=zmq.SNDMORE)
-##            pub_socket.send_pyobj(midi_file)
-            
-            print('track ' + repr(track))
-            pub_socket.send_string('track', flags=zmq.SNDMORE)
-            pub_socket.send_pyobj(track)
+        except:            
+            print('Got exception')
             exit(0)
     
 

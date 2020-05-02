@@ -60,8 +60,13 @@ def subscribe(socket, topic):
 def open_output(port):
     return mido.open_output(port)
 
-def reset_output(output):
-    output.reset()
+def handle_panic(port):
+    print('handle_panic')
+    port.panic()
+    
+def handle_reset(port):
+    print('handle_reset')
+    port.reset()
 
 
 def handle_midi_msg(port, topic, midi_msg):
@@ -72,12 +77,20 @@ def handle_midi_msg(port, topic, midi_msg):
     
     
 def handle_ctrl_msg(topic, ctrl_msg):
+    global outport
+    
     print('Got ctrl message')
-    sys.stdout.write('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg) + '\n')
-    sys.stdout.flush()
+    print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
+    if topic == 'outputter':
+        if ctrl_msg['command'] == 'panic':
+            handle_panic(outport)
+        if ctrl_msg['command'] == 'reset':
+            handle_reset(outport)
     
 
 def main():
+    global outport
+    
     try:
         outport = mido.open_output(args.midi_port_out)
     except:
@@ -87,8 +100,8 @@ def main():
     midi_socket = connect_subscriber(args.data_bus_in)
     ctrl_socket = connect_subscriber(args.data_bus_in)
     
-    subscribe(midi_socket, 'play')
-    subscribe(midi_socket, 'rec')
+    subscribe(midi_socket, 'midi_play')
+    subscribe(midi_socket, 'midi_rec')
     subscribe(ctrl_socket, 'all')
     subscribe(ctrl_socket, 'outputter')
 ## Poll loop:
@@ -113,7 +126,7 @@ def main():
                     handle_midi_msg(outport, topic, midi_msg) 
                 if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
                     topic = ctrl_socket.recv()
-                    ctrl_msg = ctrl_socket.recv()
+                    ctrl_msg = ctrl_socket.recv_pyobj()
                     handle_ctrl_msg(topic, ctrl_msg)     
         except:
             outport.close()

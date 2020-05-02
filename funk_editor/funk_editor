@@ -1,0 +1,65 @@
+#!/usr/bin/python
+"""                                                                            
+Midi editor
+
+"""
+from Tkinter import *
+import mido
+import zmq
+import sys
+import argparse
+import funk_zmq
+import funk_files
+import funk_ctrl
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    arg = parser.add_argument
+
+    arg('-i', '--data-bus-in',
+        dest='data_bus_in',
+        default='ipc:///tmp/data_bus_proxy_out',
+        help='path to input socket')
+
+    arg('-o', '--data-bus-out',
+        dest='data_bus_out',
+        default='ipc:///tmp/data_bus_proxy_in',
+        help='path to output socket')
+
+    return parser.parse_args()
+
+
+def About():
+    print("This is a simple example of a menu")
+
+
+args = parse_args()
+
+funk_ctrl.midi_socket = funk_zmq.connect_subscriber(args.data_bus_in)
+funk_ctrl.ctrl_socket = funk_zmq.connect_subscriber(args.data_bus_in)
+funk_ctrl.pub_socket = funk_zmq.connect_publisher(args.data_bus_out)
+    
+funk_zmq.subscribe(funk_ctrl.ctrl_socket, 'all')
+funk_zmq.subscribe(funk_ctrl.midi_socket, 'recorded')
+
+    
+root = Tk()
+menu = Menu(root)
+root.config(menu=menu)
+filemenu = Menu(menu)
+menu.add_cascade(label="File", menu=filemenu)
+filemenu.add_command(label="New", command=funk_files.NewFile)
+filemenu.add_command(label="Open...", command=funk_files.OpenFile)
+filemenu.add_command(label="Play", command=funk_ctrl.midi_start_play_file)
+filemenu.add_command(label="Stop", command=funk_ctrl.midi_stop_play)
+filemenu.add_command(label="Mute/unmute drums", command=funk_ctrl.midi_mute_unmute)
+filemenu.add_command(label="Panic", command=funk_ctrl.midi_panic)
+filemenu.add_command(label="Reset", command=funk_ctrl.midi_reset)
+filemenu.add_separator()
+filemenu.add_command(label="Exit", command=root.quit)
+
+helpmenu = Menu(menu)
+menu.add_cascade(label="Help", menu=helpmenu)
+helpmenu.add_command(label="About...", command=About)
+
+mainloop()

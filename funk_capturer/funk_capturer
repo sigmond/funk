@@ -60,7 +60,7 @@ def open_input(port):
 
 def send_rec_msg(socket, midi_msg):
     print('Sending midi message')
-    socket.send_string('rec', flags=zmq.SNDMORE)
+    socket.send_string('midi_rec', flags=zmq.SNDMORE)
     socket.send_pyobj(midi_msg)
     
     
@@ -74,12 +74,8 @@ def main():
         print('Error opening input port %s' % args.midi_port_in)
         exit(-1)
     
-    ctrl_socket = connect_subscriber(args.data_bus_in)
     pub_socket = connect_publisher(args.data_bus_out)
     
-    subscribe(ctrl_socket, 'all')
-    subscribe(ctrl_socket, 'capturer')    
-
     time.sleep(1)
     
     while 1:

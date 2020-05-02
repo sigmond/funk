@@ -51,46 +51,69 @@ def subscribe(socket, topic):
     socket.setsockopt(zmq.SUBSCRIBE, topic)
 
 def send_ctrl_msg(socket, topic, ctrl_msg):
-    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg)
+    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))
     socket.send_string(topic, flags=zmq.SNDMORE)
     socket.send_pyobj(ctrl_msg)
     
 
-def handle_play(msg):
+def handle_load(msg):
+    print('handle_load')
     if msg['what'] == 'disc':
         midi_obj = MidiFile(msg['path'])
-        obj = dict('command': 'play',
-                   'tick': msg['tick'],
-                   'type': 'file',
-                   'midi_obj': midi_obj
-                   )
+        obj = {'command' : 'load',
+               'type': 'file',
+               'midi_obj': midi_obj
+               }
     elif msg['what'] == 'file':
         topic = 'file'
-        obj = dict('command': 'play',
-                   'tick': msg['tick'],
-                   'type': 'file',
-                   'midi_obj': msg['midi_obj']
-                   )
+        obj = {'command': 'load',
+               'type': 'file',
+               'midi_obj': msg['midi_obj']
+               }
     elif msg['what'] == 'track':
-        obj = dict('command': 'play',
-                   'tick': msg['tick'],
-                   'type': 'track',
-                   'midi_obj': msg['midi_obj']
-                   )
+        obj = {'command': 'load',
+               'type': 'track',
+               'midi_obj': msg['midi_obj']
+               }
 
+    print('Calling send_ctrl_msg')
     send_ctrl_msg(pub_socket, 'player', obj)
 
+def handle_play(msg):
+    print('handle_play')
+    obj = {'command': 'play'}
+    send_ctrl_msg(pub_socket, 'player', obj)
+    
+    
 def handle_stop(msg):
-    obj = dict('command': 'stop')
+    obj = {'command': 'stop'}
     send_ctrl_msg(pub_socket, 'player', obj)
     send_ctrl_msg(pub_socket, 'recorder', obj)
+    ##handle_panic()
+    
+def handle_channel(msg):
+    print('handle_channel')
+    obj = msg
+    send_ctrl_msg(pub_socket, 'player', obj)
+    
+def handle_panic():
+    obj = {'command': 'panic'}
+    send_ctrl_msg(pub_socket, 'outputter', obj)
+    
+def handle_reset():
+    obj = {'command': 'reset'}
+    send_ctrl_msg(pub_socket, 'outputter', obj)
     
 def handle_record(msg):
-    if msg['what'] == 'new':
-        obj = dict('command': 'new')
-    elif msg['what'] == 'deliver':
-        obj = dict('command': 'deliver')
-    send_ctrl_msg(pub_socket, 'recorder', obj)
+    if msg['what'] == 'record':
+        obj = {'command': 'record'}
+        send_ctrl_msg(pub_socket, 'recorder', obj)
+        obj = {'command': 'play'}
+        send_ctrl_msg(pub_socket, 'player', obj)
+    if msg['what'] == 'stop':
+        obj = {'command': 'stop'}
+        send_ctrl_msg(pub_socket, 'recorder', obj)
+        send_ctrl_msg(pub_socket, 'player', obj)
     
 def handle_loopback(msg):
     send_ctrl_msg(pub_socket, 'capturer', obj)
@@ -100,18 +123,28 @@ def handle_ctrl_msg(topic, ctrl_msg):
     print('Got ctrl message')
     print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
     if topic == 'controller':
+        if ctrl_msg['command'] == 'load':
+            handle_load(ctrl_msg)
         if ctrl_msg['command'] == 'play':
             handle_play(ctrl_msg)
         if ctrl_msg['command'] == 'stop':
             handle_stop(ctrl_msg)
+        if ctrl_msg['command'] == 'channel':
+            handle_channel(ctrl_msg)
         elif ctrl_msg['command'] == 'record':
             handle_record(ctrl_msg)
         elif ctrl_msg['command'] == 'loopback':
             handle_loopback(ctrl_msg)
+        elif ctrl_msg['command'] == 'panic':
+            handle_panic()
+        elif ctrl_msg['command'] == 'reset':
+            handle_reset()
         else:
-            print('Unknown controller command ' + repr(ctrl_msg['command'])
+            print('Unknown controller command ' + repr(ctrl_msg['command']))
     elif topic == 'all':
             if ctrl_msg['command'] == 'quit':
+                print ('Killing capturer')
+                os.system('pkill -f funk_capturer')
                 print ('Quitting')
                 exit(0)
     
@@ -119,6 +152,9 @@ def handle_ctrl_msg(topic, ctrl_msg):
 
 
 def main():
+    global pub_socket
+    global ctrl_socket
+    
     ctrl_socket = connect_subscriber(args.data_bus_in)
     pub_socket = connect_publisher(args.data_bus_out)
     

@@ -58,13 +58,22 @@ def connect_publisher(path):
 def subscribe(socket, topic):
     socket.setsockopt(zmq.SUBSCRIBE, topic)
 
-def open_output(port):
-    return mido.open_output(port)
+def send_ctrl_msg(socket, topic, ctrl_msg):
+    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))
+    socket.send_string(topic, flags=zmq.SNDMORE)
+    socket.send_pyobj(ctrl_msg)
 
-def reset_output(output):
-    output.reset()
+def send_panic():
+    global pub_socket
+    obj = {'command': 'panic'}
+    send_ctrl_msg(pub_socket, 'outputter', obj)
 
-def play_file(midi_file, tick, print_messages):
+def play_file(midi_file, print_messages):
+    global muted_channels
+    global playing
+    global ctrl_socket
+    global pub_socket
+    
     playing = True
     print('Playing')
     length = midi_file.length
@@ -76,24 +85,41 @@ def play_file(midi_file, tick, print_messages):
         print('  {:2d}: {!r}'.format(i, track.name.strip()))
 
     for message in midi_file.play(meta_messages=True):
-        try:
-            topic = ctrl_socket.recv(flags=NOBLOCK)
-            ctrl_msg = ctrl_socket.recv_pyobj(flags=NOBLOCK)
-            if handle_ctrl_msg(topic, ctrl_msg) == 'stop':
-                playing = False
-                return
-        except:
-            pass
-        
         if print_messages:
             print(repr(message))
 
         if isinstance(message, Message):
-            pub_socket.send_string('play', flags=zmq.SNDMORE)
-            pub_socket.send_pyobj(message)
+            d = message.dict()
+            muted = False
+            try:
+                if d['channel'] in muted_channels:
+                    muted = True
+            except:
+                pass
+
+            if not muted:
+                pub_socket.send_string('midi_play', flags=zmq.SNDMORE)
+                pub_socket.send_pyobj(message)
         elif message.type == 'set_tempo':
             print('Tempo changed to {:.1f} BPM.'.format(
                 tempo2bpm(message.tempo)))
+        ## TODO: finer time resolution in MidiFile.play sleep duration
+        ## when there is a long time until next midi event
+        try:
+            clientsock = dict(subpoller.poll(0.001))
+
+            if clientsock:
+                if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
+                    topic = ctrl_socket.recv()
+                    print('got topic ' + repr(topic))
+                    ctrl_msg = ctrl_socket.recv_pyobj()
+                    if handle_ctrl_msg(topic, ctrl_msg) == 'stop':
+                        playing = False
+                        return
+        except:
+            print('exception')
+            pass
+        
 
     print()
     playing = False
@@ -105,34 +131,58 @@ def track2file(track):
     return midi_file
 
 
-def handle_play_command(msg):
-    print('Got play command')
+def handle_load_command(msg):
+    global midi_file
+    
+    print('Got load command')
     if msg['type'] == 'track':
         print ('converting to file')
         midi_file = track2file(msg['midi_obj'])
         print('midi_file ' + repr(midi_file))
-        print ('calling play')
-        play_file(pub_socket, midi_file, msg['tick'], args.print_messages)
     elif msg['type'] == 'file':
-        print ('calling play')
-        play_file(pub_socket, msg['midi_obj'], msg['tick'], args.print_messages)
+        midi_file = msg['midi_obj']
 
+    return ''
+        
+def handle_play_command(msg):
+    global midi_file
+    
+    print('Got play command')
+    if midi_file != None:
+        print ('calling play')
+        play_file(midi_file, args.print_messages)
+
+    midi_file = None
+    muted_channels = []
+    return ''
+        
+def handle_channel_command(msg):
+    global muted_channels
+    
+    print('Got channel command')
+    muted_channels = msg['muted']
     return ''
         
 def handle_stop_command(msg):
     print('Got stop command, playing = ' + repr(playing))
+    midi_file = None
+    send_panic()
     return 'stop'
         
 def handle_ctrl_msg(topic, msg):
     print('Got ctrl message')
     print('topic ' + repr(topic) + ' msg ' + repr(msg))
     if topic == 'player':
+        if msg['command'] == 'load':
+            return handle_load_command(msg)
         if msg['command'] == 'play':
             return handle_play_command(msg)
         elif msg['command'] == 'stop':
             return handle_stop_command(msg)
+        elif msg['command'] == 'channel':
+            return handle_channel_command(msg)
         else:
-            print('Unknown player command ' + repr(msg['command'])
+            print('Unknown ' + topic + ' command ' + repr(msg['command']))
     elif topic == 'all':
         if ctrl_msg['command'] == 'quit':
             print ('Quitting')
@@ -140,16 +190,26 @@ def handle_ctrl_msg(topic, msg):
     
     
 def main():
+    global ctrl_socket
+    global pub_socket
+    global playing
+    global midi_file
+    global muted_channels
+    global subpoller
+    
     ctrl_socket = connect_subscriber(args.data_bus_in)
     pub_socket = connect_publisher(args.data_bus_out)
     
     subscribe(ctrl_socket, 'all')
     subscribe(ctrl_socket, 'player')
+    subscribe(ctrl_socket, 'recorder')
     
     subpoller = zmq.Poller()
     subpoller.register(ctrl_socket, zmq.POLLIN)
 
     playing = False
+    midi_file = None
+    muted_channels = []
 
     while 1:
         try:
