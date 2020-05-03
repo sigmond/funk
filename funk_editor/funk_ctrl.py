@@ -1,6 +1,7 @@
 import funk_root
 import funk_zmq
 import funk_midi
+import funk_dialog
 
 pub_socket = None
 ctrl_socket = None
@@ -64,6 +65,9 @@ def midi_stop_play():
 
 def midi_mute_unmute_channel():
     global muted_channels
+
+##    d = funk_dialog.get_value_dialog(funk_root.root, "Mute", "Mute channel", muted_channels)
+##    funk_root.root.wait_window(d.top)
     
     if not muted_channels:
         muted_channels = [9]

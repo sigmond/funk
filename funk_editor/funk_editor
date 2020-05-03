@@ -46,8 +46,13 @@ funk_zmq.subscribe(funk_ctrl.midi_socket, 'recorded')
 funk_zmq.subscribe(funk_ctrl.midi_socket, 'time')
 funk_zmq.register_poller([funk_ctrl.ctrl_socket, funk_ctrl.midi_socket])
 
+width = root.winfo_screenwidth()
+height = root.winfo_screenheight()
+
+root.geometry('%dx%d' % (width, height/2))
+root.title("Forget Jazz, here is Funk!")
+
 menu = Menu(root)
-root.config(menu=menu)
 filemenu = Menu(menu)
 menu.add_cascade(label="File", menu=filemenu)
 filemenu.add_command(label="New", command=funk_files.NewFile)
@@ -66,6 +71,27 @@ filemenu.add_command(label="Exit", command=root.quit)
 helpmenu = Menu(menu)
 menu.add_cascade(label="Help", menu=helpmenu)
 helpmenu.add_command(label="About...", command=About)
+
+toolbar = Frame(root)
+
+b = Button(toolbar, text="new", width=6, command=funk_files.NewFile)
+b.pack(side=LEFT, padx=2, pady=2)
+b = Button(toolbar, text="open", width=6, command=funk_files.OpenFile)
+b.pack(side=LEFT, padx=2, pady=2)
+b = Button(toolbar, text="play", width=6, command=funk_ctrl.midi_start_play_file)
+b.pack(side=LEFT, padx=2, pady=2)
+b = Button(toolbar, text="rec", width=6, command=funk_ctrl.midi_start_play_record_file)
+b.pack(side=LEFT, padx=2, pady=2)
+b = Button(toolbar, text="stop", width=6, command=funk_ctrl.midi_stop_play)
+b.pack(side=LEFT, padx=2, pady=2)
+b = Button(toolbar, text="panic", width=6, command=funk_ctrl.midi_panic)
+b.pack(side=RIGHT, padx=2, pady=2)
+b = Button(toolbar, text="exit", width=6, command=root.quit)
+b.pack(side=RIGHT, padx=2, pady=2)
+
+toolbar.pack(side=TOP, fill=X)
+
+root.config(menu=menu)
 
 root.after(100, funk_ticker.task)
 
