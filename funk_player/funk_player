@@ -69,6 +69,13 @@ def send_panic():
     obj = {'command': 'panic'}
     send_ctrl_msg(pub_socket, 'outputter', obj)
 
+def send_time():
+    global pub_socket
+    obj = {'unit': 'seconds',
+           'time': time.time()
+           }
+    send_ctrl_msg(pub_socket, 'time', obj)
+
 
 def poll_ctrl_command():
     global playing
@@ -108,10 +115,12 @@ def play(midi_file, meta_messages=False):
             command = poll_ctrl_command()
             if command == 'stop':
                 return
+            send_time()
             time.sleep(0.1)
             duration_to_next_event = duration_to_next_event - 0.1
             
         if duration_to_next_event > 0.0:
+            send_time()
             time.sleep(duration_to_next_event)
             
         command = poll_ctrl_command()
@@ -138,6 +147,8 @@ def play_file(midi_file, print_messages):
     print('Tracks:')
     for i, track in enumerate(midi_file.tracks):
         print('  {:2d}: {!r}'.format(i, track.name.strip()))
+
+    ## TODO: instant mute/unmute track
 
     for message in play(midi_file, meta_messages=True):
         if print_messages:

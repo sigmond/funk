@@ -1,3 +1,4 @@
+import funk_root
 import funk_zmq
 import funk_midi
 
@@ -6,6 +7,7 @@ ctrl_socket = None
 midi_socket = None
 
 muted = []
+
 
 def midi_start_play_file():
     global muted
@@ -86,4 +88,32 @@ def all_quit():
            }
     
     funk_zmq.send_ctrl_msg(pub_socket, 'all', msg)
+
    
+def get_messages():
+##    print('get_messages')
+##    print('polling midi')
+    while True:
+        midi_msg = funk_zmq.poll_message(midi_socket)
+        if midi_msg:
+            handle_midi_message(midi_msg)
+        else:
+            break
+##    print('polling ctrl')
+    while True:
+        ctrl_msg = funk_zmq.poll_message(ctrl_socket)
+        if ctrl_msg:
+            handle_ctrl_message(ctrl_msg)
+        else:
+            break
+
+
+def handle_midi_message(msg):
+    print('got midi ' + repr(msg))
+    if msg['topic'] == 'time':
+        funk_root.player_time = msg['obj']
+    if msg['topic'] == 'recorded':
+        funk_root.recorded = msg['obj']
+
+def handle_ctrl_message(msg):
+    print('got ctrl ' + repr(msg))
