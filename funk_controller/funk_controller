@@ -10,6 +10,7 @@ import mido
 import zmq
 import time
 import io
+import os
 from mido import MidiFile, Message, tempo2bpm, MidiTrack, second2tick
 
 def parse_args():
@@ -89,7 +90,6 @@ def handle_stop(msg):
     obj = {'command': 'stop'}
     send_ctrl_msg(pub_socket, 'player', obj)
     send_ctrl_msg(pub_socket, 'recorder', obj)
-    ##handle_panic()
     
 def handle_channel(msg):
     print('handle_channel')
@@ -105,15 +105,10 @@ def handle_reset():
     send_ctrl_msg(pub_socket, 'outputter', obj)
     
 def handle_record(msg):
-    if msg['what'] == 'record':
-        obj = {'command': 'record'}
-        send_ctrl_msg(pub_socket, 'recorder', obj)
-        obj = {'command': 'play'}
-        send_ctrl_msg(pub_socket, 'player', obj)
-    if msg['what'] == 'stop':
-        obj = {'command': 'stop'}
-        send_ctrl_msg(pub_socket, 'recorder', obj)
-        send_ctrl_msg(pub_socket, 'player', obj)
+    obj = {'command': 'record'}
+    send_ctrl_msg(pub_socket, 'recorder', obj)
+    obj = {'command': 'play'}
+    send_ctrl_msg(pub_socket, 'player', obj)
     
 def handle_loopback(msg):
     send_ctrl_msg(pub_socket, 'capturer', obj)
@@ -144,7 +139,9 @@ def handle_ctrl_msg(topic, ctrl_msg):
     elif topic == 'all':
             if ctrl_msg['command'] == 'quit':
                 print ('Killing capturer')
-                os.system('pkill -f funk_capturer')
+                os.system('pkill funk_capturer')
+                print ('Killing data_bus_proxy')
+                os.system('pkill data_bus_proxy')
                 print ('Quitting')
                 exit(0)
     

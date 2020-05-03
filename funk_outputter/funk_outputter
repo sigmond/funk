@@ -86,6 +86,10 @@ def handle_ctrl_msg(topic, ctrl_msg):
             handle_panic(outport)
         if ctrl_msg['command'] == 'reset':
             handle_reset(outport)
+    elif topic == 'all':
+        if ctrl_msg['command'] == 'quit':
+            print ('Quitting')
+            exit(0)
     
 
 def main():

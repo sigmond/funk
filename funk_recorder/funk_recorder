@@ -64,20 +64,32 @@ def subscribe(socket, topic):
     socket.setsockopt(zmq.SUBSCRIBE, topic)
 
 
-def handle_midi_msg(topic, midi_msg, track, delta_ticks):
+def handle_midi_msg(topic, midi_msg, delta_ticks):
+    global track
     print('Got midi message, delta_ticks = %d' % delta_ticks)
-    if topic == 'rec':
+    if topic == 'midi_rec':
         midi_msg.time = delta_ticks
-        track.append(midi_msg)    
+        track.append(midi_msg)
 
 def handle_record_command(msg):
+    global recording
+    global track
+    global midi_file
+    global last_Seconds
+    
     track = MidiTrack()
     track.name = 'Capture'
-    midi_file = new_file(track)
+    midi_file = mido.MidiFile(type=1)
+    midi_file.tracks.append(track)
     last_seconds = time.time()
     recording = True
             
 def handle_stop_command(msg):
+    global pub_socket
+    global track
+    global midi_file
+    global recording
+    
     recording = False
     send_midi_msg(pub_socket, 'recorded', track)
     midi_file = None
@@ -103,17 +115,16 @@ def send_midi_msg(socket, topic, midi_msg):
     print('Sending midi message [' + repr(topic) + '] ' + repr(midi_msg))
     socket.send_string(topic, flags=zmq.SNDMORE)
     socket.send_pyobj(midi_msg)
-    
-    
-def new_file(track, type=1):
-    midi_file = mido.MidiFile(type=type)
-    midi_file.tracks.append(track)
-    return midi_file
-
-
 
 
 def main():
+    global midi_socket
+    global ctrl_socket
+    global track
+    global last_seconds
+    global recording
+    global pub_socket
+    
     tempo = args.tempo
     ticks_per_beat = args.ticks_per_beat
     
@@ -141,19 +152,18 @@ def main():
 
             if clientsock:
                 if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
+                    now = time.time()
+                    delta_ticks = int(round(second2tick(now - last_seconds, ticks_per_beat, tempo)))
+                    last_seconds = now
+                    topic = midi_socket.recv()
+                    midi_msg = midi_socket.recv_pyobj()
                     if recording:
-                        now = time.time()
-                        delta_ticks = int(round(second2tick(now - last_seconds, ticks_per_beat, tempo)))
-                        last_seconds = now
-                        topic = midi_socket.recv()
-                        midi_msg = midi_socket.recv_pyobj()
-                        handle_midi_msg(topic, midi_msg, track, delta_ticks)
+                        handle_midi_msg(topic, midi_msg, delta_ticks)
                 if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
                     topic = ctrl_socket.recv()
                     ctrl_msg = ctrl_socket.recv_pyobj()
                     handle_ctrl_msg(topic, ctrl_msg)
         except:            
-            print('Got exception')
             exit(0)
     
 
