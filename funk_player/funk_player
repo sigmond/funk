@@ -60,7 +60,7 @@ def subscribe(socket, topic):
     socket.setsockopt(zmq.SUBSCRIBE, topic)
 
 def send_ctrl_msg(socket, topic, ctrl_msg):
-    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))
+##    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))
     socket.send_string(topic, flags=zmq.SNDMORE)
     socket.send_pyobj(ctrl_msg)
 
@@ -69,10 +69,10 @@ def send_panic():
     obj = {'command': 'panic'}
     send_ctrl_msg(pub_socket, 'outputter', obj)
 
-def send_time():
+def send_time(start_time):
     global pub_socket
     obj = {'unit': 'seconds',
-           'time': time.time()
+           'time': time.time() - start_time
            }
     send_ctrl_msg(pub_socket, 'time', obj)
 
@@ -98,14 +98,14 @@ def poll_ctrl_command():
         return ''
     
 
-def play(midi_file, meta_messages=False):
+def play(midi_file,  message_track_number_list, meta_messages=False):
     global playing
     global ctrl_socket
 
     start_time = time.time()
     input_time = 0.0
 
-    for msg in midi_file:
+    for msg, track_number in map(None, midi_file, message_track_number_list):
         input_time += msg.time
 
         playback_time = time.time() - start_time
@@ -115,12 +115,12 @@ def play(midi_file, meta_messages=False):
             command = poll_ctrl_command()
             if command == 'stop':
                 return
-            send_time()
+            send_time(start_time)
             time.sleep(0.1)
             duration_to_next_event = duration_to_next_event - 0.1
             
         if duration_to_next_event > 0.0:
-            send_time()
+            send_time(start_time)
             time.sleep(duration_to_next_event)
             
         command = poll_ctrl_command()
@@ -130,10 +130,11 @@ def play(midi_file, meta_messages=False):
         if isinstance(msg, MetaMessage) and not meta_messages:
             continue
         else:
-            yield msg
+            yield {'msg' : msg, 'track_number' : track_number}
 
 def play_file(midi_file, print_messages):
     global muted_channels
+    global muted_tracks
     global playing
     global ctrl_socket
     global pub_socket
@@ -148,20 +149,47 @@ def play_file(midi_file, print_messages):
     for i, track in enumerate(midi_file.tracks):
         print('  {:2d}: {!r}'.format(i, track.name.strip()))
 
-    ## TODO: instant mute/unmute track
+    ## Instant mute/unmute track
+    track_file = mido.MidiFile(type=1)
+    print('track_file ' + repr(track_file))
+    for i, channel_track in enumerate(midi_file.tracks):
+##        print('track ' + repr(i) + ' ' + repr(channel_track))
+        track_track = mido.MidiTrack()
+        for msg in channel_track:
+            track_msg = msg.copy()
+            if hasattr(track_msg, 'channel'):
+##                print('changing from ' + repr(getattr(msg,'channel')) + ' to ' + repr(i))
+                setattr(track_msg, 'channel', i)
+##                print('msg ' + repr(msg))
+##                print('track_msg ' + repr(track_msg))
+            track_track.append(track_msg)
+        track_file.tracks.append(track_track)
 
-    for message in play(midi_file, meta_messages=True):
+##    print('midi_file ' + repr(midi_file))
+##    print('track_file ' + repr(track_file))
+    
+    track_number_messages = []
+    for msg in track_file:
+        if hasattr(msg, 'channel'):
+            track_number_messages.append(getattr(msg,'channel'))
+        else:
+            track_number_messages.append(None)
+    
+##    print('track number messages ' + repr(len(track_number_messages)))
+
+    for message_dict in play(midi_file, track_number_messages, meta_messages=True):
         if print_messages:
-            print(repr(message))
+            print(repr(message_dict))
 
+        message = message_dict['msg']
+        track_number = message_dict['track_number']
         if isinstance(message, Message):
-            d = message.dict()
             muted = False
-            try:
-                if d['channel'] in muted_channels:
+            if hasattr(message, 'channel'):
+                if getattr(message, 'channel') in muted_channels:
                     muted = True
-            except:
-                pass
+            if track_number in muted_tracks:
+                muted = True
 
             if not muted:
                 pub_socket.send_string('midi_play', flags=zmq.SNDMORE)
@@ -197,6 +225,7 @@ def handle_load_command(msg):
 def handle_play_command(msg):
     global midi_file
     global muted_channels
+    global muted_tracks
     
     print('Got play command')
     if midi_file != None:
@@ -205,6 +234,7 @@ def handle_play_command(msg):
 
     midi_file = None
     muted_channels = []
+    muted_tracks = []
     return ''
         
 def handle_channel_command(msg):
@@ -214,13 +244,22 @@ def handle_channel_command(msg):
     muted_channels = msg['muted']
     return ''
         
+def handle_track_command(msg):
+    global muted_tracks
+    
+    print('Got track command')
+    muted_tracks = msg['muted']
+    return ''
+        
 def handle_stop_command(msg):
     global midi_file
     global muted_channels
+    global muted_tracks
     
     print('Got stop command, playing = ' + repr(playing))
     midi_file = None
     muted_channels = []
+    muted_tracks = []
     send_panic()
     return 'stop'
         
@@ -236,6 +275,8 @@ def handle_ctrl_msg(topic, msg):
             return handle_stop_command(msg)
         elif msg['command'] == 'channel':
             return handle_channel_command(msg)
+        elif msg['command'] == 'track':
+            return handle_track_command(msg)
         else:
             print('Unknown ' + topic + ' command ' + repr(msg['command']))
     elif topic == 'all':
@@ -250,6 +291,7 @@ def main():
     global playing
     global midi_file
     global muted_channels
+    global muted_tracks
     global subpoller
     
     ctrl_socket = connect_subscriber(args.data_bus_in)
@@ -264,6 +306,7 @@ def main():
     playing = False
     midi_file = None
     muted_channels = []
+    muted_tracks = []
 
     while 1:
         try:

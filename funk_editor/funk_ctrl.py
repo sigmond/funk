@@ -6,13 +6,16 @@ pub_socket = None
 ctrl_socket = None
 midi_socket = None
 
-muted = []
+muted_channels = []
+muted_tracks = []
 
 
 def midi_start_play_file():
-    global muted
+    global muted_channels
+    global muted_tracks
 
-    muted = []
+    muted_channels = []
+    muted_tracks = []
 
     msg = {'command' : 'load',
            'what' : 'file',
@@ -27,9 +30,11 @@ def midi_start_play_file():
     funk_zmq.send_ctrl_msg(pub_socket, 'controller', msg)
 
 def midi_start_play_record_file():
-    global muted
+    global muted_channels
+    global muted_tracks
 
-    muted = []
+    muted_channels = []
+    muted_tracks = []
 
     msg = {'command' : 'load',
            'what' : 'file',
@@ -45,9 +50,11 @@ def midi_start_play_record_file():
     
 
 def midi_stop_play():
-    global muted
+    global muted_channels
+    global muted_tracks
 
-    muted = []
+    muted_channels = []
+    muted_tracks = []
     
     msg = {'command' : 'stop'
            }
@@ -55,18 +62,34 @@ def midi_stop_play():
     funk_zmq.send_ctrl_msg(pub_socket, 'controller', msg)
 
 
-def midi_mute_unmute():
-    global muted
+def midi_mute_unmute_channel():
+    global muted_channels
     
-    if not muted:
-        muted = [9]
+    if not muted_channels:
+        muted_channels = [9]
         msg = {'command' : 'channel',
-               'muted' : muted
+               'muted' : muted_channels
                }
     else:
-        muted = []
+        muted_channels = []
         msg = {'command' : 'channel',
-               'muted' : muted
+               'muted' : muted_channels
+               }
+    
+    funk_zmq.send_ctrl_msg(pub_socket, 'controller', msg)
+
+def midi_mute_unmute_track():
+    global muted_tracks
+    
+    if not muted_tracks:
+        muted_tracks = [2]
+        msg = {'command' : 'track',
+               'muted' : muted_tracks
+               }
+    else:
+        muted_tracks = []
+        msg = {'command' : 'track',
+               'muted' : muted_tracks
                }
     
     funk_zmq.send_ctrl_msg(pub_socket, 'controller', msg)

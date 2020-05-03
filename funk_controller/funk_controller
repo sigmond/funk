@@ -96,6 +96,11 @@ def handle_channel(msg):
     obj = msg
     send_ctrl_msg(pub_socket, 'player', obj)
     
+def handle_track(msg):
+    print('handle_track')
+    obj = msg
+    send_ctrl_msg(pub_socket, 'player', obj)
+    
 def handle_panic():
     obj = {'command': 'panic'}
     send_ctrl_msg(pub_socket, 'outputter', obj)
@@ -126,6 +131,8 @@ def handle_ctrl_msg(topic, ctrl_msg):
             handle_stop(ctrl_msg)
         if ctrl_msg['command'] == 'channel':
             handle_channel(ctrl_msg)
+        if ctrl_msg['command'] == 'track':
+            handle_track(ctrl_msg)
         elif ctrl_msg['command'] == 'record':
             handle_record(ctrl_msg)
         elif ctrl_msg['command'] == 'loopback':
