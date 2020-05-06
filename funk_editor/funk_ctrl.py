@@ -25,7 +25,9 @@ def midi_start_play_file():
     funk_zmq.send_ctrl_msg(pub_socket, 'controller', msg)
 
     
-    msg = {'command' : 'play'
+    msg = {'command' : 'play',
+           'start' : 0,
+           'unit' : 'seconds'
            }
     
     funk_zmq.send_ctrl_msg(pub_socket, 'controller', msg)

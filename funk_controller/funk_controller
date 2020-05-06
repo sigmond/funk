@@ -82,7 +82,10 @@ def handle_load(msg):
 
 def handle_play(msg):
     print('handle_play')
-    obj = {'command': 'play'}
+    obj = {'command': 'play',
+           'start' : msg['start'],
+           'unit' : msg['unit']
+           }
     send_ctrl_msg(pub_socket, 'player', obj)
     
     
