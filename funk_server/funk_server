@@ -1,0 +1,124 @@
+#!/usr/bin/python
+"""                                                                            
+Send control sequences to other entities
+
+"""
+from websocket_server import WebsocketServer
+import zmq
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    arg = parser.add_argument
+
+    arg('-i', '--data-bus-in',
+        dest='data_bus_in',
+        default='ipc:///tmp/data_bus_proxy_out',
+        help='path to input socket')
+
+    arg('-o', '--data-bus-out',
+        dest='data_bus_out',
+        default='ipc:///tmp/data_bus_proxy_in',
+        help='path to output socket')
+
+    arg('-q', '--quiet',
+        dest='quiet',
+        action='store_true',
+        default=False,
+        help='print nothing')
+
+    return parser.parse_args()
+
+
+# Called for every client connecting (after handshake)
+def new_client(client, server):
+    global websocket_client
+    print("New client connected and was given id %d" % client['id'])
+    server.send_message_to_all("Hey all, a new client has joined us")
+    websocket_client = client
+
+
+# Called for every client disconnecting
+def client_left(client, server):
+        print("Client(%d) disconnected" % client['id'])
+
+
+# Called when a client sends a message
+def message_received(client, server, message):
+    global pub_socket
+    if len(message) > 200:
+        message = message[:200]+'..'
+    print("Client(%d) said: %s" % (client['id'], message))
+    send_ctrl_msg(pub_socket, 'mytopic', message)
+    
+def send_ctrl_msg(socket, topic, ctrl_msg):
+    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))
+    socket.send_string(topic, flags=zmq.SNDMORE)
+    socket.send_pyobj(ctrl_msg)        
+
+def connect_subscriber(path):
+    context = zmq.Context()
+    socket = context.socket(zmq.SUB)
+    socket.connect (path)
+    return socket
+
+def connect_publisher(path):
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+    socket.connect (path)
+    return socket
+
+def subscribe(socket, topic):
+    socket.setsockopt(zmq.SUBSCRIBE, topic)
+
+def handle_ctrl_msg(topic, msg, server):
+    global websocket_client
+    print('Got ctrl message')
+    print('topic ' + repr(topic) + ' msg ' + repr(msg))
+    ##server.send_message_to_all('from zmq: ' + topic)
+    print ('websocket_client ' + repr(websocket_client))
+    server.send_message(websocket_client, 'from zmq: ' + topic)
+
+def main():
+    global pub_socket
+    global ctrl_socket
+    global websocket_client
+    
+    ctrl_socket = connect_subscriber(args.data_bus_in)
+    pub_socket = connect_publisher(args.data_bus_out)
+    
+    subscribe(ctrl_socket, 'all')
+    subscribe(ctrl_socket, 'server')
+
+    PORT=9001
+    server = WebsocketServer(PORT)
+    server.set_fn_new_client(new_client)
+    server.set_fn_client_left(client_left)
+    server.set_fn_message_received(message_received)
+
+    subpoller = zmq.Poller()
+    server_fileno = server.fileno()
+    subpoller.register(ctrl_socket, zmq.POLLIN)
+    subpoller.register(server_fileno, zmq.POLLIN)
+    
+    while 1:
+        try:
+            clientsock = dict(subpoller.poll(None))
+
+            if clientsock:
+                if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
+                    topic = ctrl_socket.recv()
+                    ctrl_msg = ctrl_socket.recv_pyobj()
+                    handle_ctrl_msg(topic, ctrl_msg, server)
+                if server_fileno in clientsock and clientsock[server_fileno] == zmq.POLLIN:
+                    server._handle_request_noblock()
+                    print('handled request')
+        except:
+            print('got exception')
+            exit(0)
+
+
+args = parse_args()
+
+
+main()
