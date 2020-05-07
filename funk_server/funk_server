@@ -1,11 +1,15 @@
 #!/usr/bin/python
 """                                                                            
-Send control sequences to other entities
+Proxy between zmq and websocket
 
 """
 from websocket_server import WebsocketServer
 import zmq
 import argparse
+import json
+import ast
+import mido
+import base64
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -32,26 +36,68 @@ def parse_args():
 
 # Called for every client connecting (after handshake)
 def new_client(client, server):
-    global websocket_client
+    global websocket_ctrl_client
+    global websocket_midi_client
     print("New client connected and was given id %d" % client['id'])
-    server.send_message_to_all("Hey all, a new client has joined us")
-    websocket_client = client
+    if websocket_ctrl_client == None:
+        websocket_ctrl_client = client
+    else:
+        websocket_midi_client = client
 
 
 # Called for every client disconnecting
 def client_left(client, server):
-        print("Client(%d) disconnected" % client['id'])
+    global websocket_ctrl_client
+    global websocket_midi_client
+    print("Client(%d) disconnected" % client['id'])
+    if client['id'] == websocket_ctrl_client['id']:
+        websocket_ctrl_client = None
+    else:
+        websocket_midi_client = None
+        
 
 
 # Called when a client sends a message
-def message_received(client, server, message):
+def message_received(client, server, json_message):
+    message = ast.literal_eval(json_message)
+    print("Client(%d): %s" % (client['id'], repr(message)))
+    if client['id'] == 1:
+        handle_client_ctrl_message(message)
+    else:
+        handle_client_midi_message(message)
+
+def handle_client_ctrl_message(message):
     global pub_socket
-    if len(message) > 200:
-        message = message[:200]+'..'
-    print("Client(%d) said: %s" % (client['id'], message))
-    send_ctrl_msg(pub_socket, 'mytopic', message)
+    global ctrl_socket
+    global midi_socket
+    msg = message['msg']
+    if msg['command'] == 'subscribe':
+        if msg['type'] == 'ctrl':
+            print('subscribing ctrl_socket to ' + repr(message['topic']))
+            subscribe(ctrl_socket, message['topic'])
+        elif msg['type'] == 'midi':
+            print('subscribing midi_socket to ' + repr(message['topic']))
+            subscribe(midi_socket, message['topic'])
+    elif msg['command'] == 'file':
+        print ('got file')
+        decoded = base64.decodestring(msg['content'])
+        midi_file = mido.MidiFile(file=decoded)
+        print('midi file ' + repr(midi_file))
+    else:
+        print('sending ctrl message to bus')
+        send_ctrl_msg(pub_socket, message['topic'], message['msg'])
+    
+def handle_client_midi_message(message):
+    global pub_socket
+    print('sending midi message to bus')
+    send_midi_msg(pub_socket, message['topic'], message['msg'])
     
 def send_ctrl_msg(socket, topic, ctrl_msg):
+    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))
+    socket.send_string(topic, flags=zmq.SNDMORE)
+    socket.send_pyobj(ctrl_msg)        
+
+def send_midi_msg(socket, topic, ctrl_msg):
     print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))
     socket.send_string(topic, flags=zmq.SNDMORE)
     socket.send_pyobj(ctrl_msg)        
@@ -72,19 +118,43 @@ def subscribe(socket, topic):
     socket.setsockopt(zmq.SUBSCRIBE, topic)
 
 def handle_ctrl_msg(topic, msg, server):
-    global websocket_client
+    global websocket_ctrl_client
     print('Got ctrl message')
     print('topic ' + repr(topic) + ' msg ' + repr(msg))
-    ##server.send_message_to_all('from zmq: ' + topic)
-    print ('websocket_client ' + repr(websocket_client))
-    server.send_message(websocket_client, 'from zmq: ' + topic)
+    if websocket_ctrl_client == None:
+        print ('websocket_ctrl_client not connected, discarding')
+        return
+    message = {'topic' : topic, 'msg' : msg}
+    json_message = json.dumps(message)
+    print ('sending to websocket_ctrl_client')
+    server.send_message(websocket_ctrl_client, json_message)
+
+def handle_midi_msg(topic, msg, server):
+    global websocket_midi_client
+    print('Got midi message')
+    print('topic ' + repr(topic) + ' msg ' + repr(msg))
+    if websocket_midi_client == None:
+        print ('websocket_midi_client not connected, discarding')
+        return
+    message = {'topic' : topic, 'msg' : msg.dict()}
+    print('message ' + repr(message))
+    json_message = json.dumps(message)
+    print('json_message ' + repr(json_message))
+    print ('sending to websocket_midi_client')
+    server.send_message(websocket_midi_client, json_message)
 
 def main():
     global pub_socket
+    global midi_socket
     global ctrl_socket
-    global websocket_client
+    global websocket_ctrl_client
+    global websocket_midi_client
     
+    websocket_ctrl_client = None
+    websocket_midi_client = None
+
     ctrl_socket = connect_subscriber(args.data_bus_in)
+    midi_socket = connect_subscriber(args.data_bus_in)
     pub_socket = connect_publisher(args.data_bus_out)
     
     subscribe(ctrl_socket, 'all')
@@ -99,6 +169,7 @@ def main():
     subpoller = zmq.Poller()
     server_fileno = server.fileno()
     subpoller.register(ctrl_socket, zmq.POLLIN)
+    subpoller.register(midi_socket, zmq.POLLIN)
     subpoller.register(server_fileno, zmq.POLLIN)
     
     while 1:
@@ -110,9 +181,12 @@ def main():
                     topic = ctrl_socket.recv()
                     ctrl_msg = ctrl_socket.recv_pyobj()
                     handle_ctrl_msg(topic, ctrl_msg, server)
+                if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
+                    topic = midi_socket.recv()
+                    midi_msg = midi_socket.recv_pyobj()
+                    handle_midi_msg(topic, midi_msg, server)
                 if server_fileno in clientsock and clientsock[server_fileno] == zmq.POLLIN:
                     server._handle_request_noblock()
-                    print('handled request')
         except:
             print('got exception')
             exit(0)

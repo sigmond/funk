@@ -1,0 +1,170 @@
+<html>
+<head>
+  <title>Funk client</title>
+
+  <script type="text/javascript">
+
+
+var ws_ctrl;
+var ws_midi;
+
+function ctrl_onopen()
+{
+    output("ctrl_onopen");
+    subscribe(ws_ctrl, "ctrl", "all");
+    subscribe(ws_ctrl, "ctrl", "client");
+};
+
+function ctrl_onmessage(e)
+{
+    // e.data contains received string.
+    output("ctrl_onmessage: " + e.data);
+};
+
+function ctrl_onclose()
+{
+    output("ctrl_onclose");
+};
+
+function ctrl_onerror(e)
+{
+        output("ctrl_onerror");
+        console.log(e);        
+};
+
+
+function midi_onopen()
+{
+    output("midi_onopen");
+    subscribe(ws_ctrl, "midi", "recorded");
+    subscribe(ws_ctrl, "midi", "time");
+    subscribe(ws_ctrl, "midi", "midi_rec");
+};
+
+function midi_onmessage(e)
+{
+    // e.data contains received string.
+    output("midi_onmessage: " + e.data);
+};
+
+function midi_onclose()
+{
+    output("midi_onclose");
+};
+
+function midi_onerror(e)
+{
+        output("midi_onerror");
+        console.log(e);        
+};
+
+function subscribe(socket, type, topic)
+{
+    var cmd;
+    var msg;
+    var json_message;
+
+    cmd = { "command" : "subscribe", "type" : type };
+    msg = { "topic" : topic, "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    socket.send(json_message);
+}
+
+function init()
+{
+    // Connect ctrl websocket
+    ws_ctrl = new WebSocket("ws://localhost:9001/");
+    // Set event handlers.
+    ws_ctrl.onopen = ctrl_onopen;
+    ws_ctrl.onmessage = ctrl_onmessage;
+    ws_ctrl.onclose = ctrl_onclose;
+    ws_ctrl.onerror = ctrl_onerror;
+
+    // Connect midi websocket
+    ws_midi = new WebSocket("ws://localhost:9001/");
+    // Set event handlers.
+    ws_midi.onopen = midi_onopen;
+    ws_midi.onmessage = midi_onmessage;
+    ws_midi.onclose = midi_onclose;
+    ws_midi.onerror = midi_onerror;
+}
+    
+function onSubmit()
+{
+    var input = document.getElementById("input");
+    // You can send message to the Web Socket using ws.send.
+    ws.send(input.value);
+    output("send: " + input.value);
+    input.value = "";
+    input.focus();
+}
+    
+function onCloseClick() {
+    ws_midi.close();
+    ws_ctrl.close();
+}
+    
+function output(str) {
+    var log = document.getElementById("log");
+    var escaped = str.replace(/&/, "&amp;").replace(/</, "&lt;").replace(/>/, "&gt;").replace(/\"/, "&quot;");
+    log.innerHTML = escaped + "<br>" + log.innerHTML;
+}
+
+function open_midi_file(midifile)
+{ 
+    var cmd;
+    var msg;
+    var json_message;
+
+    var base64_file = btoa(midifile);
+
+    cmd = { "command" : "file", "type" : "midi", "content" : base64_file };
+    msg = { "topic" : "ctrl", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+
+function select_midi_file()
+{    
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'audio/x-midi';
+
+    input.onchange = e => { 
+
+        // getting a hold of the file reference
+        var file = e.target.files[0];
+
+        // setting up the reader
+        var reader = new FileReader();
+        reader.readAsArrayBuffer(file);
+        
+        // here we tell the reader what to do when it's done reading...
+        reader.onload = readerEvent => {
+            var content = readerEvent.target.result; // this is the content!
+            open_midi_file(content);
+        }
+        
+    }
+
+    input.click();
+}
+
+
+</script>
+</head>
+<body onload="init();">
+  <form onsubmit="onSubmit(); return false;">
+    <input type="text" id="input">
+    <input type="submit" value="Send">
+    <button onclick="select_midi_file(); return false;">open</button>
+    <button onclick="onCloseClick(); return false;">close</button>
+  </form>
+  <div id="log"></div>
+</body>
+</html>
