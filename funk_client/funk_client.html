@@ -112,15 +112,17 @@ function output(str) {
     log.innerHTML = escaped + "<br>" + log.innerHTML;
 }
 
-function open_midi_file(midifile)
+function open_midi_file(filename, content)
 { 
     var cmd;
     var msg;
     var json_message;
+    var base64_file = btoa(
+      new Uint8Array(content)
+      .reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
 
-    var base64_file = btoa(midifile);
-
-    cmd = { "command" : "file", "type" : "midi", "content" : base64_file };
+    cmd = { "command" : "file", "name" : filename, "type" : "midi", "content" : base64_file };
     msg = { "topic" : "ctrl", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
@@ -147,7 +149,7 @@ function select_midi_file()
         // here we tell the reader what to do when it's done reading...
         reader.onload = readerEvent => {
             var content = readerEvent.target.result; // this is the content!
-            open_midi_file(content);
+            open_midi_file(file.name, content);
         }
         
     }

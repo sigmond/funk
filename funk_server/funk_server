@@ -9,7 +9,8 @@ import argparse
 import json
 import ast
 import mido
-import base64
+import binascii
+import io
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -80,8 +81,13 @@ def handle_client_ctrl_message(message):
             subscribe(midi_socket, message['topic'])
     elif msg['command'] == 'file':
         print ('got file')
-        decoded = base64.decodestring(msg['content'])
-        midi_file = mido.MidiFile(file=decoded)
+        ##decoded = codecs.decode(msg['content'], 'base64')
+        decoded = binascii.a2b_base64(msg['content'])
+        #print ('decoded ' + decoded)
+        #f = open("file.mid", "wb")
+        #f.write(decoded)
+        #f.close()
+        midi_file = mido.MidiFile(file=io.BytesIO(decoded))
         print('midi file ' + repr(midi_file))
     else:
         print('sending ctrl message to bus')
