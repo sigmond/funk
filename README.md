@@ -1,4 +1,7 @@
-# funk
+# Funk
+
+Note: This is experimental code unde development. Don't expect
+anything to work or even make sense!
 
 ## Prepare
 

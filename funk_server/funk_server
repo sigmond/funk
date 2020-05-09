@@ -35,68 +35,6 @@ def parse_args():
     return parser.parse_args()
 
 
-# Called for every client connecting (after handshake)
-def new_client(client, server):
-    global websocket_ctrl_client
-    global websocket_midi_client
-    print("New client connected and was given id %d" % client['id'])
-    if websocket_ctrl_client == None:
-        websocket_ctrl_client = client
-    else:
-        websocket_midi_client = client
-
-
-# Called for every client disconnecting
-def client_left(client, server):
-    global websocket_ctrl_client
-    global websocket_midi_client
-    print("Client(%d) disconnected" % client['id'])
-    if client['id'] == websocket_ctrl_client['id']:
-        websocket_ctrl_client = None
-    else:
-        websocket_midi_client = None
-        
-
-
-# Called when a client sends a message
-def message_received(client, server, json_message):
-    message = ast.literal_eval(json_message)
-    print("Client(%d): %s" % (client['id'], repr(message)))
-    if client['id'] == 1:
-        handle_client_ctrl_message(message)
-    else:
-        handle_client_midi_message(message)
-
-def handle_client_ctrl_message(message):
-    global pub_socket
-    global ctrl_socket
-    global midi_socket
-    msg = message['msg']
-    if msg['command'] == 'subscribe':
-        if msg['type'] == 'ctrl':
-            print('subscribing ctrl_socket to ' + repr(message['topic']))
-            subscribe(ctrl_socket, message['topic'])
-        elif msg['type'] == 'midi':
-            print('subscribing midi_socket to ' + repr(message['topic']))
-            subscribe(midi_socket, message['topic'])
-    elif msg['command'] == 'file':
-        print ('got file')
-        ##decoded = codecs.decode(msg['content'], 'base64')
-        decoded = binascii.a2b_base64(msg['content'])
-        #print ('decoded ' + decoded)
-        #f = open("file.mid", "wb")
-        #f.write(decoded)
-        #f.close()
-        midi_file = mido.MidiFile(file=io.BytesIO(decoded))
-        print('midi file ' + repr(midi_file))
-    else:
-        print('sending ctrl message to bus')
-        send_ctrl_msg(pub_socket, message['topic'], message['msg'])
-    
-def handle_client_midi_message(message):
-    global pub_socket
-    print('sending midi message to bus')
-    send_midi_msg(pub_socket, message['topic'], message['msg'])
     
 def send_ctrl_msg(socket, topic, ctrl_msg):
     print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))

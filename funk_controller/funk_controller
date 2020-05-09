@@ -7,12 +7,15 @@ from __future__ import print_function, division
 import sys
 import argparse
 import mido
-import zmq
 import time
 import io
 import os
 from mido import MidiFile, Message, tempo2bpm, MidiTrack, second2tick
-
+import json
+import ast
+import binascii
+import funk_com
+    
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     arg = parser.add_argument
@@ -27,6 +30,16 @@ def parse_args():
         default='ipc:///tmp/data_bus_proxy_in',
         help='path to output socket')
 
+    arg('-p', '--websocket-port',
+        dest='ws_port',
+        default=9001,
+        help='websocket port')
+
+    arg('-t', '--websocket-host',
+        dest='ws_host',
+        default='127.0.0.1',
+        help='websocket host')
+
     arg('-q', '--quiet',
         dest='quiet',
         action='store_true',
@@ -35,27 +48,62 @@ def parse_args():
 
     return parser.parse_args()
 
+class funk_controller():
 
-def connect_subscriber(path):
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    socket.connect (path)
-    return socket
+    com = None
 
-def connect_publisher(path):
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.connect (path)
-    return socket
+    def __init__(self, zmq_path_in, zmq_path_out, websocket_port=9001, websocket_host='127.0.0.1'):
 
-def subscribe(socket, topic):
-    socket.setsockopt(zmq.SUBSCRIBE, topic)
+        self.com = funk_com.funk_com(self, zmq_path_in, zmq_path_out, websocket_port, websocket_host)
+        self.com.subscribe('all')
+        self.com.subscribe('controller')
 
-def send_ctrl_msg(socket, topic, ctrl_msg):
-    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))
-    socket.send_string(topic, flags=zmq.SNDMORE)
-    socket.send_pyobj(ctrl_msg)
+    def handle_ctrl_message(topic, msg):
+        print('Got ctrl message')
+        print('topic ' + repr(topic) + ' msg ' + repr(msg))
+        if topic == 'controller':
+            if msg['command'] == 'load':
+                handle_load(msg)
+            elif msg['command'] == 'play':
+                handle_play(msg)
+            elif msg['command'] == 'stop':
+                handle_stop(msg)
+            elif msg['command'] == 'channel':
+                handle_channel(msg)
+            elif msg['command'] == 'track':
+                handle_track(msg)
+            elif msg['command'] == 'record':
+                handle_record(msg)
+            elif msg['command'] == 'loopback':
+                handle_loopback(msg)
+            elif msg['command'] == 'panic':
+                handle_panic()
+            elif msg['command'] == 'reset':
+                handle_reset()
+            else:
+                print('Unknown controller command ' + repr(msg['command']))
+        elif topic == 'all':
+            if msg['command'] == 'quit':
+                print ('Killing capturer')
+                os.system('pkill funk_capturer')
+                print ('Killing data_bus_proxy')
+                os.system('pkill data_bus_proxy')
+                print ('Quitting')
+                exit(0)
+        
     
+def handle_client_ctrl_message(message):
+    msg = message['msg']
+    if msg['type'] == 'ctrl':
+        self.handle_ctrl_message(message['topic'], message['msg']) 
+    elif msg['command'] == 'file':
+        print ('got file')
+        decoded = binascii.a2b_base64(msg['content'])
+        midi_file = mido.MidiFile(file=io.BytesIO(decoded))
+        print('midi file ' + repr(midi_file))
+    else:
+        print('sending ctrl message to bus')
+        send_ctrl_msg(pub_socket, message['topic'], message['msg'])
 
 def handle_load(msg):
     print('handle_load')
@@ -69,12 +117,12 @@ def handle_load(msg):
         topic = 'file'
         obj = {'command': 'load',
                'type': 'file',
-               'midi_obj': msg['midi_obj']
+               'midi_obj': msg['obj']
                }
     elif msg['what'] == 'track':
         obj = {'command': 'load',
                'type': 'track',
-               'midi_obj': msg['midi_obj']
+               'midi_obj': msg['obj']
                }
 
     print('Calling send_ctrl_msg')
@@ -122,65 +170,22 @@ def handle_loopback(msg):
     send_ctrl_msg(pub_socket, 'capturer', obj)
     
 
-def handle_ctrl_msg(topic, ctrl_msg):
-    print('Got ctrl message')
-    print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
-    if topic == 'controller':
-        if ctrl_msg['command'] == 'load':
-            handle_load(ctrl_msg)
-        if ctrl_msg['command'] == 'play':
-            handle_play(ctrl_msg)
-        if ctrl_msg['command'] == 'stop':
-            handle_stop(ctrl_msg)
-        if ctrl_msg['command'] == 'channel':
-            handle_channel(ctrl_msg)
-        if ctrl_msg['command'] == 'track':
-            handle_track(ctrl_msg)
-        elif ctrl_msg['command'] == 'record':
-            handle_record(ctrl_msg)
-        elif ctrl_msg['command'] == 'loopback':
-            handle_loopback(ctrl_msg)
-        elif ctrl_msg['command'] == 'panic':
-            handle_panic()
-        elif ctrl_msg['command'] == 'reset':
-            handle_reset()
-        else:
-            print('Unknown controller command ' + repr(ctrl_msg['command']))
-    elif topic == 'all':
-            if ctrl_msg['command'] == 'quit':
-                print ('Killing capturer')
-                os.system('pkill funk_capturer')
-                print ('Killing data_bus_proxy')
-                os.system('pkill data_bus_proxy')
-                print ('Quitting')
-                exit(0)
     
 
 
 
 def main():
-    global pub_socket
-    global ctrl_socket
-    
-    ctrl_socket = connect_subscriber(args.data_bus_in)
-    pub_socket = connect_publisher(args.data_bus_out)
-    
-    subscribe(ctrl_socket, 'all')
-    subscribe(ctrl_socket, 'controller')
-    
-    subpoller = zmq.Poller()
-    subpoller.register(ctrl_socket, zmq.POLLIN)
+
+    controller = funk_controller(args.data_bus_in, args.data_bus_out, args.ws_port, args.ws_host)
     
     while 1:
         try:
-            clientsock = dict(subpoller.poll(None))
-
-            if clientsock:
-                if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
-                    topic = ctrl_socket.recv()
-                    ctrl_msg = ctrl_socket.recv_pyobj()
-                    handle_ctrl_msg(topic, ctrl_msg)
+            messages = self.com.poll_messages()
+            if messages:
+                for message in messages:
+                    self.handle_message(message['topic'], message['obj'])
         except:
+            print('controller got exception')
             exit(0)
     
 
