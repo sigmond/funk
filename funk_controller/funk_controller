@@ -57,31 +57,36 @@ class funk_controller():
         self.com = funk_com.funk_com(self, zmq_path_in, zmq_path_out, websocket_port, websocket_host)
         self.com.subscribe('all')
         self.com.subscribe('controller')
+        self.com.subscribe('time')
 
     def handle_ctrl_message(topic, msg):
         print('Got ctrl message')
         print('topic ' + repr(topic) + ' msg ' + repr(msg))
         if topic == 'controller':
-            if msg['command'] == 'load':
-                handle_load(msg)
+            if msg['command'] == 'open':
+                self.handle_open(msg)
+            elif msg['command'] == 'load':
+                self.handle_load(msg)
             elif msg['command'] == 'play':
-                handle_play(msg)
+                self.handle_play(msg)
             elif msg['command'] == 'stop':
-                handle_stop(msg)
+                self.handle_stop(msg)
             elif msg['command'] == 'channel':
-                handle_channel(msg)
+                self.handle_channel(msg)
             elif msg['command'] == 'track':
-                handle_track(msg)
+                self.handle_track(msg)
             elif msg['command'] == 'record':
-                handle_record(msg)
+                self.handle_record(msg)
             elif msg['command'] == 'loopback':
-                handle_loopback(msg)
+                self.handle_loopback(msg)
             elif msg['command'] == 'panic':
-                handle_panic()
+                self.handle_panic()
             elif msg['command'] == 'reset':
-                handle_reset()
+                self.handle_reset()
             else:
                 print('Unknown controller command ' + repr(msg['command']))
+        elif topic == 'time':
+            self.handle_time(msg)
         elif topic == 'all':
             if msg['command'] == 'quit':
                 print ('Killing capturer')
@@ -92,84 +97,94 @@ class funk_controller():
                 exit(0)
         
     
-def handle_client_ctrl_message(message):
-    msg = message['msg']
-    if msg['type'] == 'ctrl':
-        self.handle_ctrl_message(message['topic'], message['msg']) 
-    elif msg['command'] == 'file':
-        print ('got file')
-        decoded = binascii.a2b_base64(msg['content'])
-        midi_file = mido.MidiFile(file=io.BytesIO(decoded))
-        print('midi file ' + repr(midi_file))
-    else:
-        print('sending ctrl message to bus')
-        send_ctrl_msg(pub_socket, message['topic'], message['msg'])
 
-def handle_load(msg):
-    print('handle_load')
-    if msg['what'] == 'disc':
-        midi_obj = MidiFile(msg['path'])
-        obj = {'command' : 'load',
-               'type': 'file',
-               'midi_obj': midi_obj
+    def handle_open(msg):
+        print('handle_open')
+        if msg['what'] == 'file':
+            topic = 'file'
+            obj = {'command': 'open',
+                   'type': 'file',
+                   'name' : msg['name']
+                   'midi_obj': msg['obj']
+                   }
+        else:
+            print('unknown "what" ' + repr(what))
+            return
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_load(msg):
+        print('handle_load')
+        if msg['what'] == 'disc':
+            midi_obj = MidiFile(msg['path'])
+            obj = {'command' : 'load',
+                   'type': 'file',
+                   'midi_obj': midi_obj
+                   }
+        elif msg['what'] == 'file':
+            topic = 'file'
+            obj = {'command': 'load',
+                   'type': 'file',
+                   'midi_obj': msg['obj']
+                   }
+        elif msg['what'] == 'track':
+            obj = {'command': 'load',
+                   'type': 'track',
+                   'midi_obj': msg['obj']
+                   }
+        else:
+            print('unknown "what" ' + repr(what))
+            return
+
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('player', obj)
+
+    def handle_play(msg):
+        print('handle_play')
+        obj = {'command': 'play',
+               'start' : msg['start'],
+               'unit' : msg['unit']
                }
-    elif msg['what'] == 'file':
-        topic = 'file'
-        obj = {'command': 'load',
-               'type': 'file',
-               'midi_obj': msg['obj']
+        self.com.send_bus_msg('player', obj)
+    
+    
+    def handle_stop(msg):
+        obj = {'command': 'stop'}
+        self.com.send_bus_msg('player', obj)
+        self.com.send_bus_msg('recorder', obj)
+    
+    def handle_channel(msg):
+        print('handle_channel')
+        obj = msg
+        self.com.send_bus_msg('player', obj)
+    
+    def handle_track(msg):
+        print('handle_track')
+        obj = msg
+        self.com.send_bus_msg('player', obj)
+    
+    def handle_panic():
+        obj = {'command': 'panic'}
+        self.com.send_bus_msg('outputter', obj)
+    
+    def handle_reset():
+        obj = {'command': 'reset'}
+        self.com.send_bus_msg('outputter', obj)
+    
+    def handle_record(msg):
+        obj = {'command': 'record'}
+        self.com.send_bus_msg('recorder', obj)
+        obj = {'command': 'play'}
+        self.com.send_bus_msg('player', obj)
+    
+    def handle_loopback(msg):
+        obj = {'command': 'loopback',
+               'onoff' : msg['onoff']
                }
-    elif msg['what'] == 'track':
-        obj = {'command': 'load',
-               'type': 'track',
-               'midi_obj': msg['obj']
-               }
-
-    print('Calling send_ctrl_msg')
-    send_ctrl_msg(pub_socket, 'player', obj)
-
-def handle_play(msg):
-    print('handle_play')
-    obj = {'command': 'play',
-           'start' : msg['start'],
-           'unit' : msg['unit']
-           }
-    send_ctrl_msg(pub_socket, 'player', obj)
+        self.com.send_bus_msg('outputter', obj)
     
-    
-def handle_stop(msg):
-    obj = {'command': 'stop'}
-    send_ctrl_msg(pub_socket, 'player', obj)
-    send_ctrl_msg(pub_socket, 'recorder', obj)
-    
-def handle_channel(msg):
-    print('handle_channel')
-    obj = msg
-    send_ctrl_msg(pub_socket, 'player', obj)
-    
-def handle_track(msg):
-    print('handle_track')
-    obj = msg
-    send_ctrl_msg(pub_socket, 'player', obj)
-    
-def handle_panic():
-    obj = {'command': 'panic'}
-    send_ctrl_msg(pub_socket, 'outputter', obj)
-    
-def handle_reset():
-    obj = {'command': 'reset'}
-    send_ctrl_msg(pub_socket, 'outputter', obj)
-    
-def handle_record(msg):
-    obj = {'command': 'record'}
-    send_ctrl_msg(pub_socket, 'recorder', obj)
-    obj = {'command': 'play'}
-    send_ctrl_msg(pub_socket, 'player', obj)
-    
-def handle_loopback(msg):
-    send_ctrl_msg(pub_socket, 'capturer', obj)
-    
-
+    def handle_time(msg):
+        self.com.send_client_time_msg('time', msg)
     
 
 

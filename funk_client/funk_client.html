@@ -122,8 +122,8 @@ function open_midi_file(filename, content)
       .reduce((data, byte) => data + String.fromCharCode(byte), '')
       );
 
-    cmd = { "command" : "file", "name" : filename, "type" : "midi", "content" : base64_file };
-    msg = { "topic" : "ctrl", "msg" : cmd };
+    cmd = { "command" : "open", "what" : "file", "name" : filename, "encoding" : "base64", "content" : base64_file };
+    msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
 

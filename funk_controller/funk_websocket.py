@@ -42,14 +42,20 @@ class funk_websocket_server():
         self.handle_client_ctrl_message(message)
 
     def handle_client_ctrl_message(message):
-        if message['encoding'] == 'base64':
+        topic = message['topic']
+        msg = message['msg']
+        if msg['encoding'] == 'base64':
             decoded = binascii.a2b_base64(message['content'])
-            midi_file = mido.MidiFile(file=io.BytesIO(decoded))
-            message['obj'] = midi_file
+            if msg['what'] = 'file':
+                midi_file = mido.MidiFile(file=io.BytesIO(decoded))
+                message['obj'] = midi_file
+            else:
+                print('Usupported "what" ' + repr(message['what'])
+                return
         else:
             print('Usupported encoding ' + repr(message['encoding'])
             return
-        self.ctrl_object.handle_client_ctrl_message(message)
+        self.ctrl_object.handle_ctrl_message(topic, msg)
     
     def send_ctrl_message(self, topic, ctrl_msg):
         if self.ctrl_client == None:
