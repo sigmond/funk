@@ -39,7 +39,7 @@ class funk_com():
 
     def send_client_ctrl_msg(topic, client_ctrl_msg):
         print ('sending ctrl msg to client')
-        self.websocket_server.send_ctrl_message(client_ctrl_msg)
+        self.websocket_server.send_ctrl_message(topic, client_ctrl_msg)
 
     def send_client_midi_msg(topic, client_midi_msg):
         print ('sending midi msg to client')
@@ -48,6 +48,14 @@ class funk_com():
     def send_client_time_msg(topic, client_time_msg):
         print ('sending time msg to client')
         self.websocket_server.send_time_message(topic, client_time_msg)
+
+    def send_client_error_msg(topic, client_error_msg):
+        print ('sending error msg to client')
+        self.websocket_server.send_error_message(topic, client_error_msg)
+
+    def send_client_log_msg(topic, client_log_msg):
+        print ('sending log msg to client')
+        self.websocket_server.send_log_message(topic, client_log_msg)
 
     def poll_messages(timeout=None):
         messages = []

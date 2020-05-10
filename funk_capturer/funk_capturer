@@ -27,7 +27,7 @@ def parse_args():
 
     arg('-p', '--midi-port-in',
         dest='midi_port_in',
-        default='Hammerfall DSP:HDSP MIDI 2 24:32',
+        default=None,
         help='midi input port')
 
     arg('-m', '--print-messages',
@@ -64,28 +64,100 @@ def send_rec_msg(socket, midi_msg):
     socket.send_pyobj(midi_msg)
     
     
+def log(log_msg):
+    global pub_socket
+    
+    topic = 'log'
+    msg = {'entity' : 'capturer',
+           'msg' : log_msg
+           }
+    pub_socket.send_string(topic, flags=zmq.SNDMORE)
+    pub_socket.send_pyobj(msg)
+    
+def error(error_msg):
+    global pub_socket
+    
+    topic = 'error'
+    msg = {'entity' : 'capturer',
+           'msg' : error_msg
+           }
+    pub_socket.send_string(topic, flags=zmq.SNDMORE)
+    pub_socket.send_pyobj(msg)
+
+def handle_open_input_port(msg):
+    global inport
+    print('handle_open_input_port')
+    if inport != None:
+        mido.close_input(inport)
+    try:
+        inport = mido.open_input(msg['port'])
+    except:
+        error('cannot open input port ' + repr(msg['port'])
+    try:
+        outport = open_port(msg['port'])
+    except:
+        error('cannot open output port ' + repr(msg['port'])
+
+def handle_ctrl_msg(topic, ctrl_msg):
+    global inport
+    
+    print('Got ctrl message')
+    print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
+    if topic == 'capturer':
+        if ctrl_msg['command'] == 'open_input_port':
+            handle_open_input_port(ctrl_msg)
+    elif topic == 'all':
+        if ctrl_msg['command'] == 'quit':
+            print ('Quitting')
+            mido.close_input(inport)
+            exit(0)
 
 
 
 def main():
-    try:
-        inport = mido.open_input(args.midi_port_in)
-    except:
-        print('Error opening input port %s' % args.midi_port_in)
-        exit(-1)
+    global pub_socket
+    global ctrl_socket
+    global inport
+    
+    ctrl_socket = connect_subscriber(args.data_bus_in)
+    subscribe(ctrl_socket, 'capturer')
     
     pub_socket = connect_publisher(args.data_bus_out)
     
+    try:
+        if args.midi_port_in != None:
+            inport = mido.open_input(args.midi_port_in)
+    except:
+        msg = 'Error opening input port ' + args.midi_port_in
+        print(msg)
+        error(msg)
+        exit(-1)
+
+    # wait for the publisher to initialize before trying to send anything
     time.sleep(1)
     
     while 1:
         try:
-            midi_message = inport.receive()
-            send_rec_msg(pub_socket, midi_message)
+            if inport != None:
+                midi_message = inport.receive()
+                send_rec_msg(pub_socket, midi_message)
+            else:
+                raise Exception('inport')
         except:
-            inport.close()
-            exit(0)
-    
+            # this should loop as long as inport is None
+            log('got exception:' + sys.exc_info()[0])
+            try:
+                # if we got signalled, there should be a ctrl message coming within  a short time
+                # otherwise we loop again waiting for e.g. an open port message or quit
+                clientsock = dict(subpoller.poll(100))
+
+                if clientsock:
+                    if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
+                        topic = ctrl_socket.recv()
+                        ctrl_msg = ctrl_socket.recv_pyobj()
+                        handle_ctrl_msg(topic, ctrl_msg)
+            except:
+                error('got exception:' + sys.exc_info()[0])
 
 args = parse_args()
 

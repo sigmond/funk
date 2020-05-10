@@ -61,7 +61,20 @@ class funk_websocket_server():
         if self.ctrl_client == None:
             print ('websocket ctrl_client not connected, discarding')
             return
-        message = {'topic' : topic, 'msg' : ctrl_msg}
+        if topic == 'download':
+            memoryfile = io.BytesIO()
+            midi_obj = ctrl_msg['obj'].save(file=memoryfile)
+            encoded = binascii.b2a_base64(memoryfile.read())
+            msg = {'command': 'download',
+                   'what': 'file',
+                   'name' : ctrl_msg['name'],
+                   'encoding' : 'base64',
+                   'content': encoded
+                   }
+            message = {'topic' : topic, 'msg' : msg}
+        else:
+            message = {'topic' : topic, 'msg' : ctrl_msg}
+
         json_message = json.dumps(message)
         print ('sending ctrl message to websocket ctrl_client')
         self.server.send_message(self.ctrl_client, json_message)
@@ -84,5 +97,23 @@ class funk_websocket_server():
         json_message = json.dumps(message)
         print ('sending time message to websocket time_client')
         self.server.send_message(self.time_client, json_message)
+        
+    def send_error_message(self, topic, error_msg):
+        if self.ctrl_client == None:
+            print ('websocket ctrl_client not connected, discarding')
+            return
+        message = {'topic' : topic, 'msg' : error_msg}
+        json_message = json.dumps(message)
+        print ('sending error message to websocket ctrl_client')
+        self.server.send_message(self.ctrl_client, json_message)
+        
+    def send_log_message(self, topic, log_msg):
+        if self.ctrl_client == None:
+            print ('websocket ctrl_client not connected, discarding')
+            return
+        message = {'topic' : topic, 'msg' : log_msg}
+        json_message = json.dumps(message)
+        print ('sending log message to websocket ctrl_client')
+        self.server.send_message(self.ctrl_client, json_message)
         
             

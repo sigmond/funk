@@ -59,6 +59,26 @@ def connect_publisher(path):
 def subscribe(socket, topic):
     socket.setsockopt(zmq.SUBSCRIBE, topic)
 
+def log(log_msg):
+    global pub_socket
+    
+    topic = 'log'
+    msg = {'entity' : 'player',
+           'msg' : log_msg
+           }
+    pub_socket.send_string(topic, flags=zmq.SNDMORE)
+    pub_socket.send_pyobj(msg)
+    
+def error(error_msg):
+    global pub_socket
+    
+    topic = 'error'
+    msg = {'entity' : 'player',
+           'msg' : error_msg
+           }
+    pub_socket.send_string(topic, flags=zmq.SNDMORE)
+    pub_socket.send_pyobj(msg)
+
 def send_ctrl_msg(socket, topic, ctrl_msg):
 ##    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))
     socket.send_string(topic, flags=zmq.SNDMORE)
@@ -94,8 +114,7 @@ def poll_ctrl_command():
                     return 'stop'
                 return ''
     except:
-        print('exception')
-        return ''
+        error('got exception:' + sys.exc_info()[0])
     
 
 def play(midi_file,  message_track_number_list, start_play, time_unit, meta_messages=False):
@@ -324,7 +343,7 @@ def main():
                     ctrl_msg = ctrl_socket.recv_pyobj()
                     handle_ctrl_msg(topic, ctrl_msg)
         except:
-            exit(0)
+            error('got exception:' + sys.exc_info()[0])
 
 args = parse_args()
 

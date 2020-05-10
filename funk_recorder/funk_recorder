@@ -63,6 +63,26 @@ def connect_publisher(path):
 def subscribe(socket, topic):
     socket.setsockopt(zmq.SUBSCRIBE, topic)
 
+def log(log_msg):
+    global pub_socket
+    
+    topic = 'log'
+    msg = {'entity' : 'recorder',
+           'msg' : log_msg
+           }
+    pub_socket.send_string(topic, flags=zmq.SNDMORE)
+    pub_socket.send_pyobj(msg)
+    
+def error(error_msg):
+    global pub_socket
+    
+    topic = 'error'
+    msg = {'entity' : 'recorder',
+           'msg' : error_msg
+           }
+    pub_socket.send_string(topic, flags=zmq.SNDMORE)
+    pub_socket.send_pyobj(msg)
+    
 
 def handle_midi_msg(topic, midi_msg, delta_ticks):
     global track
@@ -74,25 +94,20 @@ def handle_midi_msg(topic, midi_msg, delta_ticks):
 def handle_record_command(msg):
     global recording
     global track
-    global midi_file
     global last_Seconds
     
     track = MidiTrack()
     track.name = 'Capture'
-    midi_file = mido.MidiFile(type=1)
-    midi_file.tracks.append(track)
-    last_seconds = time.time()
+    last_seconds = time.time() + msg['start_play']
     recording = True
             
 def handle_stop_command(msg):
     global pub_socket
     global track
-    global midi_file
     global recording
     
     recording = False
     send_midi_msg(pub_socket, 'recorded', track)
-    midi_file = None
     track = None
             
 def handle_ctrl_msg(topic, msg):
@@ -142,7 +157,6 @@ def main():
 
     recording = False
     track = None
-    midi_file = None
     
     last_seconds = time.time()
     
@@ -152,7 +166,7 @@ def main():
 
             if clientsock:
                 if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
-                    now = time.time()
+                    now = time.time() + start_play
                     delta_ticks = int(round(second2tick(now - last_seconds, ticks_per_beat, tempo)))
                     last_seconds = now
                     topic = midi_socket.recv()
@@ -163,8 +177,8 @@ def main():
                     topic = ctrl_socket.recv()
                     ctrl_msg = ctrl_socket.recv_pyobj()
                     handle_ctrl_msg(topic, ctrl_msg)
-        except:            
-            exit(0)
+        except:
+            error('got exception:' + sys.exc_info()[0])
     
 
 args = parse_args()

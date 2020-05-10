@@ -30,14 +30,14 @@ def parse_args():
 
     arg('-p', '--midi-port-out',
         dest='midi_port_out',
-        default='Hammerfall DSP:HDSP MIDI 2 24:32',
+        default=None,
         help='midi output port')
 
     arg('-m', '--print-messages',
         dest='print_messages',
         action='store_true',
         default=False,
-        help='Print messages as they are played back')
+        help='Print messages as they are played')
 
     arg('-q', '--quiet',
         dest='quiet',
@@ -60,20 +60,60 @@ def subscribe(socket, topic):
 def open_output(port):
     return mido.open_output(port)
 
+def send_ctrl_msg(socket, topic, ctrl_msg):
+    socket.send_string(topic, flags=zmq.SNDMORE)
+    socket.send_pyobj(ctrl_msg)
+    
+def log(log_msg):
+    global pub_socket
+    
+    topic = 'log'
+    msg = {'entity' : 'outputter',
+           'msg' : log_msg
+           }
+    pub_socket.send_string(topic, flags=zmq.SNDMORE)
+    pub_socket.send_pyobj(msg)
+    
+def error(error_msg):
+    global pub_socket
+
+    topic = 'error'
+    msg = {'entity' : 'outputter',
+           'msg' : error_msg
+           }
+    pub_socket.send_string(topic, flags=zmq.SNDMORE)
+    pub_socket.send_pyobj(msg)
+    
 def handle_panic(port):
     print('handle_panic')
     port.panic()
     
-def handle_reset(port):
-    print('handle_reset')
-    port.reset()
+def handle_loopback(msg):
+    global loopback
+    print('handle_loopback')
+    if msg['onoff'] == 'on':
+        loopback = True
+    else:
+        loopback = False
+
+def handle_open_output_port(msg):
+    global outport
+    print('handle_open_output_port')
+    if outport != None:
+        mido.close_output(outport)
+    try:
+        outport = open_port(msg['port'])
+    except:
+        error('cannot open output port ' + repr(msg['port'])
 
 
 def handle_midi_msg(port, topic, midi_msg):
+    global loopback
     print('Got midi message')
     sys.stdout.write('topic ' + repr(topic) + ' msg ' + repr(midi_msg) + '\n')
     sys.stdout.flush()
-    port.send(midi_msg)
+    if topic != 'midi_rec' or loopback:
+        port.send(midi_msg)
     
     
 def handle_ctrl_msg(topic, ctrl_msg):
@@ -84,8 +124,10 @@ def handle_ctrl_msg(topic, ctrl_msg):
     if topic == 'outputter':
         if ctrl_msg['command'] == 'panic':
             handle_panic(outport)
-        if ctrl_msg['command'] == 'reset':
-            handle_reset(outport)
+        elif ctrl_msg['command'] == 'loopback':
+            handle_loopback(ctrl_msg)
+        elif ctrl_msg['command'] == 'open_output_port':
+            handle_open_output_port(ctrl_msg)
     elif topic == 'all':
         if ctrl_msg['command'] == 'quit':
             print ('Quitting')
@@ -94,11 +136,21 @@ def handle_ctrl_msg(topic, ctrl_msg):
 
 def main():
     global outport
+    global loopback
+    global pub_socket
+    
+    pub_socket = connect_publisher(args.data_bus_out)
+
+    outport = None
+    loopback = True
     
     try:
-        outport = mido.open_output(args.midi_port_out)
+        if args.midi_port_out != None:
+            outport = mido.open_output(args.midi_port_out)
     except:
-        print('Error opening output port %s' % args.midi_port_out)
+        msg = 'Error opening output port ' + args.midi_port_out
+        print(msg)
+        error(msg)
         exit(-1)
         
     midi_socket = connect_subscriber(args.data_bus_in)
@@ -110,11 +162,11 @@ def main():
     subscribe(ctrl_socket, 'outputter')
 ## Poll loop:
 ## Receive events for playing on midi_socket
-## - events on 'play' topic should be queued up and sent to played according to timestamp
-## - events on 'rec' topic (if enabled by control) should be played immediately (typically loopback from keyboard)
+## - events on 'midi_play' topic should be played immediately
+## - events on 'midi_rec' topic (typically loopback from keyboard) should be played immediately if loopback is on
 ## Receive control-messages on ctrl_socket
 ## - it is important that control messages are handled asap (e.g. stop play or panic)
-## - typical ctrl messages: add_port (name), del_port (name), start, stop, loop (on/off), panic
+## - typical ctrl messages: open_output_port (name), loopback (on/off), panic
     subpoller = zmq.Poller()
     subpoller.register(midi_socket, zmq.POLLIN)
     subpoller.register(ctrl_socket, zmq.POLLIN)
@@ -133,6 +185,7 @@ def main():
                     ctrl_msg = ctrl_socket.recv_pyobj()
                     handle_ctrl_msg(topic, ctrl_msg)     
         except:
+            error('got exception:' + sys.exc_info()[0])
             outport.close()
             exit(0)
 
