@@ -24,3 +24,6 @@ pip install pyzmq
 pip install git+https://github.com/Pithikos/python-websocket-server
 
 
+## Architecture
+
+<p><img src='doc/funk_architecture.svg'></p>
