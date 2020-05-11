@@ -10,6 +10,7 @@ Example:
 from __future__ import print_function, division
 import sys
 import argparse
+import time
 import mido
 import zmq
 from mido import MidiFile, Message, tempo2bpm
@@ -47,6 +48,12 @@ def parse_args():
 
     return parser.parse_args()
 
+
+def connect_publisher(path):
+    context = zmq.Context()
+    socket = context.socket(zmq.PUB)
+    socket.connect (path)
+    return socket
 
 def connect_subscriber(path):
     context = zmq.Context()
@@ -86,7 +93,8 @@ def error(error_msg):
     
 def handle_panic(port):
     print('handle_panic')
-    port.panic()
+    if port != None:
+        port.panic()
     
 def handle_loopback(msg):
     global loopback
@@ -96,6 +104,16 @@ def handle_loopback(msg):
     else:
         loopback = False
 
+def handle_list_output_ports(msg):
+    global pub_socket
+    
+    ports = mido.get_output_names()
+    msg = {'command' : 'output_ports',
+           'output_ports' : ports
+           }
+    send_ctrl_msg(pub_socket, 'controller', msg)
+    
+
 def handle_open_output_port(msg):
     global outport
     print('handle_open_output_port')
@@ -104,7 +122,7 @@ def handle_open_output_port(msg):
     try:
         outport = open_port(msg['port'])
     except:
-        error('cannot open output port ' + repr(msg['port'])
+        error('cannot open output port ' + repr(msg['port']))
 
 
 def handle_midi_msg(port, topic, midi_msg):
@@ -113,7 +131,8 @@ def handle_midi_msg(port, topic, midi_msg):
     sys.stdout.write('topic ' + repr(topic) + ' msg ' + repr(midi_msg) + '\n')
     sys.stdout.flush()
     if topic != 'midi_rec' or loopback:
-        port.send(midi_msg)
+        if port != None:
+            port.send(midi_msg)
     
     
 def handle_ctrl_msg(topic, ctrl_msg):
@@ -128,6 +147,10 @@ def handle_ctrl_msg(topic, ctrl_msg):
             handle_loopback(ctrl_msg)
         elif ctrl_msg['command'] == 'open_output_port':
             handle_open_output_port(ctrl_msg)
+        elif ctrl_msg['command'] == 'list_output_ports':
+            handle_list_output_ports(ctrl_msg)
+        else:
+            log('unknown command ' + repr(msg['command']))
     elif topic == 'all':
         if ctrl_msg['command'] == 'quit':
             print ('Quitting')
@@ -141,6 +164,9 @@ def main():
     
     pub_socket = connect_publisher(args.data_bus_out)
 
+    time.sleep(1)
+    log("started")
+    
     outport = None
     loopback = True
     
@@ -179,14 +205,15 @@ def main():
                 if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
                     topic = midi_socket.recv()
                     midi_msg = midi_socket.recv_pyobj()
-                    handle_midi_msg(outport, topic, midi_msg) 
+                    handle_midi_msg(outport, topic, midi_msg)
                 if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
                     topic = ctrl_socket.recv()
                     ctrl_msg = ctrl_socket.recv_pyobj()
                     handle_ctrl_msg(topic, ctrl_msg)     
         except:
-            error('got exception:' + sys.exc_info()[0])
-            outport.close()
+            error('got exception: ' + repr(sys.exc_info()))
+            if outport != None:
+                mido.close_output(outport)
             exit(0)
 
 args = parse_args()

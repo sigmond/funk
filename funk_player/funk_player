@@ -238,12 +238,13 @@ def handle_load_command(msg):
     global midi_file
     
     print('Got load command')
-    if msg['type'] == 'track':
+    if msg['what'] == 'track':
         print ('converting to file')
-        midi_file = track2file(msg['midi_obj'])
+        midi_file = track2file(msg['obj'])
         print('midi_file ' + repr(midi_file))
-    elif msg['type'] == 'file':
-        midi_file = msg['midi_obj']
+    elif msg['what'] == 'file':
+        midi_file = msg['obj']
+        log('loaded midi file ' + repr(midi_file))
 
     return ''
         
@@ -319,8 +320,11 @@ def main():
     global muted_tracks
     global subpoller
     
-    ctrl_socket = connect_subscriber(args.data_bus_in)
     pub_socket = connect_publisher(args.data_bus_out)
+    time.sleep(1)
+    log("started")
+    
+    ctrl_socket = connect_subscriber(args.data_bus_in)
     
     subscribe(ctrl_socket, 'all')
     subscribe(ctrl_socket, 'player')

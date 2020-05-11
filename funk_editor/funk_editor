@@ -1,0 +1,144 @@
+#!/usr/bin/python
+"""                                                                            
+Edit midi files
+
+"""
+from __future__ import print_function, division
+import sys
+import argparse
+import mido
+import zmq
+import time
+import io
+from mido import MidiFile, Message, tempo2bpm, MidiTrack, second2tick
+
+DEFAULT_TEMPO = 500000
+DEFAULT_TICKS_PER_BEAT = 480
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    arg = parser.add_argument
+
+    arg('-i', '--data-bus-in',
+        dest='data_bus_in',
+        default='ipc:///tmp/data_bus_proxy_out',
+        help='path to input socket')
+
+    arg('-o', '--data-bus-out',
+        dest='data_bus_out',
+        default='ipc:///tmp/data_bus_proxy_in',
+        help='path to output socket')
+
+    arg('-q', '--quiet',
+        dest='quiet',
+        action='store_true',
+        default=False,
+        help='print nothing')
+
+    return parser.parse_args()
+
+class funk_editor():
+
+    context = None
+    pub_socket = None
+    sub_socket = None
+    subpoller = None
+    
+    def __init__(self, zmq_path_in, zmq_path_out):
+        
+        self.context = zmq.Context()
+        self.pub_socket = self.context.socket(zmq.PUB)
+        self.pub_socket.connect(zmq_path_out)
+        time.sleep(1)
+        self.log('started')
+        
+        self.sub_socket = self.context.socket(zmq.SUB)
+        self.sub_socket.connect(zmq_path_in)
+        self.sub_socket.setsockopt(zmq.SUBSCRIBE, 'editor')
+        self.sub_socket.setsockopt(zmq.SUBSCRIBE, 'all')
+        
+        self.subpoller = zmq.Poller()
+        self.subpoller.register(self.sub_socket, zmq.POLLIN)
+
+    def log(self, log_msg):    
+        topic = 'log'
+        msg = {'entity' : 'editor',
+               'msg' : log_msg
+               }
+        self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
+        self.pub_socket.send_pyobj(msg)
+            
+    def error(self, error_msg):
+        topic = 'error'
+        msg = {'entity' : 'editor',
+               'msg' : error_msg
+               }
+        self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
+        self.pub_socket.send_pyobj(msg)
+    
+
+    def send_ctrl_msg(self, topic, msg):
+        print('Sending ctrl message [' + repr(topic) + '] ' + repr(msg))
+        self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
+        self.pub_socket.send_pyobj(msg)
+        
+    def handle_ctrl_msg(self, topic, msg):
+        print('Got ctrl message')
+        print('topic ' + repr(topic) + ' msg ' + repr(msg))
+        if topic == 'editor':
+            if msg['command'] == 'open':
+                self.handle_open(msg)
+            elif msg['command'] == 'prepare':
+                self.handle_prepare(msg)
+            else:
+                print('Unknown editor command ' + repr(msg['command']))
+                self.log('Unknown editor command ' + repr(msg['command']))
+        elif topic == 'all':
+            if ctrl_msg['command'] == 'quit':
+                print ('Quitting')
+                exit(0)
+
+    def handle_open(self, msg):
+        if msg['type'] ==  'file':
+            self.filename = msg['name']
+            self.midi_file = msg['obj']
+            self.log('opening ' + self.filename)
+        else:
+            self.log('Unknown open type ' + repr(msg['type']))
+
+    def handle_prepare(self, msg):
+        if msg['what'] ==  'file':
+            self.log('preparing ' + self.filename)
+            obj = {'command': 'load',
+                   'what': 'file',
+                   'obj': self.midi_file
+                   }
+            self.send_ctrl_msg('controller', obj)
+        else:
+            self.log('Unknown prepare what ' + repr(msg['what']))
+                    
+
+def main():
+
+    editor = funk_editor(args.data_bus_in, args.data_bus_out)
+    
+    while 1:
+        try:
+            clientsock = dict(editor.subpoller.poll(None))
+            if clientsock:
+                if editor.sub_socket in clientsock and clientsock[editor.sub_socket] == zmq.POLLIN:
+                    topic = editor.sub_socket.recv()
+                    ctrl_msg = editor.sub_socket.recv_pyobj()
+                    editor.handle_ctrl_msg(topic, ctrl_msg)
+        except:
+            editor.error('editor got exception:' + repr(sys.exc_info()))
+            exit(0)
+    
+
+args = parse_args()
+
+if args.quiet:
+    def print(*args):
+        pass
+
+main()

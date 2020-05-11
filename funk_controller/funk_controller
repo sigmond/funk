@@ -62,21 +62,21 @@ class funk_controller():
         self.com.subscribe('error')
         self.com.subscribe('log')
 
-    def error(msg):
+    def error(self, msg):
         topic = 'error'
         msg = {'entity' : 'controller',
                'msg' : msg
                }
         self.handle_error(msg)
 
-    def log(msg):
+    def log(self, msg):
         topic = 'log'
         msg = {'entity' : 'controller',
                'msg' : msg
                }
         self.handle_log(msg)
 
-    def handle_ctrl_message(topic, msg):
+    def handle_ctrl_message(self, topic, msg):
         print('Got ctrl message')
         print('topic ' + repr(topic) + ' msg ' + repr(msg))
         if topic == 'controller':
@@ -86,10 +86,10 @@ class funk_controller():
             elif msg['command'] == 'open_input_port':
                 # someone (e.g. the client) wants to open a midi port for input
                 self.handle_open_input_port(msg)
-            elif msg['command'] == 'edit':
+            elif msg['command'] == 'open':
                 # client is uploading something (e.g. a file)
-                # to be remembered by the editor
-                self.handle_edit(msg)
+                # to be opened by the editor
+                self.handle_open(msg)
             elif msg['command'] == 'save':
                 # client wants to get hold of something (e.g. a file)
                 self.handle_save(msg)
@@ -97,8 +97,12 @@ class funk_controller():
                 # someone (e.g. the editor) wants to send something (e.g. a file)
                 # to the client for saving
                 self.handle_download(msg)
+            elif msg['command'] == 'prepare':
+                # someone (e.g. the client) wants to prepare something (e.g. a file)
+                # for playing
+                self.handle_prepare(msg)
             elif msg['command'] == 'load':
-                # someone (e.g. the editor or the client) wants to prepare something (e.g. a file)
+                # someone (e.g. the editor) wants to load something (e.g. a file)
                 # for playing
                 self.handle_load(msg)
             elif msg['command'] == 'play':
@@ -123,10 +127,20 @@ class funk_controller():
             elif msg['command'] == 'panic':
                 # someone (e.g. the client) wants to stop all sound from the midi module
                 self.handle_panic()
-            elif msg['command'] == 'reset':
-                # someone wants to reset the midi module
-                self.handle_reset()
+            elif msg['command'] == 'list_input_ports':
+                # someone (e.g. the client) wants to know which input midi ports to choose from
+                self.handle_list_input_ports()
+            elif msg['command'] == 'input_ports':
+                # someone (e.g. the capturer) wants to show list of input midi ports to choose from
+                self.handle_input_ports(msg)
+            elif msg['command'] == 'list_output_ports':
+                # someone (e.g. the client) wants to know which output midi ports to choose from
+                self.handle_list_output_ports()
+            elif msg['command'] == 'output_ports':
+                # someone (e.g. the outputter) wants to show list of output midi ports to choose from
+                self.handle_output_ports(msg)
             else:
+                self.log('Unknown controller command ' + repr(msg['command']))
                 print('Unknown controller command ' + repr(msg['command']))
         elif topic == 'time':
             # someone (the player) has sent information about what position in the song (midi file) we are playing right now
@@ -147,22 +161,22 @@ class funk_controller():
                 print ('Quitting')
                 exit(0)
 
-    def handle_error(msg):
+    def handle_error(self, msg):
         print(repr(msg))
         self.com.send_client_error_msg('error', msg)
         
-    def handle_log(msg):
+    def handle_log(self, msg):
         print(repr(msg))
         self.com.send_client_log_msg('log', msg)
             
 
-    def handle_open_output_port(msg):
+    def handle_open_output_port(self, msg):
         obj = {'command': 'open_output_port',
                'port' : msg['port']
                }
         self.com.send_bus_msg('outputter', obj)
     
-    def handle_open_input_port(msg):
+    def handle_open_input_port(self, msg):
         # this is supposed to bring the capturer out of the midi-read loop and
         # wait for a bus message:
         os.system('pkill -HUP funk_capturer')
@@ -171,65 +185,73 @@ class funk_controller():
                }
         self.com.send_bus_msg('capturer', obj)
     
-    def handle_edit(msg):
-        print('handle_edit')
+    def handle_open(self, msg):
+        print('handle_open')
         if msg['what'] == 'file':
-            topic = 'file'
-            obj = {'command': 'edit',
+            obj = {'command': 'open',
                    'type': 'file',
-                   'name' : msg['name']
-                   'midi_obj': msg['obj']
+                   'name' : msg['name'],
+                   'obj': msg['obj']
                    }
         else:
+            self.log('unknown "what" ' + repr(what))
             print('unknown "what" ' + repr(what))
             return
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
         
-    def handle_save(msg):
+    def handle_save(self, msg):
         print('handle_save')
         if msg['what'] == 'file':
-            topic = 'file'
             obj = {'command': 'save',
                    'type': 'file'
                    }
         else:
+            self.log('unknown "what" ' + repr(what))
             print('unknown "what" ' + repr(what))
             return
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
         
-    def handle_download(msg):
+    def handle_download(self, msg):
         print('handle_download')
         self.com.send_client_ctrl_msg('download', msg)
         
-    def handle_load(msg):
+    def handle_prepare(self, msg):
+        print('handle_prepare')
+        obj = {'command' : 'prepare',
+               'what': 'file'
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+
+    def handle_load(self, msg):
         print('handle_load')
         if msg['what'] == 'disc':
             midi_obj = MidiFile(msg['path'])
             obj = {'command' : 'load',
-                   'type': 'file',
-                   'midi_obj': midi_obj
+                   'what': 'file',
+                   'obj': midi_obj
                    }
         elif msg['what'] == 'file':
-            topic = 'file'
             obj = {'command': 'load',
-                   'type': 'file',
-                   'midi_obj': msg['obj']
+                   'what': 'file',
+                   'obj': msg['obj']
                    }
         elif msg['what'] == 'track':
             obj = {'command': 'load',
-                   'type': 'track',
-                   'midi_obj': msg['obj']
+                   'what': 'track',
+                   'obj': msg['obj']
                    }
         else:
+            self.log('unknown "what" ' + repr(what))
             print('unknown "what" ' + repr(what))
             return
 
         print('Calling send_bus_msg')
         self.com.send_bus_msg('player', obj)
 
-    def handle_play(msg):
+    def handle_play(self, msg):
         print('handle_play')
         obj = {'command': 'play',
                'start' : msg['start'],
@@ -238,30 +260,43 @@ class funk_controller():
         self.com.send_bus_msg('player', obj)
     
     
-    def handle_stop(msg):
+    def handle_stop(self, msg):
         obj = {'command': 'stop'}
         self.com.send_bus_msg('player', obj)
         self.com.send_bus_msg('recorder', obj)
     
-    def handle_channel(msg):
+    def handle_channel(self, msg):
         print('handle_channel')
         obj = msg
         self.com.send_bus_msg('player', obj)
     
-    def handle_track(msg):
+    def handle_track(self, msg):
         print('handle_track')
         obj = msg
         self.com.send_bus_msg('player', obj)
     
-    def handle_panic():
+    def handle_panic(self):
         obj = {'command': 'panic'}
         self.com.send_bus_msg('outputter', obj)
     
-    def handle_reset():
-        obj = {'command': 'reset'}
+    def handle_list_input_ports(self):
+        # this is supposed to bring the capturer out of the midi-read loop and
+        # wait for a bus message:
+        os.system('pkill -HUP funk_capturer')
+        obj = {'command': 'list_input_ports'}
+        self.com.send_bus_msg('capturer', obj)
+    
+    def handle_input_ports(self, msg):
+        self.com.send_client_ctrl_msg('input_ports', msg)
+    
+    def handle_list_output_ports(self):
+        obj = {'command': 'list_output_ports'}
         self.com.send_bus_msg('outputter', obj)
     
-    def handle_record(msg):
+    def handle_output_ports(self, msg):
+        self.com.send_client_ctrl_msg('output_ports', msg)
+    
+    def handle_record(self, msg):
         obj = {'command': 'record',
                'start' : msg['start'],
                'unit' : msg['unit']
@@ -270,13 +305,13 @@ class funk_controller():
         obj = {'command': 'play'}
         self.com.send_bus_msg('player', obj)
     
-    def handle_loopback(msg):
+    def handle_loopback(self, msg):
         obj = {'command': 'loopback',
                'onoff' : msg['onoff']
                }
         self.com.send_bus_msg('outputter', obj)
     
-    def handle_time(msg):
+    def handle_time(self, msg):
         self.com.send_client_time_msg('time', msg)
     
 
@@ -288,12 +323,12 @@ def main():
     
     while 1:
         try:
-            messages = self.com.poll_messages()
+            messages = controller.com.poll_messages()
             if messages:
                 for message in messages:
-                    self.handle_message(message['topic'], message['obj'])
+                    controller.handle_ctrl_message(message['topic'], message['msg'])
         except:
-            error('got exception:' + sys.exc_info()[0])
+            controller.error('controller got exception:' + repr(sys.exc_info()))
             exit(0)
     
 

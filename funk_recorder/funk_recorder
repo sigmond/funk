@@ -107,7 +107,7 @@ def handle_stop_command(msg):
     global recording
     
     recording = False
-    send_midi_msg(pub_socket, 'recorded', track)
+    send_ctrl_msg(pub_socket, 'recorded', track)
     track = None
             
 def handle_ctrl_msg(topic, msg):
@@ -119,17 +119,17 @@ def handle_ctrl_msg(topic, msg):
         elif msg['command'] == 'stop':
             return handle_stop_command(msg)
         else:
-            print('Unknown player command ' + repr(msg['command']))
+            print('Unknown recorder command ' + repr(msg['command']))
     elif topic == 'all':
         if ctrl_msg['command'] == 'quit':
             print ('Quitting')
             exit(0)
 
         
-def send_midi_msg(socket, topic, midi_msg):
-    print('Sending midi message [' + repr(topic) + '] ' + repr(midi_msg))
+def send_ctrl_msg(socket, topic, msg):
+    print('Sending ctrl message [' + repr(topic) + '] ' + repr(msg))
     socket.send_string(topic, flags=zmq.SNDMORE)
-    socket.send_pyobj(midi_msg)
+    socket.send_pyobj(msg)
 
 
 def main():
@@ -139,14 +139,18 @@ def main():
     global last_seconds
     global recording
     global pub_socket
+
+    pub_socket = connect_publisher(args.data_bus_out)
+
+    time.sleep(1)
+    log("started")
     
     tempo = args.tempo
     ticks_per_beat = args.ticks_per_beat
     
     midi_socket = connect_subscriber(args.data_bus_in)
     ctrl_socket = connect_subscriber(args.data_bus_in)
-    pub_socket = connect_publisher(args.data_bus_out)
-    
+
     subscribe(midi_socket, 'midi_rec')
     subscribe(ctrl_socket, 'all')
     subscribe(ctrl_socket, 'recorder')    

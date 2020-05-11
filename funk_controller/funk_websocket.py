@@ -1,5 +1,9 @@
 from websocket_server import WebsocketServer
 import binascii
+import ast
+import json
+import mido
+import io
 
 class funk_websocket_server():
     server = None
@@ -16,8 +20,14 @@ class funk_websocket_server():
         self.time_client = None
         self.ctrl_object = ctrl_object
 
+    def fileno(self):
+        return self.server.fileno()
+
+    def _handle_request_noblock(self):
+        return self.server._handle_request_noblock()
+
     # Called for every client connecting (after handshake)
-    def new_client(client, server):
+    def new_client(self, client, server):
         if self.ctrl_client == None:
             print("Assigning client %d as ctrl client" % client['id'])
             self.ctrl_client = client
@@ -26,7 +36,7 @@ class funk_websocket_server():
             self.time_client = client
         
     # Called for every client disconnecting
-    def client_left(client, server):
+    def client_left(self, client, server):
         if client['id'] == self.ctrl_client['id']:
             print("Ctlr Client (%d) disconnected" % client['id'])
             self.ctrl_client = None
@@ -36,25 +46,26 @@ class funk_websocket_server():
 
 
     # Called when a client sends a message
-    def message_received(client, server, json_message):
+    def message_received(self, client, server, json_message):
         message = ast.literal_eval(json_message)
         print("Message from ctrl client")
         self.handle_client_ctrl_message(message)
 
-    def handle_client_ctrl_message(message):
+    def handle_client_ctrl_message(self, message):
         topic = message['topic']
         msg = message['msg']
-        if msg['encoding'] == 'base64':
-            decoded = binascii.a2b_base64(message['content'])
-            if msg['what'] = 'file':
-                midi_file = mido.MidiFile(file=io.BytesIO(decoded))
-                message['obj'] = midi_file
+        if msg.has_key('encoding'):
+            if msg['encoding'] == 'base64':
+                decoded = binascii.a2b_base64(msg['content'])
+                if msg['what'] == 'file':
+                    midi_file = mido.MidiFile(file=io.BytesIO(decoded))
+                    msg['obj'] = midi_file
+                else:
+                    print('Usupported "what" ' + repr(msg['what']))
+                    return
             else:
-                print('Usupported "what" ' + repr(message['what'])
+                print('Usupported encoding ' + repr(msg['encoding']))
                 return
-        else:
-            print('Usupported encoding ' + repr(message['encoding'])
-            return
         self.ctrl_object.handle_ctrl_message(topic, msg)
     
     def send_ctrl_message(self, topic, ctrl_msg):
@@ -63,7 +74,8 @@ class funk_websocket_server():
             return
         if topic == 'download':
             memoryfile = io.BytesIO()
-            midi_obj = ctrl_msg['obj'].save(file=memoryfile)
+            midi_obj = ctrl_msg['obj']
+            midi_obj.save(file=memoryfile)
             encoded = binascii.b2a_base64(memoryfile.read())
             msg = {'command': 'download',
                    'what': 'file',

@@ -11,8 +11,6 @@ var ws_midi;
 function ctrl_onopen()
 {
     output("ctrl_onopen");
-    subscribe(ws_ctrl, "ctrl", "all");
-    subscribe(ws_ctrl, "ctrl", "client");
 };
 
 function ctrl_onmessage(e)
@@ -36,9 +34,6 @@ function ctrl_onerror(e)
 function midi_onopen()
 {
     output("midi_onopen");
-    subscribe(ws_ctrl, "midi", "recorded");
-    subscribe(ws_ctrl, "midi", "time");
-    subscribe(ws_ctrl, "midi", "midi_rec");
 };
 
 function midi_onmessage(e)
@@ -57,20 +52,6 @@ function midi_onerror(e)
         output("midi_onerror");
         console.log(e);        
 };
-
-function subscribe(socket, type, topic)
-{
-    var cmd;
-    var msg;
-    var json_message;
-
-    cmd = { "command" : "subscribe", "type" : type };
-    msg = { "topic" : topic, "msg" : cmd };
-    
-    json_message = JSON.stringify(msg);
-
-    socket.send(json_message);
-}
 
 function init()
 {
@@ -157,6 +138,84 @@ function select_midi_file()
     input.click();
 }
 
+function prepare_midi_file()
+{ 
+    var cmd;
+    var msg;
+
+    cmd = { "command" : "prepare", "what" : "file" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function play_midi_file()
+{ 
+    var cmd;
+    var msg;
+
+    cmd = { "command" : "play", "start" : 0, "unit" : "seconds" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function stop()
+{ 
+    var cmd;
+    var msg;
+
+    cmd = { "command" : "stop" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function panic()
+{ 
+    var cmd;
+    var msg;
+
+    cmd = { "command" : "panic" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function list_input_ports()
+{ 
+    var cmd;
+    var msg;
+
+    cmd = { "command" : "list_input_ports" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function list_output_ports()
+{ 
+    var cmd;
+    var msg;
+
+    cmd = { "command" : "list_output_ports" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
 
 </script>
 </head>
@@ -165,6 +224,12 @@ function select_midi_file()
     <input type="text" id="input">
     <input type="submit" value="Send">
     <button onclick="select_midi_file(); return false;">open</button>
+    <button onclick="prepare_midi_file(); return false;">prepare</button>
+    <button onclick="play_midi_file(); return false;">play</button>
+    <button onclick="stop(); return false;">stop</button>
+    <button onclick="panic(); return false;">panic</button>
+    <button onclick="list_input_ports(); return false;">input</button>
+    <button onclick="list_output_ports(); return false;">output</button>
     <button onclick="onCloseClick(); return false;">close</button>
   </form>
   <div id="log"></div>
