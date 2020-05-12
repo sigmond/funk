@@ -106,21 +106,26 @@ def handle_loopback(msg):
 
 def handle_list_output_ports(msg):
     global pub_socket
+    global outport_name
     
     ports = mido.get_output_names()
     msg = {'command' : 'output_ports',
-           'output_ports' : ports
+           'output_ports' : ports,
+           'current_port' : outport_name
            }
     send_ctrl_msg(pub_socket, 'controller', msg)
     
 
 def handle_open_output_port(msg):
     global outport
+    global outport_name
+    
     print('handle_open_output_port')
     if outport != None:
-        mido.close_output(outport)
+        outport.close()
     try:
-        outport = open_port(msg['port'])
+        outport = open_output(msg['port'])
+        outport_name = msg['port']
     except:
         error('cannot open output port ' + repr(msg['port']))
 
@@ -159,6 +164,7 @@ def handle_ctrl_msg(topic, ctrl_msg):
 
 def main():
     global outport
+    global outport_name
     global loopback
     global pub_socket
     
@@ -168,11 +174,13 @@ def main():
     log("started")
     
     outport = None
+    outport_name = ""
     loopback = True
     
     try:
         if args.midi_port_out != None:
             outport = mido.open_output(args.midi_port_out)
+            outport_name = args.midi_port_out
     except:
         msg = 'Error opening output port ' + args.midi_port_out
         print(msg)
@@ -213,7 +221,7 @@ def main():
         except:
             error('got exception: ' + repr(sys.exc_info()))
             if outport != None:
-                mido.close_output(outport)
+                outport.close()
             exit(0)
 
 args = parse_args()

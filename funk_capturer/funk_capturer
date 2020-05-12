@@ -50,6 +50,7 @@ def receiveSignal(signalNumber, frame):
     topic = ctrl_socket.recv()
     ctrl_msg = ctrl_socket.recv_pyobj()
     handle_ctrl_msg(topic, ctrl_msg)
+    raise Exception('inport')
     
     
 def connect_publisher(path):
@@ -103,20 +104,25 @@ def send_ctrl_msg(socket, topic, ctrl_msg):
 
 def handle_list_input_ports(msg):
     global pub_socket
+    global inport_name
     
     ports = mido.get_input_names()
     msg = {'command' : 'input_ports',
-           'input_ports' : ports
+           'input_ports' : ports,
+           'current_port' : inport_name
            }
     send_ctrl_msg(pub_socket, 'controller', msg)
 
 def handle_open_input_port(msg):
     global inport
+    global inport_name
+    
     print('handle_open_input_port')
     if inport != None:
-        mido.close_input(inport)
+        inport.close()
     try:
-        inport = mido.open_input(msg['port'])
+        inport = open_input(msg['port'])
+        inport_name = msg['port']
     except:
         error('cannot open input port ' + repr(msg['port']))
 
@@ -128,14 +134,14 @@ def handle_ctrl_msg(topic, ctrl_msg):
     if topic == 'capturer':
         if ctrl_msg['command'] == 'open_input_port':
             handle_open_input_port(ctrl_msg)
-        if ctrl_msg['command'] == 'list_input_ports':
+        elif ctrl_msg['command'] == 'list_input_ports':
             handle_list_input_ports(ctrl_msg)
         else:
             log('unknown command ' + repr(ctrl_msg['command']))
     elif topic == 'all':
         if ctrl_msg['command'] == 'quit':
             print ('Quitting')
-            mido.close_input(inport)
+            inport.close()
             exit(0)
 
 
@@ -145,8 +151,10 @@ def main():
     global ctrl_socket
     global subpoller
     global inport
+    global inport_name
 
     inport = None
+    inport_name = ""
     
     pub_socket = connect_publisher(args.data_bus_out)
     time.sleep(1)
@@ -163,6 +171,7 @@ def main():
     try:
         if args.midi_port_in != None:
             inport = mido.open_input(args.midi_port_in)
+            inport_name = args.midi_port_in
     except:
         msg = 'Error opening input port ' + args.midi_port_in
         print(msg)
@@ -178,22 +187,12 @@ def main():
                 midi_message = inport.receive()
                 send_rec_msg(pub_socket, midi_message)
             else:
-                raise Exception('inport')
-        except Exception():
-            # this should loop as long as inport is None
-            #log('got exception: ' + repr(sys.exc_info()))
-            try:
-                # if we got signalled, there should be a ctrl message coming within  a short time
-                # otherwise we loop again waiting for e.g. an open port message or quit
-                clientsock = dict(subpoller.poll(1000))
-
-                if clientsock:
-                    if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
-                        topic = ctrl_socket.recv()
-                        ctrl_msg = ctrl_socket.recv_pyobj()
-                        handle_ctrl_msg(topic, ctrl_msg)
-            except Exception('inport'):
-                error('got exception: ' + repr(sys.exc_info()))
+                pass
+        except KeyboardInterrupt:
+            error('got exception: ' + repr(sys.exc_info()))
+            exit(0)
+        except:
+            pass
 
 args = parse_args()
 
