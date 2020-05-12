@@ -44,310 +44,295 @@ def parse_args():
     return parser.parse_args()
 
 
-def connect_subscriber(path):
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    socket.connect (path)
-    return socket
+class funk_player():
+    context = None
+    ctrl_socket = None
+    pub_socket = None
+    playing = False
+    midi_file = None
+    muted_channels = []
+    muted_tracks = []
+    subpoller = None
+    print_messages = False
 
-def connect_publisher(path):
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.connect (path)
-    return socket
+    def __init__(self, data_bus_in, data_bus_out, print_messages):
 
-def subscribe(socket, topic):
-    socket.setsockopt(zmq.SUBSCRIBE, topic)
-
-def log(log_msg):
-    global pub_socket
-    
-    topic = 'log'
-    msg = {'entity' : 'player',
-           'msg' : log_msg
-           }
-    pub_socket.send_string(topic, flags=zmq.SNDMORE)
-    pub_socket.send_pyobj(msg)
-    
-def error(error_msg):
-    global pub_socket
-    
-    topic = 'error'
-    msg = {'entity' : 'player',
-           'msg' : error_msg
-           }
-    pub_socket.send_string(topic, flags=zmq.SNDMORE)
-    pub_socket.send_pyobj(msg)
-
-def send_ctrl_msg(socket, topic, ctrl_msg):
-##    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))
-    socket.send_string(topic, flags=zmq.SNDMORE)
-    socket.send_pyobj(ctrl_msg)
-
-def send_panic():
-    global pub_socket
-    obj = {'command': 'panic'}
-    send_ctrl_msg(pub_socket, 'outputter', obj)
-
-def send_time(start_time, start_play):
-    global pub_socket
-    obj = {'unit': 'seconds',
-           'time': time.time() - start_time + start_play
-           }
-    send_ctrl_msg(pub_socket, 'time', obj)
-
-
-def poll_ctrl_command():
-    global playing
-    global ctrl_socket
-    
-    try:
-        clientsock = dict(subpoller.poll(0.001))
+        self.print_messages = print_messages
+        self.context = zmq.Context()
         
-        if clientsock:
-            if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
-                topic = ctrl_socket.recv()
-                print('got topic ' + repr(topic))
-                ctrl_msg = ctrl_socket.recv_pyobj()
-                if handle_ctrl_msg(topic, ctrl_msg) == 'stop':
-                    playing = False
-                    return 'stop'
-                return ''
-    except:
-        error('got exception:' + sys.exc_info()[0])
+        self.pub_socket = self.connect_publisher(data_bus_out)
+        time.sleep(1)
+        self.log("started")
+    
+        self.ctrl_socket = self.connect_subscriber(data_bus_in)
+    
+        self.subscribe(self.ctrl_socket, 'all')
+        self.subscribe(self.ctrl_socket, 'player')
+    
+        self.subpoller = zmq.Poller()
+        self.subpoller.register(self.ctrl_socket, zmq.POLLIN)
+
+        self.playing = False
+        self.midi_file = None
+        self.muted_channels = []
+        self.muted_tracks = []
+
+
+    def connect_subscriber(self, path):
+        socket = self.context.socket(zmq.SUB)
+        socket.connect (path)
+        return socket
+
+    def connect_publisher(self, path):
+        socket = self.context.socket(zmq.PUB)
+        socket.connect (path)
+        return socket
+
+    def subscribe(self, socket, topic):
+        socket.setsockopt(zmq.SUBSCRIBE, topic)
+
+    def log(self, log_msg):
+        topic = 'log'
+        msg = {'entity' : 'player',
+               'msg' : log_msg
+               }
+        self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
+        self.pub_socket.send_pyobj(msg)
+    
+    def error(self, error_msg):
+        topic = 'error'
+        msg = {'entity' : 'player',
+               'msg' : error_msg
+               }
+        self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
+        self.pub_socket.send_pyobj(msg)
+
+    def send_ctrl_msg(self, socket, topic, ctrl_msg):
+##    print('Sending ctrl message [' + repr(topic) + '] ' + repr(ctrl_msg))
+        socket.send_string(topic, flags=zmq.SNDMORE)
+        socket.send_pyobj(ctrl_msg)
+
+    def send_panic(self):
+        obj = {'command': 'panic'}
+        self.send_ctrl_msg(self.pub_socket, 'outputter', obj)
+
+    def send_time(self, start_time, start_play):
+        obj = {'unit': 'seconds',
+               'time': time.time() - start_time + start_play
+               }
+        self.send_ctrl_msg(self.pub_socket, 'time', obj)
+
+
+    def poll_ctrl_command(self):
+    
+        try:
+            clientsock = dict(self.subpoller.poll(0.001))
+        
+            if clientsock:
+                if self.ctrl_socket in clientsock and clientsock[self.ctrl_socket] == zmq.POLLIN:
+                    topic = self.ctrl_socket.recv()
+                    print('got topic ' + repr(topic))
+                    ctrl_msg = self.ctrl_socket.recv_pyobj()
+                    if self.handle_ctrl_msg(topic, ctrl_msg) == 'stop':
+                        self.playing = False
+                        return 'stop'
+                    return ''
+        except:
+            error('got exception:' + repr(sys.exc_info()))
     
 
-def play(midi_file,  message_track_number_list, start_play, time_unit, meta_messages=False):
-    global playing
-    global ctrl_socket
+    def play(self, start_play, time_unit, meta_messages=False):
 
-    start_time = time.time()
-    input_time = 0.0
+        start_time = time.time()
+        input_time = 0.0
 
-    for msg, track_number in map(None, midi_file, message_track_number_list):
-        input_time += msg.time
+        for msg, track_number in map(None, self.midi_file, self.track_number_messages):
+            input_time += msg.time
 
 
-        playback_time = time.time() - start_time + start_play
-        duration_to_next_event = input_time - playback_time
+            playback_time = time.time() - start_time + start_play
+            duration_to_next_event = input_time - playback_time
 
 ##        print('input_time ' + repr(input_time) + ' start_play ' + repr(start_play) + ' sleep duration ' + repr(duration_to_next_event))
         
-        if (input_time > 0) and (input_time < start_play):
-            continue
+            if (input_time > 0) and (input_time < start_play):
+                continue
 
-        while duration_to_next_event > 0.1:
-            command = poll_ctrl_command()
+            while duration_to_next_event > 0.1:
+                command = self.poll_ctrl_command()
+                if command == 'stop':
+                    return
+                self.send_time(start_time, start_play)
+                time.sleep(0.1)
+                duration_to_next_event = duration_to_next_event - 0.1
+            
+            if duration_to_next_event > 0.0:
+                self.send_time(start_time, start_play)
+                time.sleep(duration_to_next_event)
+            
+            command = self.poll_ctrl_command()
             if command == 'stop':
                 return
-            send_time(start_time, start_play)
-            time.sleep(0.1)
-            duration_to_next_event = duration_to_next_event - 0.1
             
-        if duration_to_next_event > 0.0:
-            send_time(start_time, start_play)
-            time.sleep(duration_to_next_event)
-            
-        command = poll_ctrl_command()
-        if command == 'stop':
-            return
-            
-        if isinstance(msg, MetaMessage) and not meta_messages:
-            continue
-        else:
-            yield {'msg' : msg, 'track_number' : track_number}
+            if isinstance(msg, MetaMessage) and not meta_messages:
+                continue
+            else:
+                yield {'msg' : msg, 'track_number' : track_number}
 
-def play_file(midi_file, start_time, time_unit, print_messages):
-    global muted_channels
-    global muted_tracks
-    global playing
-    global ctrl_socket
-    global pub_socket
+    def prepare_file(self):
     
-    playing = True
-    print('Playing')
-    length = midi_file.length
-    print('Song length: {} minutes, {} seconds.'.format(
+        print('Preparing')
+        length = self.midi_file.length
+        print('Song length: {} minutes, {} seconds.'.format(
             int(length / 60),
             int(length % 60)))
-    print('Tracks:')
-    for i, track in enumerate(midi_file.tracks):
-        print('  {:2d}: {!r}'.format(i, track.name.strip()))
+        print('Tracks:')
+        for i, track in enumerate(self.midi_file.tracks):
+            print('  {:2d}: {!r}'.format(i, track.name.strip()))
 
-    ## Instant mute/unmute track
-    track_file = mido.MidiFile(type=1)
-    print('track_file ' + repr(track_file))
-    for i, channel_track in enumerate(midi_file.tracks):
+        ## Instant mute/unmute track
+        track_file = mido.MidiFile(type=1)
+        print('track_file ' + repr(track_file))
+        for i, channel_track in enumerate(self.midi_file.tracks):
 ##        print('track ' + repr(i) + ' ' + repr(channel_track))
-        track_track = mido.MidiTrack()
-        for msg in channel_track:
-            track_msg = msg.copy()
-            if hasattr(track_msg, 'channel'):
+            track_track = mido.MidiTrack()
+            for msg in channel_track:
+                track_msg = msg.copy()
+                if hasattr(track_msg, 'channel'):
 ##                print('changing from ' + repr(getattr(msg,'channel')) + ' to ' + repr(i))
-                setattr(track_msg, 'channel', i)
+                    setattr(track_msg, 'channel', i)
 ##                print('msg ' + repr(msg))
 ##                print('track_msg ' + repr(track_msg))
-            track_track.append(track_msg)
-        track_file.tracks.append(track_track)
+                    track_track.append(track_msg)
+            track_file.tracks.append(track_track)
 
-##    print('midi_file ' + repr(midi_file))
-##    print('track_file ' + repr(track_file))
+        ##print('midi_file ' + repr(self.midi_file))
+        ##print('track_file ' + repr(track_file))
     
-    track_number_messages = []
-    for msg in track_file:
-        if hasattr(msg, 'channel'):
-            track_number_messages.append(getattr(msg,'channel'))
-        else:
-            track_number_messages.append(None)
+        self.track_number_messages = []
+        for msg in track_file:
+            if hasattr(msg, 'channel'):
+                self.track_number_messages.append(getattr(msg,'channel'))
+            else:
+                self.track_number_messages.append(None)
     
-##    print('track number messages ' + repr(len(track_number_messages)))
+        ##print('track number messages ' + repr(len(self.track_number_messages)))
 
-    for message_dict in play(midi_file, track_number_messages, start_time, time_unit, meta_messages=True):
-        if print_messages:
-            print(repr(message_dict))
 
-        message = message_dict['msg']
-        track_number = message_dict['track_number']
-        if isinstance(message, Message):
-            muted = False
-            if hasattr(message, 'channel'):
-                if getattr(message, 'channel') in muted_channels:
+    def play_file(self, start_time, time_unit, print_messages):
+
+        self.playing = True
+        
+        for message_dict in self.play(start_time, time_unit, meta_messages=True):
+            if print_messages:
+                print(repr(message_dict))
+
+            message = message_dict['msg']
+            track_number = message_dict['track_number']
+            if isinstance(message, Message):
+                muted = False
+                if hasattr(message, 'channel'):
+                    if getattr(message, 'channel') in self.muted_channels:
+                        muted = True
+                if track_number in self.muted_tracks:
                     muted = True
-            if track_number in muted_tracks:
-                muted = True
 
-            if not muted:
-                pub_socket.send_string('midi_play', flags=zmq.SNDMORE)
-                pub_socket.send_pyobj(message)
-        elif message.type == 'set_tempo':
-            print('Tempo changed to {:.1f} BPM.'.format(
-                tempo2bpm(message.tempo)))
+                if not muted:
+                    self.pub_socket.send_string('midi_play', flags=zmq.SNDMORE)
+                    self.pub_socket.send_pyobj(message)
+            elif message.type == 'set_tempo':
+                print('Tempo changed to {:.1f} BPM.'.format(
+                    tempo2bpm(message.tempo)))
         
 
-    print()
-    playing = False
+        print()
+        self.playing = False
 
 
-def track2file(track):
-    midi_file = MidiFile(type=1)
-    midi_file.tracks.append(track)
-    return midi_file
+    def track2file(self, track):
+        midi_file = MidiFile(type=1)
+        midi_file.tracks.append(track)
+        return midi_file
 
 
-def handle_load_command(msg):
-    global midi_file
-    
-    print('Got load command')
-    if msg['what'] == 'track':
-        print ('converting to file')
-        midi_file = track2file(msg['obj'])
-        print('midi_file ' + repr(midi_file))
-    elif msg['what'] == 'file':
-        midi_file = msg['obj']
-        log('loaded midi file ' + repr(midi_file))
+    def handle_load_command(self, msg):
+        print('Got load command')
+        if msg['what'] == 'track':
+            print ('converting to file')
+            self.midi_file = self.track2file(msg['obj'])
+            print('midi_file ' + repr(self.midi_file))
+        elif msg['what'] == 'file':
+            self.midi_file = msg['obj']
+            self.log('loaded midi file ' + repr(self.midi_file))
 
-    return ''
+        self.prepare_file()
+        return ''
         
-def handle_play_command(msg):
-    global midi_file
-    global muted_channels
-    global muted_tracks
-    
-    print('Got play command')
-    if midi_file != None:
-        print ('calling play')
-        play_file(midi_file, msg['start'], msg['unit'], args.print_messages)
+    def handle_play_command(self, msg):
+        print('Got play command')
+        if self.midi_file != None:
+            print ('calling play')
+            self.play_file(msg['start'], msg['unit'], self.print_messages)
 
-    midi_file = None
-    muted_channels = []
-    muted_tracks = []
-    return ''
+        self.muted_channels = []
+        self.muted_tracks = []
+        return ''
         
-def handle_channel_command(msg):
-    global muted_channels
-    
-    print('Got channel command')
-    muted_channels = msg['muted']
-    return ''
+    def handle_channel_command(self, msg):    
+        print('Got channel command')
+        self.muted_channels = msg['muted']
+        return ''
         
-def handle_track_command(msg):
-    global muted_tracks
-    
-    print('Got track command')
-    muted_tracks = msg['muted']
-    return ''
+    def handle_track_command(self, msg):    
+        print('Got track command')
+        self.muted_tracks = msg['muted']
+        return ''
         
-def handle_stop_command(msg):
-    global midi_file
-    global muted_channels
-    global muted_tracks
-    
-    print('Got stop command, playing = ' + repr(playing))
-    midi_file = None
-    muted_channels = []
-    muted_tracks = []
-    send_panic()
-    return 'stop'
+    def handle_stop_command(self, msg):    
+        print('Got stop command, playing = ' + repr(self.playing))
+        self.muted_channels = []
+        self.muted_tracks = []
+        self.send_panic()
+        return 'stop'
         
-def handle_ctrl_msg(topic, msg):
-    print('Got ctrl message')
-    print('topic ' + repr(topic) + ' msg ' + repr(msg))
-    if topic == 'player':
-        if msg['command'] == 'load':
-            return handle_load_command(msg)
-        if msg['command'] == 'play':
-            return handle_play_command(msg)
-        elif msg['command'] == 'stop':
-            return handle_stop_command(msg)
-        elif msg['command'] == 'channel':
-            return handle_channel_command(msg)
-        elif msg['command'] == 'track':
-            return handle_track_command(msg)
-        else:
-            print('Unknown ' + topic + ' command ' + repr(msg['command']))
-    elif topic == 'all':
-        if ctrl_msg['command'] == 'quit':
-            print ('Quitting')
-            exit(0)
+    def handle_ctrl_msg(self, topic, msg):
+        print('Got ctrl message')
+        print('topic ' + repr(topic) + ' msg ' + repr(msg))
+        if topic == 'player':
+            if msg['command'] == 'load':
+                return self.handle_load_command(msg)
+            if msg['command'] == 'play':
+                return self.handle_play_command(msg)
+            elif msg['command'] == 'stop':
+                return self.handle_stop_command(msg)
+            elif msg['command'] == 'channel':
+                return self.handle_channel_command(msg)
+            elif msg['command'] == 'track':
+                return self.handle_track_command(msg)
+            else:
+                print('Unknown ' + topic + ' command ' + repr(msg['command']))
+        elif topic == 'all':
+            if ctrl_msg['command'] == 'quit':
+                print ('Quitting')
+                exit(0)
     
     
 def main():
-    global ctrl_socket
-    global pub_socket
-    global playing
-    global midi_file
-    global muted_channels
-    global muted_tracks
-    global subpoller
-    
-    pub_socket = connect_publisher(args.data_bus_out)
-    time.sleep(1)
-    log("started")
-    
-    ctrl_socket = connect_subscriber(args.data_bus_in)
-    
-    subscribe(ctrl_socket, 'all')
-    subscribe(ctrl_socket, 'player')
-    
-    subpoller = zmq.Poller()
-    subpoller.register(ctrl_socket, zmq.POLLIN)
 
-    playing = False
-    midi_file = None
-    muted_channels = []
-    muted_tracks = []
+    player = funk_player(args.data_bus_in, args.data_bus_out, args.print_messages)
 
     while 1:
         try:
-            clientsock = dict(subpoller.poll(None))
+            clientsock = dict(player.subpoller.poll(None))
 
             if clientsock:
-                if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
-                    topic = ctrl_socket.recv()
-                    ctrl_msg = ctrl_socket.recv_pyobj()
-                    handle_ctrl_msg(topic, ctrl_msg)
+                if player.ctrl_socket in clientsock and clientsock[player.ctrl_socket] == zmq.POLLIN:
+                    topic = player.ctrl_socket.recv()
+                    ctrl_msg = player.ctrl_socket.recv_pyobj()
+                    player.handle_ctrl_msg(topic, ctrl_msg)
         except:
-            error('got exception:' + sys.exc_info()[0])
+            player.error('got exception: ' + repr(sys.exc_info()))
+            exit(0)
 
 args = parse_args()
 

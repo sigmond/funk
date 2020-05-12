@@ -43,6 +43,9 @@ class funk_editor():
     pub_socket = None
     sub_socket = None
     subpoller = None
+    midi_file = None
+    midi_file_changed_since_load = False
+    filename = ""
     
     def __init__(self, zmq_path_in, zmq_path_out):
         
@@ -88,8 +91,8 @@ class funk_editor():
         if topic == 'editor':
             if msg['command'] == 'open':
                 self.handle_open(msg)
-            elif msg['command'] == 'prepare':
-                self.handle_prepare(msg)
+            elif msg['command'] == 'play':
+                self.handle_play(msg)
             else:
                 print('Unknown editor command ' + repr(msg['command']))
                 self.log('Unknown editor command ' + repr(msg['command']))
@@ -100,22 +103,37 @@ class funk_editor():
 
     def handle_open(self, msg):
         if msg['type'] ==  'file':
+            self.log('opening ' + self.filename)
             self.filename = msg['name']
             self.midi_file = msg['obj']
-            self.log('opening ' + self.filename)
-        else:
-            self.log('Unknown open type ' + repr(msg['type']))
-
-    def handle_prepare(self, msg):
-        if msg['what'] ==  'file':
-            self.log('preparing ' + self.filename)
+            self.midi_file_changed_since_load = True
+            self.log('loading ' + self.filename)
             obj = {'command': 'load',
                    'what': 'file',
                    'obj': self.midi_file
                    }
-            self.send_ctrl_msg('controller', obj)
+            self.send_ctrl_msg('player', obj)
+            self.midi_file_changed_since_load = False
         else:
-            self.log('Unknown prepare what ' + repr(msg['what']))
+            self.log('Unknown open type ' + repr(msg['type']))
+
+    def handle_play(self, msg):
+        if msg['what'] ==  'file':
+            if self.midi_file_changed_since_load:
+                self.log('playing ' + self.filename)
+                obj = {'command': 'load',
+                       'what': 'file',
+                       'obj': self.midi_file
+                       }
+                self.send_ctrl_msg('player', obj)
+                self.midi_file_changed_since_load = False
+            obj = {'command': 'play',
+                   'start' : msg['start'],
+                   'unit' : msg['unit']
+                   }
+            self.send_ctrl_msg('player', obj)
+        else:
+            self.log('Unknown play what ' + repr(msg['what']))
                     
 
 def main():

@@ -217,47 +217,14 @@ class funk_controller():
         print('handle_download')
         self.com.send_client_ctrl_msg('download', msg)
         
-    def handle_prepare(self, msg):
-        print('handle_prepare')
-        obj = {'command' : 'prepare',
-               'what': 'file'
-               }
-        print('Calling send_bus_msg')
-        self.com.send_bus_msg('editor', obj)
-
-    def handle_load(self, msg):
-        print('handle_load')
-        if msg['what'] == 'disc':
-            midi_obj = MidiFile(msg['path'])
-            obj = {'command' : 'load',
-                   'what': 'file',
-                   'obj': midi_obj
-                   }
-        elif msg['what'] == 'file':
-            obj = {'command': 'load',
-                   'what': 'file',
-                   'obj': msg['obj']
-                   }
-        elif msg['what'] == 'track':
-            obj = {'command': 'load',
-                   'what': 'track',
-                   'obj': msg['obj']
-                   }
-        else:
-            self.log('unknown "what" ' + repr(what))
-            print('unknown "what" ' + repr(what))
-            return
-
-        print('Calling send_bus_msg')
-        self.com.send_bus_msg('player', obj)
-
     def handle_play(self, msg):
         print('handle_play')
         obj = {'command': 'play',
+               'what' : 'file',
                'start' : msg['start'],
                'unit' : msg['unit']
                }
-        self.com.send_bus_msg('player', obj)
+        self.com.send_bus_msg('editor', obj)
     
     
     def handle_stop(self, msg):
