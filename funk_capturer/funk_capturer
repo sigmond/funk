@@ -45,151 +45,140 @@ def parse_args():
 
     return parser.parse_args()
 
-def receiveSignal(signalNumber, frame):
-    print('got signal')
-    topic = ctrl_socket.recv()
-    ctrl_msg = ctrl_socket.recv_pyobj()
-    handle_ctrl_msg(topic, ctrl_msg)
-    raise Exception('inport')
-    
-    
-def connect_publisher(path):
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.connect (path)
-    return socket
+class funk_capturer:
+    context = None
+    pub_socket = None
+    ctrl_socket = None
+    subpoller = None
+    inport = None
+    inport_name = ""
 
-def connect_subscriber(path):
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    socket.connect (path)
-    return socket
+    def __init__(self, data_bus_in, data_bus_out):
+        self.inport = None
+        self.inport_name = ""
+    
+        self.context = zmq.Context()
+        self.pub_socket = self.connect_publisher(data_bus_out)
+        time.sleep(1)
+        self.log("started")
+    
+        self.ctrl_socket = self.connect_subscriber(data_bus_in)
+        self.subscribe(self.ctrl_socket, 'capturer')
 
-def subscribe(socket, topic):
-    socket.setsockopt(zmq.SUBSCRIBE, topic)
-
-def open_input(port):
-    return mido.open_input(port)
-
-
-def send_rec_msg(socket, midi_msg):
-    print('Sending midi message')
-    socket.send_string('midi_rec', flags=zmq.SNDMORE)
-    socket.send_pyobj(midi_msg)
+        signal.signal(signal.SIGHUP, self.receiveSignal)
+    
+        self.subpoller = zmq.Poller()
+        self.subpoller.register(self.ctrl_socket, zmq.POLLIN)
+    
+    def receiveSignal(self, signalNumber, frame):
+        print('got signal')
+        topic = self.ctrl_socket.recv()
+        ctrl_msg = self.ctrl_socket.recv_pyobj()
+        self.handle_ctrl_msg(topic, ctrl_msg)
+        raise Exception('signal')
     
     
-def log(log_msg):
-    global pub_socket
-    
-    topic = 'log'
-    msg = {'entity' : 'capturer',
-           'msg' : log_msg
-           }
-    pub_socket.send_string(topic, flags=zmq.SNDMORE)
-    pub_socket.send_pyobj(msg)
-    
-def error(error_msg):
-    global pub_socket
-    
-    topic = 'error'
-    msg = {'entity' : 'capturer',
-           'msg' : error_msg
-           }
-    pub_socket.send_string(topic, flags=zmq.SNDMORE)
-    pub_socket.send_pyobj(msg)
+    def connect_publisher(self, path):
+        socket = self.context.socket(zmq.PUB)
+        socket.connect(path)
+        return socket
 
-def send_ctrl_msg(socket, topic, ctrl_msg):
-    socket.send_string(topic, flags=zmq.SNDMORE)
-    socket.send_pyobj(ctrl_msg)
+    def connect_subscriber(self, path):
+        socket = self.context.socket(zmq.SUB)
+        socket.connect(path)
+        return socket
 
-def handle_list_input_ports(msg):
-    global pub_socket
-    global inport_name
-    
-    ports = mido.get_input_names()
-    msg = {'command' : 'input_ports',
-           'input_ports' : ports,
-           'current_port' : inport_name
-           }
-    send_ctrl_msg(pub_socket, 'controller', msg)
+    def subscribe(self, socket, topic):
+        socket.setsockopt(zmq.SUBSCRIBE, topic)
 
-def handle_open_input_port(msg):
-    global inport
-    global inport_name
-    
-    print('handle_open_input_port')
-    if inport != None:
-        inport.close()
-    try:
-        inport = open_input(msg['port'])
-        inport_name = msg['port']
-    except:
-        error('cannot open input port ' + repr(msg['port']))
+    def open_input(self, port):
+        return mido.open_input(port)
 
-def handle_ctrl_msg(topic, ctrl_msg):
-    global inport
+
+    def send_rec_msg(self, socket, midi_msg):
+        print('Sending midi message')
+        socket.send_string('midi_rec', flags=zmq.SNDMORE)
+        socket.send_pyobj(midi_msg)
     
-    print('Got ctrl message')
-    print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
-    if topic == 'capturer':
-        if ctrl_msg['command'] == 'open_input_port':
-            handle_open_input_port(ctrl_msg)
-        elif ctrl_msg['command'] == 'list_input_ports':
-            handle_list_input_ports(ctrl_msg)
-        else:
-            log('unknown command ' + repr(ctrl_msg['command']))
-    elif topic == 'all':
-        if ctrl_msg['command'] == 'quit':
-            print ('Quitting')
-            inport.close()
-            exit(0)
+    
+    def log(self, log_msg):    
+        topic = 'log'
+        msg = {'entity' : 'capturer',
+               'msg' : log_msg
+               }
+        self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
+        self.pub_socket.send_pyobj(msg)
+    
+    def error(self, error_msg):
+        topic = 'error'
+        msg = {'entity' : 'capturer',
+               'msg' : error_msg
+               }
+        self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
+        self.pub_socket.send_pyobj(msg)
+
+    def send_ctrl_msg(self, socket, topic, ctrl_msg):
+        socket.send_string(topic, flags=zmq.SNDMORE)
+        socket.send_pyobj(ctrl_msg)
+
+    def handle_list_input_ports(self, msg):
+        ports = mido.get_input_names()
+        obj = {'command' : 'input_ports',
+               'input_ports' : ports,
+               'current_port' : self.inport_name
+               }
+        self.send_ctrl_msg(self.pub_socket, 'controller', obj)
+
+    def handle_open_input_port(self, msg):
+        print('handle_open_input_port')
+        if self.inport != None:
+            self.inport.close()
+        try:
+            self.inport = self.open_input(msg['port'])
+            self.inport_name = msg['port']
+        except:
+            self.error('cannot open input port ' + repr(msg['port']))
+
+    def handle_ctrl_msg(self, topic, ctrl_msg):
+        print('Got ctrl message')
+        print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
+        if topic == 'capturer':
+            if ctrl_msg['command'] == 'open_input_port':
+                self.handle_open_input_port(ctrl_msg)
+            elif ctrl_msg['command'] == 'list_input_ports':
+                self.handle_list_input_ports(ctrl_msg)
+            else:
+                self.log('unknown command ' + repr(ctrl_msg['command']))
+        elif topic == 'all':
+            if ctrl_msg['command'] == 'quit':
+                print ('Quitting')
+                self.inport.close()
+                exit(0)
 
 
 
 def main():
-    global pub_socket
-    global ctrl_socket
-    global subpoller
-    global inport
-    global inport_name
+    capturer = funk_capturer(args.data_bus_in, args.data_bus_out)
 
-    inport = None
-    inport_name = ""
-    
-    pub_socket = connect_publisher(args.data_bus_out)
-    time.sleep(1)
-    log("started")
-    
-    ctrl_socket = connect_subscriber(args.data_bus_in)
-    subscribe(ctrl_socket, 'capturer')
-
-    signal.signal(signal.SIGHUP, receiveSignal)
-    
-    subpoller = zmq.Poller()
-    subpoller.register(ctrl_socket, zmq.POLLIN)
-    
     try:
         if args.midi_port_in != None:
-            inport = mido.open_input(args.midi_port_in)
-            inport_name = args.midi_port_in
+            capturer.inport = capturer.open_input(args.midi_port_in)
+            capturer.inport_name = args.midi_port_in
     except:
         msg = 'Error opening input port ' + args.midi_port_in
         print(msg)
-        error(msg)
+        capturer.error(msg)
         exit(-1)
-
-    # wait for the publisher to initialize before trying to send anything
-    time.sleep(1)
     
     while 1:
         try:
-            if inport != None:
-                midi_message = inport.receive()
-                send_rec_msg(pub_socket, midi_message)
+            if capturer.inport != None:
+                midi_message = capturer.inport.receive()
+                capturer.send_rec_msg(capturer.pub_socket, midi_message)
             else:
-                pass
+                time.sleep(1)
         except KeyboardInterrupt:
-            error('got exception: ' + repr(sys.exc_info()))
+            capturer.error('got exception: ' + repr(sys.exc_info()))
             exit(0)
         except:
             pass

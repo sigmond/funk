@@ -269,7 +269,7 @@ class funk_controller():
                'unit' : msg['unit']
                }
         self.com.send_bus_msg('recorder', obj)
-        obj = {'command': 'play'}
+        obj['command'] = 'play'
         self.com.send_bus_msg('player', obj)
     
     def handle_loopback(self, msg):

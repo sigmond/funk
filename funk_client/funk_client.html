@@ -151,6 +151,19 @@ function play_midi_file()
     ws_ctrl.send(json_message);
 }
 
+function record_midi_file()
+{ 
+    var cmd;
+    var msg;
+
+    cmd = { "command" : "record", "start" : 0, "unit" : "seconds" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
 function stop()
 { 
     var cmd;
@@ -286,6 +299,7 @@ function select_choice(choice_list, selected, id, onchange)
     <div id="topmenu">
       <button onclick="select_midi_file(); return false;">open</button>
       <button onclick="play_midi_file(); return false;">play</button>
+      <button onclick="record_midi_file(); return false;">record</button>
       <button onclick="stop(); return false;">stop</button>
       <button onclick="panic(); return false;">panic</button>
       <button onclick="list_input_ports(); return false;">input</button>

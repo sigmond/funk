@@ -49,179 +49,165 @@ def parse_args():
     return parser.parse_args()
 
 
-def connect_publisher(path):
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.connect (path)
-    return socket
-
-def connect_subscriber(path):
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    socket.connect (path)
-    return socket
-
-def subscribe(socket, topic):
-    socket.setsockopt(zmq.SUBSCRIBE, topic)
-
-def open_output(port):
-    return mido.open_output(port)
-
-def send_ctrl_msg(socket, topic, ctrl_msg):
-    socket.send_string(topic, flags=zmq.SNDMORE)
-    socket.send_pyobj(ctrl_msg)
-    
-def log(log_msg):
-    global pub_socket
-    
-    topic = 'log'
-    msg = {'entity' : 'outputter',
-           'msg' : log_msg
-           }
-    pub_socket.send_string(topic, flags=zmq.SNDMORE)
-    pub_socket.send_pyobj(msg)
-    
-def error(error_msg):
-    global pub_socket
-
-    topic = 'error'
-    msg = {'entity' : 'outputter',
-           'msg' : error_msg
-           }
-    pub_socket.send_string(topic, flags=zmq.SNDMORE)
-    pub_socket.send_pyobj(msg)
-    
-def handle_panic(port):
-    print('handle_panic')
-    if port != None:
-        port.panic()
-    
-def handle_loopback(msg):
-    global loopback
-    print('handle_loopback')
-    if msg['onoff'] == 'on':
-        loopback = True
-    else:
-        loopback = False
-
-def handle_list_output_ports(msg):
-    global pub_socket
-    global outport_name
-    
-    ports = mido.get_output_names()
-    msg = {'command' : 'output_ports',
-           'output_ports' : ports,
-           'current_port' : outport_name
-           }
-    send_ctrl_msg(pub_socket, 'controller', msg)
-    
-
-def handle_open_output_port(msg):
-    global outport
-    global outport_name
-    
-    print('handle_open_output_port')
-    if outport != None:
-        outport.close()
-    try:
-        outport = open_output(msg['port'])
-        outport_name = msg['port']
-    except:
-        error('cannot open output port ' + repr(msg['port']))
-
-
-def handle_midi_msg(port, topic, midi_msg):
-    global loopback
-    print('Got midi message')
-    sys.stdout.write('topic ' + repr(topic) + ' msg ' + repr(midi_msg) + '\n')
-    sys.stdout.flush()
-    if topic != 'midi_rec' or loopback:
-        if port != None:
-            port.send(midi_msg)
-    
-    
-def handle_ctrl_msg(topic, ctrl_msg):
-    global outport
-    
-    print('Got ctrl message')
-    print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
-    if topic == 'outputter':
-        if ctrl_msg['command'] == 'panic':
-            handle_panic(outport)
-        elif ctrl_msg['command'] == 'loopback':
-            handle_loopback(ctrl_msg)
-        elif ctrl_msg['command'] == 'open_output_port':
-            handle_open_output_port(ctrl_msg)
-        elif ctrl_msg['command'] == 'list_output_ports':
-            handle_list_output_ports(ctrl_msg)
-        else:
-            log('unknown command ' + repr(msg['command']))
-    elif topic == 'all':
-        if ctrl_msg['command'] == 'quit':
-            print ('Quitting')
-            exit(0)
-    
-
-def main():
-    global outport
-    global outport_name
-    global loopback
-    global pub_socket
-    
-    pub_socket = connect_publisher(args.data_bus_out)
-
-    time.sleep(1)
-    log("started")
-    
+class funk_outputter():
     outport = None
     outport_name = ""
     loopback = True
+    context = None
+    pub_socket = None
+    subpoller = None
+
+    def __init__(self, data_bus_in, data_bus_out):
+        self.context = zmq.Context()
+        self.pub_socket = self.connect_publisher(data_bus_out)
+
+        time.sleep(1)
+        self.log("started")
+    
+        self.outport = None
+        self.outport_name = ""
+        self.loopback = True
+
+        self.midi_socket = self.connect_subscriber(data_bus_in)
+        self.ctrl_socket = self.connect_subscriber(data_bus_in)
+        
+        self.subscribe(self.midi_socket, 'midi_play')
+        self.subscribe(self.midi_socket, 'midi_rec')
+        self.subscribe(self.ctrl_socket, 'all')
+        self.subscribe(self.ctrl_socket, 'outputter')
+
+        self.subpoller = zmq.Poller()
+        self.subpoller.register(self.midi_socket, zmq.POLLIN)
+        self.subpoller.register(self.ctrl_socket, zmq.POLLIN)
+    
+        
+    def connect_publisher(self, path):
+        socket = self.context.socket(zmq.PUB)
+        socket.connect(path)
+        return socket
+
+    def connect_subscriber(self, path):
+        socket = self.context.socket(zmq.SUB)
+        socket.connect(path)
+        return socket
+
+    def subscribe(self, socket, topic):
+        socket.setsockopt(zmq.SUBSCRIBE, topic)
+
+    def open_output(self, port):
+        return mido.open_output(port)
+
+    def send_ctrl_msg(self, socket, topic, ctrl_msg):
+        socket.send_string(topic, flags=zmq.SNDMORE)
+        socket.send_pyobj(ctrl_msg)
+    
+    def log(self, log_msg):
+        topic = 'log'
+        msg = {'entity' : 'outputter',
+               'msg' : log_msg
+               }
+        self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
+        self.pub_socket.send_pyobj(msg)
+    
+    def error(self, error_msg):
+        topic = 'error'
+        msg = {'entity' : 'outputter',
+               'msg' : error_msg
+               }
+        self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
+        self.pub_socket.send_pyobj(msg)
+    
+    def handle_panic(self, port):
+        print('handle_panic')
+        if port != None:
+            port.panic()
+    
+    def handle_loopback(self, msg):
+        print('handle_loopback')
+        if msg['onoff'] == 'on':
+            self.loopback = True
+        else:
+            self.loopback = False
+
+    def handle_list_output_ports(self, msg):
+        ports = mido.get_output_names()
+        msg = {'command' : 'output_ports',
+               'output_ports' : ports,
+               'current_port' : self.outport_name
+               }
+        self.send_ctrl_msg(self.pub_socket, 'controller', msg)
+    
+
+    def handle_open_output_port(self, msg):
+        print('handle_open_output_port')
+        if self.outport != None:
+            self.outport.close()
+        try:
+            self.outport = self.open_output(msg['port'])
+            self.outport_name = msg['port']
+        except:
+            self.error('cannot open output port ' + repr(msg['port']))
+
+
+    def handle_midi_msg(self, port, topic, midi_msg):
+        print('Got midi message')
+        sys.stdout.write('topic ' + repr(topic) + ' msg ' + repr(midi_msg) + '\n')
+        sys.stdout.flush()
+        if topic != 'midi_rec' or self.loopback:
+            if port != None:
+                port.send(midi_msg)
+    
+    
+    def handle_ctrl_msg(self, topic, ctrl_msg):
+        print('Got ctrl message')
+        print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
+        if topic == 'outputter':
+            if ctrl_msg['command'] == 'panic':
+                self.handle_panic(outport)
+            elif ctrl_msg['command'] == 'loopback':
+                self.handle_loopback(ctrl_msg)
+            elif ctrl_msg['command'] == 'open_output_port':
+                self.handle_open_output_port(ctrl_msg)
+            elif ctrl_msg['command'] == 'list_output_ports':
+                self.handle_list_output_ports(ctrl_msg)
+            else:
+                self.log('unknown command ' + repr(msg['command']))
+        elif topic == 'all':
+            if ctrl_msg['command'] == 'quit':
+                print ('Quitting')
+                exit(0)
+    
+
+def main():
+    outputter = funk_outputter(args.data_bus_in, args.data_bus_out)
     
     try:
         if args.midi_port_out != None:
-            outport = mido.open_output(args.midi_port_out)
-            outport_name = args.midi_port_out
+            outputter.outport = outputter.open_output(args.midi_port_out)
+            outputter.outport_name = args.midi_port_out
     except:
         msg = 'Error opening output port ' + args.midi_port_out
         print(msg)
-        error(msg)
+        outputter.error(msg)
         exit(-1)
         
-    midi_socket = connect_subscriber(args.data_bus_in)
-    ctrl_socket = connect_subscriber(args.data_bus_in)
-    
-    subscribe(midi_socket, 'midi_play')
-    subscribe(midi_socket, 'midi_rec')
-    subscribe(ctrl_socket, 'all')
-    subscribe(ctrl_socket, 'outputter')
-## Poll loop:
-## Receive events for playing on midi_socket
-## - events on 'midi_play' topic should be played immediately
-## - events on 'midi_rec' topic (typically loopback from keyboard) should be played immediately if loopback is on
-## Receive control-messages on ctrl_socket
-## - it is important that control messages are handled asap (e.g. stop play or panic)
-## - typical ctrl messages: open_output_port (name), loopback (on/off), panic
-    subpoller = zmq.Poller()
-    subpoller.register(midi_socket, zmq.POLLIN)
-    subpoller.register(ctrl_socket, zmq.POLLIN)
-    
     while 1:
         try:
-            clientsock = dict(subpoller.poll(None))
+            clientsock = dict(outputter.subpoller.poll(None))
 
             if clientsock:
-                if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
-                    topic = midi_socket.recv()
-                    midi_msg = midi_socket.recv_pyobj()
-                    handle_midi_msg(outport, topic, midi_msg)
-                if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
-                    topic = ctrl_socket.recv()
-                    ctrl_msg = ctrl_socket.recv_pyobj()
-                    handle_ctrl_msg(topic, ctrl_msg)     
+                if outputter.midi_socket in clientsock and clientsock[outputter.midi_socket] == zmq.POLLIN:
+                    topic = outputter.midi_socket.recv()
+                    midi_msg = outputter.midi_socket.recv_pyobj()
+                    outputter.handle_midi_msg(outputter.outport, topic, midi_msg)
+                if outputter.ctrl_socket in clientsock and clientsock[outputter.ctrl_socket] == zmq.POLLIN:
+                    topic = outputter.ctrl_socket.recv()
+                    ctrl_msg = outputter.ctrl_socket.recv_pyobj()
+                    outputter.handle_ctrl_msg(topic, ctrl_msg)     
         except:
-            error('got exception: ' + repr(sys.exc_info()))
-            if outport != None:
-                outport.close()
+            outputter.error('got exception: ' + repr(sys.exc_info()))
+            if outputter.outport != None:
+                outputter.outport.close()
             exit(0)
 
 args = parse_args()

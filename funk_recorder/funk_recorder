@@ -48,141 +48,140 @@ def parse_args():
     return parser.parse_args()
 
 
-def connect_subscriber(path):
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    socket.connect (path)
-    return socket
-
-def connect_publisher(path):
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.connect (path)
-    return socket
-
-def subscribe(socket, topic):
-    socket.setsockopt(zmq.SUBSCRIBE, topic)
-
-def log(log_msg):
-    global pub_socket
-    
-    topic = 'log'
-    msg = {'entity' : 'recorder',
-           'msg' : log_msg
-           }
-    pub_socket.send_string(topic, flags=zmq.SNDMORE)
-    pub_socket.send_pyobj(msg)
-    
-def error(error_msg):
-    global pub_socket
-    
-    topic = 'error'
-    msg = {'entity' : 'recorder',
-           'msg' : error_msg
-           }
-    pub_socket.send_string(topic, flags=zmq.SNDMORE)
-    pub_socket.send_pyobj(msg)
-    
-
-def handle_midi_msg(topic, midi_msg, delta_ticks):
-    global track
-    print('Got midi message, delta_ticks = %d' % delta_ticks)
-    if topic == 'midi_rec':
-        midi_msg.time = delta_ticks
-        track.append(midi_msg)
-
-def handle_record_command(msg):
-    global recording
-    global track
-    global last_Seconds
-    
-    track = MidiTrack()
-    track.name = 'Capture'
-    last_seconds = time.time() + msg['start_play']
-    recording = True
-            
-def handle_stop_command(msg):
-    global pub_socket
-    global track
-    global recording
-    
-    recording = False
-    send_ctrl_msg(pub_socket, 'recorded', track)
+class funk_recorder:
+    context = None
+    pub_socket = None
+    midi_socket = None
+    ctrl_socket = None
+    subpoller = None
     track = None
+    last_seconds = None
+    recording = False
+    tempo = None
+    ticks_per_beat = None
+    start_play = 0.0
+
+    def __init__(self, data_bus_in, data_bus_out, tempo, ticks_per_beat):
+        self.context = zmq.Context()
+        self.pub_socket = self.connect_publisher(data_bus_out)
+        
+        time.sleep(1)
+        self.log("started")
+    
+        self.tempo = tempo
+        self.ticks_per_beat = ticks_per_beat
+    
+        self.midi_socket = self.connect_subscriber(data_bus_in)
+        self.ctrl_socket = self.connect_subscriber(data_bus_in)
+
+        self.subscribe(self.midi_socket, 'midi_rec')
+        self.subscribe(self.ctrl_socket, 'all')
+        self.subscribe(self.ctrl_socket, 'recorder')    
+    
+        self.subpoller = zmq.Poller()
+        self.subpoller.register(self.midi_socket, zmq.POLLIN)
+        self.subpoller.register(self.ctrl_socket, zmq.POLLIN)
+
+        self.recording = False
+        self.track = None
+    
+        self.last_seconds = time.time()
+    
+
+
+    def connect_subscriber(self, path):
+        socket = self.context.socket(zmq.SUB)
+        socket.connect(path)
+        return socket
+
+    def connect_publisher(self, path):
+        socket = self.context.socket(zmq.PUB)
+        socket.connect(path)
+        return socket
+
+    def subscribe(self, socket, topic):
+        socket.setsockopt(zmq.SUBSCRIBE, topic)
+
+    def log(self, log_msg):
+        topic = 'log'
+        msg = {'entity' : 'recorder',
+               'msg' : log_msg
+               }
+        self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
+        self.pub_socket.send_pyobj(msg)
+    
+    def error(self, error_msg):
+        topic = 'error'
+        msg = {'entity' : 'recorder',
+               'msg' : error_msg
+               }
+        self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
+        self.pub_socket.send_pyobj(msg)
+    
+
+    def handle_midi_msg(self, topic, midi_msg, delta_ticks):
+        print('Got midi message, delta_ticks = %d' % delta_ticks)
+        if topic == 'midi_rec':
+            midi_msg.time = delta_ticks
+            self.track.append(midi_msg)
+
+    def handle_record_command(self, msg):
+        print('handle_record_command')
+        self.track = MidiTrack()
+        self.track.name = 'Capture'
+        self.start_play = msg['start']
+        self.last_seconds = time.time() + self.start_play
+        self.recording = True
             
-def handle_ctrl_msg(topic, msg):
-    print('Got ctrl message')
-    print('topic ' + repr(topic) + ' msg ' + repr(msg))
-    if topic == 'recorder':
-        if msg['command'] == 'record':
-            handle_record_command(msg)
-        elif msg['command'] == 'stop':
-            return handle_stop_command(msg)
-        else:
-            print('Unknown recorder command ' + repr(msg['command']))
-    elif topic == 'all':
-        if ctrl_msg['command'] == 'quit':
-            print ('Quitting')
-            exit(0)
+    def handle_stop_command(self, msg):
+        self.recording = False
+        self.send_ctrl_msg(self.pub_socket, 'recorded', self.track)
+        self.track = None
+            
+    def handle_ctrl_msg(self, topic, msg):
+        if topic == 'recorder':
+            if msg['command'] == 'record':
+                self.handle_record_command(msg)
+            elif msg['command'] == 'stop':
+                return self.handle_stop_command(msg)
+            else:
+                print('Unknown recorder command ' + repr(msg['command']))
+        elif topic == 'all':
+            if ctrl_msg['command'] == 'quit':
+                print ('Quitting')
+                exit(0)
 
         
-def send_ctrl_msg(socket, topic, msg):
-    print('Sending ctrl message [' + repr(topic) + '] ' + repr(msg))
-    socket.send_string(topic, flags=zmq.SNDMORE)
-    socket.send_pyobj(msg)
+    def send_ctrl_msg(self, socket, topic, msg):
+        print('Sending ctrl message [' + repr(topic) + '] ' + repr(msg))
+        socket.send_string(topic, flags=zmq.SNDMORE)
+        socket.send_pyobj(msg)
 
 
 def main():
-    global midi_socket
-    global ctrl_socket
-    global track
-    global last_seconds
-    global recording
-    global pub_socket
 
-    pub_socket = connect_publisher(args.data_bus_out)
-
-    time.sleep(1)
-    log("started")
-    
-    tempo = args.tempo
-    ticks_per_beat = args.ticks_per_beat
-    
-    midi_socket = connect_subscriber(args.data_bus_in)
-    ctrl_socket = connect_subscriber(args.data_bus_in)
-
-    subscribe(midi_socket, 'midi_rec')
-    subscribe(ctrl_socket, 'all')
-    subscribe(ctrl_socket, 'recorder')    
-    
-    subpoller = zmq.Poller()
-    subpoller.register(midi_socket, zmq.POLLIN)
-    subpoller.register(ctrl_socket, zmq.POLLIN)
-
-    recording = False
-    track = None
-    
-    last_seconds = time.time()
+    recorder = funk_recorder(args.data_bus_in, args.data_bus_out, args.tempo, args.ticks_per_beat)
     
     while 1:
         try:
-            clientsock = dict(subpoller.poll(None))
+            clientsock = dict(recorder.subpoller.poll(None))
 
             if clientsock:
-                if midi_socket in clientsock and clientsock[midi_socket] == zmq.POLLIN:
-                    now = time.time() + start_play
-                    delta_ticks = int(round(second2tick(now - last_seconds, ticks_per_beat, tempo)))
-                    last_seconds = now
-                    topic = midi_socket.recv()
-                    midi_msg = midi_socket.recv_pyobj()
-                    if recording:
-                        handle_midi_msg(topic, midi_msg, delta_ticks)
-                if ctrl_socket in clientsock and clientsock[ctrl_socket] == zmq.POLLIN:
-                    topic = ctrl_socket.recv()
-                    ctrl_msg = ctrl_socket.recv_pyobj()
-                    handle_ctrl_msg(topic, ctrl_msg)
+                if recorder.midi_socket in clientsock and clientsock[recorder.midi_socket] == zmq.POLLIN:
+                    now = time.time() + recorder.start_play
+                    delta_ticks = int(round(second2tick(now - recorder.last_seconds, recorder.ticks_per_beat, recorder.tempo)))
+                    recorder.last_seconds = now
+                    topic = recorder.midi_socket.recv()
+                    midi_msg = recorder.midi_socket.recv_pyobj()
+                    if recorder.recording:
+                        recorder.handle_midi_msg(topic, midi_msg, delta_ticks)
+                elif recorder.ctrl_socket in clientsock and clientsock[recorder.ctrl_socket] == zmq.POLLIN:
+                    topic = recorder.ctrl_socket.recv()
+                    ctrl_msg = recorder.ctrl_socket.recv_pyobj()
+                    recorder.handle_ctrl_msg(topic, ctrl_msg)
         except:
-            error('got exception:' + sys.exc_info()[0])
+            recorder.error('got exception:' + repr(sys.exc_info()))
+            exit(0)
     
 
 args = parse_args()
