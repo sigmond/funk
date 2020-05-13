@@ -139,6 +139,9 @@ class funk_controller():
             elif msg['command'] == 'output_ports':
                 # someone (e.g. the outputter) wants to show list of output midi ports to choose from
                 self.handle_output_ports(msg)
+            elif msg['command'] == 'file_loaded':
+                # someone (e.g. the editor) wants to show loaded midi file
+                self.handle_file_loaded(msg)
             else:
                 self.log('Unknown controller command ' + repr(msg['command']))
                 print('Unknown controller command ' + repr(msg['command']))
@@ -254,14 +257,17 @@ class funk_controller():
         self.com.send_bus_msg('capturer', obj)
     
     def handle_input_ports(self, msg):
-        self.com.send_client_ctrl_msg('input_ports', msg)
+        self.com.send_client_ctrl_msg('capturer', msg)
     
     def handle_list_output_ports(self):
         obj = {'command': 'list_output_ports'}
         self.com.send_bus_msg('outputter', obj)
     
     def handle_output_ports(self, msg):
-        self.com.send_client_ctrl_msg('output_ports', msg)
+        self.com.send_client_ctrl_msg('outputter', msg)
+    
+    def handle_file_loaded(self, msg):
+        self.com.send_client_ctrl_msg('editor', msg)
     
     def handle_record(self, msg):
         obj = {'command': 'record',

@@ -114,6 +114,7 @@ class funk_editor():
                    }
             self.send_ctrl_msg('player', obj)
             self.midi_file_changed_since_load = False
+            self.client_file_loaded()
         else:
             self.log('Unknown open type ' + repr(msg['type']))
 
@@ -135,6 +136,11 @@ class funk_editor():
         else:
             self.log('Unknown play what ' + repr(msg['what']))
                     
+    def client_file_loaded(self):
+        obj = {'command' : 'file_loaded',
+               'filename' : self.filename
+               }
+        self.send_ctrl_msg('controller', obj)
 
 def main():
 
