@@ -163,7 +163,7 @@ class funk_outputter():
         print('topic ' + repr(topic) + ' msg ' + repr(ctrl_msg))
         if topic == 'outputter':
             if ctrl_msg['command'] == 'panic':
-                self.handle_panic(outport)
+                self.handle_panic(self.outport)
             elif ctrl_msg['command'] == 'loopback':
                 self.handle_loopback(ctrl_msg)
             elif ctrl_msg['command'] == 'open_output_port':

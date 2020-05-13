@@ -282,11 +282,12 @@ class funk_controller():
         self.com.send_client_time_msg('time', msg)
     
 
-
-
 def main():
 
     controller = funk_controller(args.data_bus_in, args.data_bus_out, args.ws_port, args.ws_host)
+
+
+
     
     while 1:
         try:
