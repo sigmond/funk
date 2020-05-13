@@ -1,7 +1,7 @@
 # Funk
 
-Note: This is experimental code under development. Don't expect
-anything to work or even make sense!
+**Note: This is experimental code under development. Don't expect
+anything to work or even make sense!**
 
 The intention is to develop a midi sequencer that resembles the midi-functionality of "The JAZZ Midi Sequencer". This
 sequencer was developed by Andreas Voss and myself in the middle of the 1990's as a cross-platform program running on
@@ -78,10 +78,12 @@ pyobj).
 The controller acts as the communication hub. E.g. when the client orders a 'record' operation, the controller will
 know what processes to contact for the simultaneous playback and record to happen:
 - The client orders recording to start from a specific time into the song.
-- The editor will be told to deliver the file for playing.
-- The controller will then tell the player to load the file.
-- Then the player and the recorder will simultaneously be told to start playing/recording at the specific time into the file.
-- The player will play back the file by sending midi message objects to the outputter as well as sending time events to the client (via the controller, for play progress information).
+- The editor will receive the play command (via the contoller) and decide if the song needs to be loaded into the
+player before playback.
+- If needed, the editor will tell the player to load the file.
+- The player and the recorder will simultaneously be told (by the editor) to start playing/recording at the specific time into the file.
+- The player will play back the file by sending midi message objects to the outputter as well as sending time events to the client (via the controller,
+for play progress information).
 - The capturer will send captured midi message objects to the outputter (for loopback listening) as well as to the recorder.
 - When the client issues stop (to both player and recorder via the controller), the recorder will deliver the recorded messages as a track directly to the editor.
 - The editor will then deliver the altered file to the client (via the controller) for display.
