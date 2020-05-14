@@ -16,13 +16,17 @@ function ctrl_onmessage(e)
       {
           handle_outputter(data['msg']);
       }
-      else if (data['topic'] == 'inputter')
+      else if (data['topic'] == 'capturer')
       {
-          handle_inputter(data['msg']);
+          handle_capturer(data['msg']);
       }
       else if (data['topic'] == 'editor')
       {
           handle_editor(data['msg']);
+      }
+      else
+      {
+          output('Unknown ctrl message');
       }
 };
 
@@ -109,6 +113,21 @@ function open_midi_file(filename, content)
 }
 
 
+function save_midi_file()
+{ 
+    var cmd;
+    var msg;
+    var json_message;
+
+    cmd = { "command" : "save", "what" : "file" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+
 function select_midi_file()
 {    
     var input = document.createElement('input');
@@ -133,6 +152,17 @@ function select_midi_file()
     }
 
     input.click();
+}
+
+
+function download(filename, content)
+{
+    contentType = 'application/octet-stream';
+    var a = document.createElement('a');
+    var blob = new Blob([content], {'type':contentType});
+    a.href = window.URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
 }
 
 function play_midi_file()
@@ -320,6 +350,10 @@ function handle_editor(msg)
     {
         handle_editor_file_loaded(msg);
     }
+    else if (msg['command'] == 'download')
+    {
+        handle_editor_download(msg);
+    }
     else
     {
         output("Unknown editor command '" + msg['command'] + "'");
@@ -330,4 +364,22 @@ function handle_editor(msg)
 function handle_editor_file_loaded(msg)
 {
     trackwin_load_file(msg['filename']);
+    pianowin_load_track(msg['filename']);
+}
+
+function base64_decode(b64) {
+    const byteCharacters = atob(b64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    
+    return new Blob([byteArray], {type: 'application/octet-stream'});
+}
+
+function handle_editor_download(msg)
+{    
+    decoded = base64_decode(msg['content']);
+    download(msg['name'], decoded);    
 }

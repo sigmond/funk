@@ -5,6 +5,7 @@ import json
 import mido
 import io
 
+
 class funk_websocket_server():
     server = None
     ctrl_client = None
@@ -72,18 +73,21 @@ class funk_websocket_server():
         if self.ctrl_client == None:
             print ('websocket ctrl_client not connected, discarding')
             return
-        if topic == 'download':
+        if ctrl_msg['command'] == 'download':
             memoryfile = io.BytesIO()
             midi_obj = ctrl_msg['obj']
+            print('download file ' + repr(midi_obj))
             midi_obj.save(file=memoryfile)
-            encoded = binascii.b2a_base64(memoryfile.read())
+            print('memoryfile size ' + repr(len(memoryfile.getvalue())))
+            encoded = binascii.b2a_base64(memoryfile.getvalue())
+            print('encoded size ' + repr(len(encoded)))
             msg = {'command': 'download',
                    'what': 'file',
                    'name' : ctrl_msg['name'],
                    'encoding' : 'base64',
                    'content': encoded
                    }
-            message = {'topic' : topic, 'msg' : msg}
+            message = {'topic' : 'editor', 'msg' : msg}
         else:
             message = {'topic' : topic, 'msg' : ctrl_msg}
 

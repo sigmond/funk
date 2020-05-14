@@ -2,12 +2,23 @@
 <style>
 .trackwin-container {
   width: 100%;
-  height: 200;
-  background-color: powderblue;
+  height: 40%;
   overflow: auto;
 }
 
 .trackwin-canvas {
+    width: 2000;
+    height: 400;
+    viewBox: 0 0 2000 400;
+}
+
+.pianowin-container {
+  width: 100%;
+  height: 40%;
+  overflow: auto;
+}
+
+.pianowin-canvas {
     width: 2000;
     height: 400;
     viewBox: 0 0 2000 400;
@@ -18,11 +29,13 @@
 
     <script type="text/javascript" src="funk_dispatcher.js"></script>
     <script type="text/javascript" src="funk_trackwin.js"></script>
+    <script type="text/javascript" src="funk_pianowin.js"></script>
 
 </head>
   <body onload="init();">
     <div id="topmenu">
       <button onclick="select_midi_file(); return false;">open</button>
+      <button onclick="save_midi_file(); return false;">save</button>
       <button onclick="play_midi_file(); return false;">play</button>
       <button onclick="record_midi_file(); return false;">record</button>
       <button onclick="stop(); return false;">stop</button>
@@ -32,6 +45,8 @@
       <button onclick="onCloseClick(); return false;">close</button>
     </div>
     <div id="trackwin_frame" class="trackwin-container">
+    </div>
+    <div id="pianowin_frame" class="pianowin-container">
     </div>
     <div id="log" width="500" height="200"></div>
   </body>

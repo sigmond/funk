@@ -218,7 +218,7 @@ class funk_controller():
         
     def handle_download(self, msg):
         print('handle_download')
-        self.com.send_client_ctrl_msg('download', msg)
+        self.com.send_client_ctrl_msg('editor', msg)
         
     def handle_play(self, msg):
         print('handle_play')

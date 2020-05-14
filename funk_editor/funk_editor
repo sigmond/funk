@@ -91,6 +91,8 @@ class funk_editor():
         if topic == 'editor':
             if msg['command'] == 'open':
                 self.handle_open(msg)
+            elif msg['command'] == 'save':
+                self.handle_save(msg)
             elif msg['command'] == 'play':
                 self.handle_play(msg)
             else:
@@ -115,6 +117,18 @@ class funk_editor():
             self.send_ctrl_msg('player', obj)
             self.midi_file_changed_since_load = False
             self.client_file_loaded()
+        else:
+            self.log('Unknown open type ' + repr(msg['type']))
+
+    def handle_save(self, msg):
+        if msg['type'] ==  'file':
+            self.log('saving ' + self.filename)
+            obj = {'command': 'download',
+                   'what': 'file',
+                   'name': self.filename,
+                   'obj': self.midi_file
+                   }
+            self.send_ctrl_msg('controller', obj)
         else:
             self.log('Unknown open type ' + repr(msg['type']))
 
