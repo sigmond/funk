@@ -37,8 +37,9 @@ class funk_midievent():
                 msgs.append(midi_msg.dict())
 
             last_track_tick, events = self.msgs2events(msgs)
-#            for e in events:
-#                print('event ' + repr(e))
+            if i == 0:
+                for e in events:
+                    print('event ' + repr(e))
             track['events'] = events
 
             if last_track_tick > last_tick:

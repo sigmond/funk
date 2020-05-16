@@ -370,6 +370,7 @@ function handle_editor_file_loaded(msg)
     var trackwin_tracks_frame = document.getElementById("trackwin_tracks_container");
     var trackwin_info_frame = document.getElementById("trackwin_info_container");
     tw = new trackwin(trackwin_info_frame, trackwin_tracks_frame);
+    tw.create_rulers(song);
     tw.create_tracks(song);
 
 }

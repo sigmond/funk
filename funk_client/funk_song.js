@@ -9,6 +9,11 @@ class funk_song
         this._tracks = tracks;
         this._beats_per_bar = 4;
 
+        this._tracknames = [];
+        this.get_tracknames();
+        this._tempos = [];
+        this.get_tempos();
+
         this._bars = [];
         this.generate_bars();
     }
@@ -42,6 +47,21 @@ class funk_song
     {
         return this._bars;
     }
+
+    get tracknames()
+    {
+        return this._tracknames;
+    }
+
+    get tempos()
+    {
+        return this._tempos;
+    }
+
+    trackname(track_index)
+    {
+        return this._tracknames[track_index];
+    }
     
     generate_bars()
     {
@@ -64,16 +84,59 @@ class funk_song
 
     }
 
+    get_tracknames()
+    {
+        for (const track of this._tracks)
+        {
+            var name = "";
+            
+            for (const event of track['events'])
+            {
+                if (event['type'] == 'track_name')
+                {
+                    name = event['name'];
+                    break;
+                }
+            }
+            this._tracknames.push(name);
+        }
+    }
+
+    get_tempos()
+    {
+        var tempo;
+        
+        // TODO: gather all tempos in track 0
+        for (const event of this._tracks[0]['events'])
+        {
+            if (event['type'] == 'set_tempo')
+            {
+                tempo = event['tempo'];
+                break;
+            }
+        }
+        this._tempos.push(tempo);
+    }
+
+    tick2second(tick)
+    {
+        var seconds_per_beat;
+        
+        // TODO: go through all tempos to calculate time of this tick
+        seconds_per_beat = (parseInt(this._tempos[0]) / 1000000.0) / this._ticks_per_beat;
+        return tick * seconds_per_beat;
+    }
+
 }
     
 class funk_bar
 {
-    constructor(start_tick, time_signature, ticks_per_bar)
+    constructor(start_tick, time_signature, ticks_per_beat)
     {
         // TODO: support time signature (for now always 4/4)
 
         this._start = start_tick;
-        this._ticks = ticks_per_bar;
+        this._ticks = ticks_per_beat * 4;
     }
 
     get start() 
