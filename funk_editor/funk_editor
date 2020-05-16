@@ -11,6 +11,7 @@ import zmq
 import time
 import io
 from mido import MidiFile, Message, tempo2bpm, MidiTrack, second2tick
+import funk_midievent
 
 DEFAULT_TEMPO = 500000
 DEFAULT_TICKS_PER_BEAT = 480
@@ -46,6 +47,7 @@ class funk_editor():
     midi_file = None
     midi_file_changed_since_load = False
     filename = ""
+    midievent = None
     
     def __init__(self, zmq_path_in, zmq_path_out):
         
@@ -62,6 +64,8 @@ class funk_editor():
         
         self.subpoller = zmq.Poller()
         self.subpoller.register(self.sub_socket, zmq.POLLIN)
+
+        self.midievent = funk_midievent.funk_midievent()
 
     def log(self, log_msg):    
         topic = 'log'
@@ -81,7 +85,7 @@ class funk_editor():
     
 
     def send_ctrl_msg(self, topic, msg):
-        print('Sending ctrl message [' + repr(topic) + '] ' + repr(msg))
+        print('Sending ctrl message [' + repr(topic) + ']')
         self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
         self.pub_socket.send_pyobj(msg)
         
@@ -152,9 +156,13 @@ class funk_editor():
                     
     def client_file_loaded(self):
         obj = {'command' : 'file_loaded',
-               'filename' : self.filename
+               'filename' : self.filename,
+               'file' : self.encode_file_for_client(self.midi_file)
                }
         self.send_ctrl_msg('controller', obj)
+
+    def encode_file_for_client(self, obj):
+        return self.midievent.midi2events(obj)
 
 def main():
 

@@ -9,9 +9,10 @@ function ctrl_onopen()
 function ctrl_onmessage(e)
 {
       // e.data contains received string.
-      output("ctrl_onmessage: " + e.data);
+      output("ctrl_onmessage:");
       
       var data = JSON.parse(e.data);
+      output("topic: " + data['topic']);
       if (data['topic'] == 'outputter')
       {
           handle_outputter(data['msg']);
@@ -23,10 +24,6 @@ function ctrl_onmessage(e)
       else if (data['topic'] == 'editor')
       {
           handle_editor(data['msg']);
-      }
-      else
-      {
-          output('Unknown ctrl message');
       }
 };
 
@@ -363,8 +360,18 @@ function handle_editor(msg)
 
 function handle_editor_file_loaded(msg)
 {
-    trackwin_load_file(msg['filename']);
-    pianowin_load_track(msg['filename']);
+    output("File name: " + msg['filename']);
+    output("File length (seconds): " + msg['file']['length_seconds']);
+    output("File length (ticks): " + msg['file']['length_ticks']);
+    output("Tracks: " + msg['file']['tracks'].length);
+
+    var song = new funk_song(msg['file']['length_seconds'], msg['file']['length_ticks'], msg['file']['ticks_per_beat'], msg['file']['tracks']);
+
+    var trackwin_tracks_frame = document.getElementById("trackwin_tracks_container");
+    var trackwin_info_frame = document.getElementById("trackwin_info_container");
+    tw = new trackwin(trackwin_info_frame, trackwin_tracks_frame);
+    tw.create_tracks(song);
+
 }
 
 function base64_decode(b64) {

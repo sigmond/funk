@@ -1,15 +1,34 @@
 <html>
 <style>
-.trackwin-container {
-  width: 100%;
-  height: 40%;
-  overflow: auto;
+
+.trackwin-frame {
+    width: 100%;
+    height: 40%;
+    display: flex;
+}
+    
+.trackwin-info-container {
+    width: 120;
+    height: 100%;
+    overflow: auto;
+}
+   
+    
+.trackwin-tracks-container {
+    width: 100%;
+    height: 100%;
+    flex-grow: 1;
+    overflow: auto;
+}
+    
+.trackwin-info-canvas {
+    width: 100;
+    height: 100%;
 }
 
-.trackwin-canvas {
+.trackwin-track-canvas {
     width: 2000;
-    height: 400;
-    viewBox: 0 0 2000 400;
+    height: 100%;
 }
 
 .pianowin-container {
@@ -21,12 +40,17 @@
 .pianowin-canvas {
     width: 2000;
     height: 400;
-    viewBox: 0 0 2000 400;
 }
+
+.tw-seconds-ruler {
+    width:100%;
+}
+
 </style>
 <head>
   <title>Funk client</title>
 
+    <script type="text/javascript" src="funk_song.js"></script>
     <script type="text/javascript" src="funk_dispatcher.js"></script>
     <script type="text/javascript" src="funk_trackwin.js"></script>
     <script type="text/javascript" src="funk_pianowin.js"></script>
@@ -44,7 +68,11 @@
       <button onclick="list_output_ports(); return false;">output</button>
       <button onclick="onCloseClick(); return false;">close</button>
     </div>
-    <div id="trackwin_frame" class="trackwin-container">
+    <div id="trackwin_frame" class="trackwin-frame">
+      <div id="trackwin_info_container" class="trackwin-info-container">
+      </div>
+      <div id="trackwin_tracks_container" class="trackwin-tracks-container">
+      </div>
     </div>
     <div id="pianowin_frame" class="pianowin-container">
     </div>

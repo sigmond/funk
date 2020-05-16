@@ -34,7 +34,7 @@ class funk_com():
         self.sub_socket.setsockopt(zmq.SUBSCRIBE, topic)
 
     def send_bus_msg(self, topic, bus_msg):
-        print('Sending bus message [' + repr(topic) + '] ' + repr(bus_msg))
+        print('Sending bus message [' + repr(topic) + ']')
         self.pub_socket.send_string(topic, flags=zmq.SNDMORE)
         self.pub_socket.send_pyobj(bus_msg)
 
@@ -67,7 +67,7 @@ class funk_com():
                 if self.sub_socket in clientsock and clientsock[self.sub_socket] == zmq.POLLIN:
                     topic = self.sub_socket.recv()
                     msg = self.sub_socket.recv_pyobj()
-                    print('got [' + repr(topic) + ']:  ' + repr(msg))
+                    print('got [' + repr(topic) + ']')
                     messages.append({'topic' : topic, 'msg' : msg})
                 elif self.ws_fileno in clientsock and clientsock[self.ws_fileno] == zmq.POLLIN:
                     self.websocket_server._handle_request_noblock()

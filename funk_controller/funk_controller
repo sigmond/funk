@@ -78,8 +78,10 @@ class funk_controller():
 
     def handle_ctrl_message(self, topic, msg):
         print('Got ctrl message')
-        print('topic ' + repr(topic) + ' msg ' + repr(msg))
+        #print('topic ' + repr(topic) + ' msg ' + repr(msg))
+        print('topic ' + repr(topic))
         if topic == 'controller':
+            print(' command ' + repr(msg['command']))
             if msg['command'] == 'open_output_port':
                 # someone (e.g. the client) wants to open a midi port for output
                 self.handle_open_output_port(msg)
