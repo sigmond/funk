@@ -47,7 +47,13 @@ function midi_onopen()
 function midi_onmessage(e)
 {
     // e.data contains received string.
-    output("midi_onmessage: " + e.data);
+//     output("midi_onmessage: " + e.data);
+
+    var data = JSON.parse(e.data);
+    if (data['topic'] == 'time')
+    {
+        handle_time(data['msg']);
+    }
 };
 
 function midi_onclose()
@@ -162,12 +168,12 @@ function download(filename, content)
     a.click();
 }
 
-function play_midi_file()
+function play_midi_file(start)
 { 
     var cmd;
     var msg;
 
-    cmd = { "command" : "play", "start" : 0, "unit" : "seconds" };
+    cmd = { "command" : "play", "start" : start, "unit" : "seconds" };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
@@ -175,12 +181,12 @@ function play_midi_file()
     ws_ctrl.send(json_message);
 }
 
-function record_midi_file()
+function record_midi_file(start)
 { 
     var cmd;
     var msg;
 
-    cmd = { "command" : "record", "start" : 0, "unit" : "seconds" };
+    cmd = { "command" : "record", "start" : start, "unit" : "seconds" };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
@@ -357,6 +363,7 @@ function handle_editor(msg)
     }
 }
 
+var trackwin_object;
 
 function handle_editor_file_loaded(msg)
 {
@@ -369,9 +376,9 @@ function handle_editor_file_loaded(msg)
 
     var trackwin_tracks_frame = document.getElementById("trackwin_tracks_container");
     var trackwin_info_frame = document.getElementById("trackwin_info_container");
-    tw = new trackwin(trackwin_info_frame, trackwin_tracks_frame);
-    tw.create_rulers(song);
-    tw.create_tracks(song);
+    trackwin_object = new trackwin(trackwin_info_frame, trackwin_tracks_frame, song);
+    trackwin_object.create_rulers();
+    trackwin_object.create_tracks();
 
 }
 
@@ -390,4 +397,10 @@ function handle_editor_download(msg)
 {    
     decoded = base64_decode(msg['content']);
     download(msg['name'], decoded);    
+}
+
+
+function handle_time(msg)
+{
+    trackwin_object.handle_time(msg['time'], msg['unit']);
 }

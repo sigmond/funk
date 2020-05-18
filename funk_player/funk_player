@@ -148,8 +148,7 @@ class funk_player():
 
         for msg, track_number in map(None, self.midi_file, self.track_number_messages):
             input_time += msg.time
-
-
+        
             playback_time = time.time() - start_time + start_play
             duration_to_next_event = input_time - playback_time
 

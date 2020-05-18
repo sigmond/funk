@@ -120,11 +120,20 @@ class funk_song
 
     tick2second(tick)
     {
-        var seconds_per_beat;
+        var seconds_per_tick;
         
         // TODO: go through all tempos to calculate time of this tick
-        seconds_per_beat = (parseInt(this._tempos[0]) / 1000000.0) / this._ticks_per_beat;
-        return tick * seconds_per_beat;
+        seconds_per_tick = (parseInt(this._tempos[0]) / 1000000.0) / this._ticks_per_beat;
+        return tick * seconds_per_tick;
+    }
+
+    second2tick(second)
+    {
+        var seconds_per_tick;
+        
+        // TODO: go through all tempos to calculate time of this tick
+        seconds_per_tick = (parseInt(this._tempos[0]) / 1000000.0) / this._ticks_per_beat;
+        return parseInt(second / seconds_per_tick);
     }
 
 }
@@ -137,11 +146,17 @@ class funk_bar
 
         this._start = start_tick;
         this._ticks = ticks_per_beat * 4;
+        this._end = start_tick + this._ticks;
     }
 
     get start() 
     {
         return this._start;
+    }
+    
+    get end() 
+    {
+        return this._end;
     }
     
     get ticks() 
