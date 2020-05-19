@@ -157,6 +157,7 @@ class funk_player():
             if (input_time > 0) and (input_time < start_play):
                 continue
 
+
             while duration_to_next_event > 0.1:
                 command = self.poll_ctrl_command()
                 if command == 'stop':
