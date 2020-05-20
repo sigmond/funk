@@ -220,6 +220,19 @@ function panic()
     ws_ctrl.send(json_message);
 }
 
+function send_mute_state(muted)
+{ 
+    var cmd;
+    var msg;
+
+    cmd = { "command" : "track", "muted" : muted };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
 function list_input_ports()
 { 
     var cmd;
