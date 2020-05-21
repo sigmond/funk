@@ -184,7 +184,7 @@ class trackwin
                     this._bar_highlight_element.setAttribute("width", width);
                     this._bar_highlight_element.setAttribute("x", xpos);
                     this._bar_highlight_element.setAttribute("y", this._track_y);
-                    this._bar_highlight_element.setAttribute("style", "fill:blue;stroke:black;stroke-width:0;fill-opacity:0.5;stroke-opacity:0.0");
+                    this._bar_highlight_element.setAttribute("style", "fill:blue;stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
                     this._tracks_canvas.appendChild(this._bar_highlight_element);
                 }                
             }
@@ -226,7 +226,7 @@ class trackwin
             this._track_highlight_element.setAttribute("width", width);
             this._track_highlight_element.setAttribute("x", 0);
             this._track_highlight_element.setAttribute("y", this._track_y + (track_index * this._track_height));
-            this._track_highlight_element.setAttribute("style", "fill:blue;stroke:black;stroke-width:0;fill-opacity:0.5;stroke-opacity:0.0");
+            this._track_highlight_element.setAttribute("style", "fill:blue;stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
             this._info_canvas.appendChild(this._track_highlight_element);
         }
     }
@@ -528,7 +528,7 @@ class trackwin
         }
         
         var width_style = "width:" + (track_width + 100).toString() + ";";
-        var height_style = "height:" + ((this._track_height * this._song.tracks.length) + this._track_y + 100).toString() + ";";
+        var height_style = "height:" + ((this._track_height * this._song.tracks.length) + this._track_y).toString() + ";";
 
         this._tracks_canvas.setAttribute("style", width_style + height_style);
 

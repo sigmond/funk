@@ -3,23 +3,26 @@
 
 .trackwin-frame {
     width: 100%;
-    height: 40%;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.trackwin-container {
     display: flex;
 }
-    
+  
 .trackwin-info-container {
     width: 120;
-    height: 100%;
 }
    
     
 .trackwin-tracks-container {
     width: 100%;
-    height: 100%;
     flex-grow: 1;
     overflow-x: auto;
     overflow-y: hidden;
 }
+
     
 .trackwin-info-canvas {
     width: 100;
@@ -28,7 +31,6 @@
 
 .trackwin-track-canvas {
     width: 2000;
-    height: 100%;
 }
 
 .pianowin-container {
@@ -68,9 +70,11 @@
       <button onclick="onCloseClick(); return false;">close</button>
     </div>
     <div id="trackwin_frame" class="trackwin-frame">
-      <div id="trackwin_info_container" class="trackwin-info-container">
-      </div>
-      <div id="trackwin_tracks_container" class="trackwin-tracks-container">
+      <div id="trackwin_container" class="trackwin-container">
+        <div id="trackwin_info_container" class="trackwin-info-container">
+        </div>
+        <div id="trackwin_tracks_container" class="trackwin-tracks-container">
+        </div>
       </div>
     </div>
     <div id="pianowin_frame" class="pianowin-container">
