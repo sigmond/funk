@@ -18,14 +18,18 @@ class trackwin
         this._mute_button_left = this._info_width - this._button_width_space + this._button_padding;
         this._mute_button_right = this._mute_button_left + this._button_width;
 
-        this._normal_opacity = "0.3";
-        this._highlight_opacity = "0.7";
+        this._button_opacity = "1.0";
         
-        this._solo_color = "green";
-        this._mute_color = "yellow";
+        this._solo_color = "lawngreen";
+        this._solo_engaged_color = "maroon";
+        this._mute_color = "gold";
+        this._mute_engaged_color = "indianred";
 
+        this._solo_state = [];
         this._mute_state = [];
         
+        this._allSoloTimerFunction = null;
+        this._all_solo_highlighted = false;
         
         this._playing = false;
         this._playhead_ticks = 0;
@@ -61,8 +65,6 @@ class trackwin
         
         this._bar_highlight_element = null;
         this._track_highlight_element = null;
-        this._solo_highlight_element = null;
-        this._mute_highlight_element = null;
     }
     
     tracks_clickhandler(event)
@@ -92,13 +94,13 @@ class trackwin
     solo_mouseoverhandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.fill = "black";
+        svg.style.stroke = "white";
     }
 
     solo_mouseouthandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.fill = "green";
+        svg.style.stroke = "black";
     }
 
     solo_clickhandler(event)
@@ -113,13 +115,13 @@ class trackwin
     mute_mouseoverhandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.fill = "black";
+        svg.style.stroke = "white";
     }
 
     mute_mouseouthandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.fill = "yellow";
+        svg.style.stroke = "black";
     }
 
     mute_clickhandler(event)
@@ -338,16 +340,86 @@ class trackwin
     }
 
 
+    startAllSoloAnimation() {
+        if(this._allSoloTimerFunction == null) {
+            this._allSoloTimerFunction = setInterval(this.allSoloAnimate, 250);
+        }
+    }
+    
+    stopAllSoloAnimation() {
+        var all_solo = document.getElementById("track_solo_0");
+        if(this._allSoloTimerFunction != null){
+            clearInterval(this._allSoloTimerFunction);
+            this._allSoloTimerFunction = null;
+        }
+        all_solo.style.stroke = "black";
+        this._all_solo_highlighted = false;
+    }
+    
+    allSoloAnimate() {
+        var all_solo = document.getElementById("track_solo_0");
+        if (this._all_solo_highlighted)
+        {
+            all_solo.style.stroke = "black";
+            this._all_solo_highlighted = false;
+        }
+        else
+        {
+            all_solo.style.stroke = "white";
+            this._all_solo_highlighted = true;
+        }
+    }
+    
 
     handle_solo_click(svg, track_index)
     {
+        
+        if (track_index == 0)
+        {
+            if (this._solo_state.includes(1))
+            {
+                var i;
+                for (i = 0; i < this._song.tracks.length; i++)
+                {
+                    var svg = document.getElementById("track_solo_" + i.toString());
+                    svg.style.fill = this._solo_color;
+                    this._solo_state[i] = 0;
+                }                
+                this.stopAllSoloAnimation();
+            }
+        }
+        else
+        {
+            if (!this._solo_state[track_index])
+            {
+                var all_solo = document.getElementById("track_solo_0");
+                all_solo.style.fill = this._solo_engaged_color;
+                this.startAllSoloAnimation();
+
+                svg.style.fill = this._solo_engaged_color;
+                this._solo_state[track_index] = 1;
+            }
+            else
+            {
+                svg.style.fill = this._solo_color;
+                this._solo_state[track_index] = 0;
+                if (!this._solo_state.includes(1))
+                {
+                    var all_solo = document.getElementById("track_solo_0");
+                    all_solo.style.fill = this._solo_color;
+                    this.stopAllSoloAnimation();
+                }
+            }
+        }
+
+        this.handle_solo_mute_state_changed();
     }
 
     handle_mute_click(svg, track_index)
     {
         if (!this._mute_state[track_index])
         {
-            svg.style.fill = "red";
+            svg.style.fill = this._mute_engaged_color;
             this._mute_state[track_index] = 1;
         }
         else
@@ -356,19 +428,23 @@ class trackwin
             this._mute_state[track_index] = 0;
         }
 
-        this.handle_mute_state_changed();
+        this.handle_solo_mute_state_changed();
     }
 
 
-
-    handle_mute_state_changed()
+    handle_solo_mute_state_changed()
     {
         var muted = [];
         var i;
+        var solo_on = this._solo_state.includes(1);
         
         for (i = 0; i < this._song.tracks.length; i++)
         {
-            if (this._mute_state[i] == 0)
+            if (solo_on && (this._solo_state[i] == 0))
+            {
+                muted.push(i);
+            }
+            else if (this._mute_state[i] == 1)
             {
                 muted.push(i);
             }
@@ -376,6 +452,7 @@ class trackwin
 
         send_mute_state(muted);
     }
+
 
 
 
@@ -464,7 +541,8 @@ class trackwin
         for (const track of this._song.tracks)
         {
             this.fill_track_events(track_index, track);
-            this._mute_state.push(1);
+            this._solo_state.push(0);
+            this._mute_state.push(0);
             track_index++;
         }
 
@@ -600,8 +678,7 @@ class trackwin
         solo_rect.addEventListener('mouseover', this.solo_mouseoverhandler);
         solo_rect.addEventListener('mouseout', this.solo_mouseouthandler);
         solo_rect.addEventListener('click', this.solo_clickhandler);
-        var opacity= highlight ? this._highlight_opacity : this._normal_opacity;
-        solo_rect.setAttribute("style", "fill:" + this._solo_color + ";stroke:black;stroke-width:1;fill-opacity:" + opacity + ";stroke-opacity:1.0");
+        solo_rect.setAttribute("style", "fill:" + this._solo_color + ";stroke:black;stroke-width:1;fill-opacity:" + this._button_opacity + ";stroke-opacity:1.0");
 
         return solo_rect;
     }
@@ -625,8 +702,7 @@ class trackwin
         mute_rect.addEventListener('mouseover', this.mute_mouseoverhandler);
         mute_rect.addEventListener('mouseout', this.mute_mouseouthandler);
         mute_rect.addEventListener('click', this.mute_clickhandler);
-        var opacity= highlight ? this._highlight_opacity : this._normal_opacity;
-        mute_rect.setAttribute("style", "fill:" + this._mute_color + ";stroke:black;stroke-width:1;fill-opacity:" + opacity + ";stroke-opacity:1.0");
+        mute_rect.setAttribute("style", "fill:" + this._mute_color + ";stroke:black;stroke-width:1;fill-opacity:" + this._button_opacity + ";stroke-opacity:1.0");
 
         return mute_rect;
     }
@@ -645,9 +721,9 @@ class trackwin
         info_rect.setAttribute("style", "fill:blue;stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
         this._info_canvas.appendChild(info_rect);
 
+        this._info_canvas.appendChild(this.create_solo_button(track_index, false));
         if (track_index > 0)
         {
-            this._info_canvas.appendChild(this.create_solo_button(track_index, false));
             this._info_canvas.appendChild(this.create_mute_button(track_index, false));
         }
 

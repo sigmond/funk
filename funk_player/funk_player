@@ -218,7 +218,15 @@ class funk_player():
     
         ##print('track number messages ' + repr(len(self.track_number_messages)))
 
+    def all_sounds_off_message(channel):
+        ALL_SOUNDS_OFF = 120
+        return Message(
+            'control_change',
+            channel=channel,
+            control=ALL_SOUNDS_OFF
+            )
 
+            
     def play_file(self, start_time, time_unit, print_messages):
 
         self.playing = True
@@ -233,9 +241,12 @@ class funk_player():
                 muted = False
                 if hasattr(message, 'channel'):
                     if getattr(message, 'channel') in self.muted_channels:
-                        muted = True
+                        if getattr(message, 'velocity') != 0:
+                            muted = True
                 if track_number in self.muted_tracks:
-                    muted = True
+                    if hasattr(message, 'velocity'):
+                        if getattr(message, 'velocity') != 0:
+                            muted = True
 
                 if not muted:
                     self.pub_socket.send_string('midi_play', flags=zmq.SNDMORE)
