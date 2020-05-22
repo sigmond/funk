@@ -19,11 +19,12 @@ class trackwin
         this._mute_button_right = this._mute_button_left + this._button_width;
 
         this._button_opacity = "1.0";
-        
+
+        this._bg_color = "blue";
         this._solo_color = "lawngreen";
-        this._solo_engaged_color = "maroon";
-        this._mute_color = "gold";
-        this._mute_engaged_color = "indianred";
+        this._solo_engaged_color = "green";
+        this._mute_color = "lightcoral";
+        this._mute_engaged_color = "darkred";
 
         this._solo_state = [];
         this._mute_state = [];
@@ -94,13 +95,13 @@ class trackwin
     solo_mouseoverhandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.stroke = "white";
+        svg.style.fillOpacity = 0.1;
     }
 
     solo_mouseouthandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.stroke = "black";
+        svg.style.fillOpacity = 1.0;
     }
 
     solo_clickhandler(event)
@@ -115,13 +116,13 @@ class trackwin
     mute_mouseoverhandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.stroke = "white";
+        svg.style.fillOpacity = 0.1;
     }
 
     mute_mouseouthandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.stroke = "black";
+        svg.style.fillOpacity = 1.0;
     }
 
     mute_clickhandler(event)
@@ -184,7 +185,7 @@ class trackwin
                     this._bar_highlight_element.setAttribute("width", width);
                     this._bar_highlight_element.setAttribute("x", xpos);
                     this._bar_highlight_element.setAttribute("y", this._track_y);
-                    this._bar_highlight_element.setAttribute("style", "fill:blue;stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
+                    this._bar_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
                     this._tracks_canvas.appendChild(this._bar_highlight_element);
                 }                
             }
@@ -226,7 +227,7 @@ class trackwin
             this._track_highlight_element.setAttribute("width", width);
             this._track_highlight_element.setAttribute("x", 0);
             this._track_highlight_element.setAttribute("y", this._track_y + (track_index * this._track_height));
-            this._track_highlight_element.setAttribute("style", "fill:blue;stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
+            this._track_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
             this._info_canvas.appendChild(this._track_highlight_element);
         }
     }
@@ -320,7 +321,7 @@ class trackwin
             this._track_highlight_element.setAttribute("width", width);
             this._track_highlight_element.setAttribute("x", 0);
             this._track_highlight_element.setAttribute("y", this._track_y + (track_index * this._track_height));
-            this._track_highlight_element.setAttribute("style", "fill:blue;stroke:black;stroke-width:0;fill-opacity:0.5;stroke-opacity:0.0");
+            this._track_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.5;stroke-opacity:0.0");
             this._info_canvas.appendChild(this._track_highlight_element);
         }
     }
@@ -352,7 +353,7 @@ class trackwin
             clearInterval(this._allSoloTimerFunction);
             this._allSoloTimerFunction = null;
         }
-        all_solo.style.stroke = "black";
+        all_solo.style.strokeWidth = 1;
         this._all_solo_highlighted = false;
     }
     
@@ -360,12 +361,12 @@ class trackwin
         var all_solo = document.getElementById("track_solo_0");
         if (this._all_solo_highlighted)
         {
-            all_solo.style.stroke = "black";
+            all_solo.style.strokeWidth = 1;
             this._all_solo_highlighted = false;
         }
         else
         {
-            all_solo.style.stroke = "white";
+            all_solo.style.strokeWidth = 0;
             this._all_solo_highlighted = true;
         }
     }
@@ -382,6 +383,7 @@ class trackwin
                 for (i = 0; i < this._song.tracks.length; i++)
                 {
                     var svg = document.getElementById("track_solo_" + i.toString());
+                    svg.style.strokeWidth = 1;
                     svg.style.fill = this._solo_color;
                     this._solo_state[i] = 0;
                 }                
@@ -393,14 +395,16 @@ class trackwin
             if (!this._solo_state[track_index])
             {
                 var all_solo = document.getElementById("track_solo_0");
-                all_solo.style.fill = this._solo_engaged_color;
+                all_solo.style.strokeWidth = 0;
                 this.startAllSoloAnimation();
 
+                svg.style.strokeWidth = 0;
                 svg.style.fill = this._solo_engaged_color;
                 this._solo_state[track_index] = 1;
             }
             else
             {
+                svg.style.strokeWidth = 1;
                 svg.style.fill = this._solo_color;
                 this._solo_state[track_index] = 0;
                 if (!this._solo_state.includes(1))
@@ -419,11 +423,13 @@ class trackwin
     {
         if (!this._mute_state[track_index])
         {
+            svg.style.strokeWidth = 0;
             svg.style.fill = this._mute_engaged_color;
             this._mute_state[track_index] = 1;
         }
         else
         {
+            svg.style.strokeWidth = 1;
             svg.style.fill = this._mute_color;
             this._mute_state[track_index] = 0;
         }
@@ -653,7 +659,7 @@ class trackwin
             bar_rect.setAttribute("width", width);
             bar_rect.setAttribute("x", bar_index * width);
             bar_rect.setAttribute("y", this._track_y + (track_index * this._track_height));
-            bar_rect.setAttribute("style", "fill:blue;stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
+            bar_rect.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
             this._tracks_canvas.appendChild(bar_rect);
             bar_index++;
         }
@@ -675,6 +681,8 @@ class trackwin
         solo_rect.setAttribute("width", this._button_width);
         solo_rect.setAttribute("x", x1);
         solo_rect.setAttribute("y", y1);
+        solo_rect.setAttribute("rx", 2);
+        solo_rect.setAttribute("ry", 2);
         solo_rect.addEventListener('mouseover', this.solo_mouseoverhandler);
         solo_rect.addEventListener('mouseout', this.solo_mouseouthandler);
         solo_rect.addEventListener('click', this.solo_clickhandler);
@@ -699,6 +707,8 @@ class trackwin
         mute_rect.setAttribute("width", this._button_width);
         mute_rect.setAttribute("x", x1);
         mute_rect.setAttribute("y", y1);
+        mute_rect.setAttribute("rx", 2);
+        mute_rect.setAttribute("ry", 2);
         mute_rect.addEventListener('mouseover', this.mute_mouseoverhandler);
         mute_rect.addEventListener('mouseout', this.mute_mouseouthandler);
         mute_rect.addEventListener('click', this.mute_clickhandler);
@@ -718,7 +728,7 @@ class trackwin
         info_rect.setAttribute("width", width);
         info_rect.setAttribute("x", 0);
         info_rect.setAttribute("y", this._track_y + (track_index * this._track_height));
-        info_rect.setAttribute("style", "fill:blue;stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
+        info_rect.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
         this._info_canvas.appendChild(info_rect);
 
         this._info_canvas.appendChild(this.create_solo_button(track_index, false));
