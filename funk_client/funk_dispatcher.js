@@ -393,6 +393,12 @@ function handle_editor_file_loaded(msg)
     trackwin_object.create_rulers();
     trackwin_object.create_tracks();
 
+    var pianowin_tracks_frame = document.getElementById("pianowin_tracks_container");
+    var pianowin_info_frame = document.getElementById("pianowin_info_container");
+    pianowin_object = new pianowin(pianowin_info_frame, pianowin_tracks_frame, song);
+    pianowin_object.create_rulers();
+    pianowin_object.create_track(1);
+
 }
 
 function base64_decode(b64) {
@@ -416,4 +422,5 @@ function handle_editor_download(msg)
 function handle_time(msg)
 {
     trackwin_object.handle_time(msg['time'], msg['unit']);
+    pianowin_object.handle_time(msg['time'], msg['unit']);
 }

@@ -3,6 +3,7 @@
 
 .trackwin-frame {
     width: 100%;
+    height: 40%;
     overflow-x: hidden;
     overflow-y: auto;
 }
@@ -33,15 +34,41 @@
     width: 2000;
 }
 
-.pianowin-container {
-  width: 100%;
-  height: 40%;
+
+
+.pianowin-frame {
+    width: 100%;
+    height: 50%;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
-.pianowin-canvas {
-    width: 2000;
-    height: 400;
+.pianowin-container {
+    display: flex;
 }
+  
+.pianowin-info-container {
+    width: 120;
+}
+   
+    
+.pianowin-tracks-container {
+    width: 100%;
+    flex-grow: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+    
+.pianowin-info-canvas {
+    width: 100;
+    height: 100%;
+}
+
+.pianowin-track-canvas {
+    width: 2000;
+}
+
 
 .trackwin-ruler {
     width:100%;
@@ -77,7 +104,13 @@
         </div>
       </div>
     </div>
-    <div id="pianowin_frame" class="pianowin-container">
+    <div id="pianowin_frame" class="pianowin-frame">
+      <div id="pianowin_container" class="pianowin-container">
+        <div id="pianowin_info_container" class="pianowin-info-container">
+        </div>
+        <div id="pianowin_tracks_container" class="pianowin-tracks-container">
+        </div>
+      </div>
     </div>
     <div id="log" width="500" height="200"></div>
   </body>

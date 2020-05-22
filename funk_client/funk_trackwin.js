@@ -22,9 +22,9 @@ class trackwin
 
         this._bg_color = "blue";
         this._solo_color = "lawngreen";
-        this._solo_engaged_color = "green";
-        this._mute_color = "lightcoral";
-        this._mute_engaged_color = "darkred";
+        this._solo_engaged_color = "lawngreen";
+        this._mute_color = "lightsalmon";
+        this._mute_engaged_color = "lightsalmon";
 
         this._solo_state = [];
         this._mute_state = [];
