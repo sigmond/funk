@@ -396,9 +396,6 @@ function handle_editor_file_loaded(msg)
     var pianowin_tracks_frame = document.getElementById("pianowin_tracks_container");
     var pianowin_info_frame = document.getElementById("pianowin_info_container");
     pianowin_object = new pianowin(pianowin_info_frame, pianowin_tracks_frame, song);
-    pianowin_object.create_rulers();
-    pianowin_object.create_track(1);
-
 }
 
 function base64_decode(b64) {

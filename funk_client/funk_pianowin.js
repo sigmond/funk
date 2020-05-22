@@ -54,6 +54,9 @@ class pianowin
         this._xgrid_highlight_element = null;
         this._key_highlight_element = null;
         this._key_highlight_type = null;
+
+        this.create_rulers();
+        this.create_track(1);
     }
     
 
@@ -364,15 +367,26 @@ class pianowin
 
         return bar_index * width;
     }
+   
+    remove_current_track()
+    {
+        var node = this._tracks_canvas;
+        while (node.firstChild) {
+            node.removeChild(node.lastChild);
+        }
+        
+        node = this._info_canvas;
+        while (node.firstChild) {
+            node.removeChild(node.lastChild);
+        }
+    }
     
-
     create_track(track_index)
     {
         var notes_width = 0;
         var notes_width_tmp;
         var note;
         var track;
-        
 
         track = this._song.tracks[track_index];
 
@@ -394,7 +408,7 @@ class pianowin
         this._height = wh.height;
         this._notes_width = wh.width;
 
-        this.fill_note_events(track_index, track);
+        var middle_note = this.fill_note_events(track_index, track);
 
         var info_width = this._info_width;
         var info_width_tmp;
@@ -441,11 +455,16 @@ class pianowin
         this._info_canvas.setAttribute("style", width_style);
 
         this.create_playhead();
+
+        var middle_y = this._track_y + (this.note2line(middle_note) * this._note_height);
+        var pianowin_frame = document.getElementById("pianowin_frame");
+        pianowin_frame.scrollTop = middle_y - (pianowin_frame.clientHeight / 2);
     }
 
     fill_note_events(track_index, track)
     {
-        
+        var highest_note = 0;
+        var lowest_note = this._num_notes;
 
         for (const event of track.events)
         {
@@ -455,6 +474,10 @@ class pianowin
             }
             
             var note = event.note;
+
+            highest_note = parseInt(Math.max(highest_note, note));
+            lowest_note = parseInt(Math.min(lowest_note, note));
+            
             var width = parseInt((event.end - event.start) * this._pixels_per_tick);
             var height = this._note_height - 4;
             var y = this._track_y + (this.note2line(note) * this._note_height) + 2;
@@ -469,6 +492,7 @@ class pianowin
             this._tracks_canvas.appendChild(event_rect);
         }
         
+        return parseInt((highest_note + lowest_note) / 2);
     }
 
 
@@ -504,22 +528,6 @@ class pianowin
         return bar_index * width;
     }
 
-    note2key_y(note)
-    {
-        if (note == 127)
-        {
-            return this._track_y;
-        }
-        
-        if (this._white_notes.includes(note % 12))
-        {
-            return this._track_y + (this._white_key_num[note] * this._white_note_height) - parseInt(this._white_note_height * 1 / 3);
-        }
-        else
-        {
-            return this._track_y + (this.note2line(note) * this._note_height);
-        }
-    }
 
     create_note_info(note, is_white, white_key_num, track)
     {

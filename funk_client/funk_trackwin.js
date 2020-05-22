@@ -45,7 +45,13 @@ class trackwin
         
         tracks_frame.appendChild(this._tracks_canvas);
         
+        this._tracks_canvas.addEventListener('contextmenu', function(ev) {
+                                                 ev.preventDefault();
+                                                 trackwin_object.tracks_clickhandler(ev);
+                                                 return false;
+                                             }, false);
         this._tracks_canvas.addEventListener('click', this.tracks_clickhandler);
+        this._tracks_canvas.addEventListener('auxclick', this.tracks_clickhandler);
         this._tracks_canvas.addEventListener('mousemove', this.tracks_mousemovehandler);
         
         var wh = this._tracks_canvas.getClientRects()[0];
@@ -77,8 +83,9 @@ class trackwin
         let y = event.clientY - bound.top - svg.clientTop;
         
         output("click: " + x + " " + y);
+        output("button: " + event.button);
         
-        trackwin_object.tracks_handle_click(x, y);
+        trackwin_object.tracks_handle_click(x, y, event.button);
     }
     
     tracks_mousemovehandler(event)
@@ -135,7 +142,7 @@ class trackwin
     }
 
 
-    tracks_handle_click(x, y)
+    tracks_handle_click(x, y, button)
     {
         if (y < this._ruler_height)
         {
@@ -158,7 +165,26 @@ class trackwin
                 }
             }
         }
-        
+        else
+        {
+            if (button == 2)
+            {
+                // right click
+                var track_index = parseInt((y - this._track_y) / this._track_height);
+                if (track_index < 0)
+                {
+                    track_index = 0;
+                }
+                else if (track_index >= (this._song.tracks.length))
+                {
+                    track_index = this._song.tracks.length - 1;
+                }
+                
+                pianowin_object.remove_current_track();
+                pianowin_object.create_rulers();
+                pianowin_object.create_track(track_index);
+            }
+        }
     }
     
     tracks_handle_mouse_move(x, y)
