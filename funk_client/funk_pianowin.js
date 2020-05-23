@@ -50,6 +50,7 @@ class pianowin
         this._info_canvas.addEventListener('click', this.info_clickhandler);
         this._info_canvas.addEventListener('mousemove', this.info_mousemovehandler);
         
+        this._track_events = [];
         
         this._xgrid_highlight_element = null;
         this._key_highlight_element = null;
@@ -368,16 +369,14 @@ class pianowin
         return bar_index * width;
     }
    
-    remove_current_track()
+    
+    remove_track_events()
     {
-        var node = this._tracks_canvas;
-        while (node.firstChild) {
-            node.removeChild(node.lastChild);
-        }
+        var event;
         
-        node = this._info_canvas;
-        while (node.firstChild) {
-            node.removeChild(node.lastChild);
+        while ((event = this._track_events.pop()))
+        {
+            event.remove();
         }
     }
     
@@ -461,10 +460,13 @@ class pianowin
         pianowin_frame.scrollTop = middle_y - (pianowin_frame.clientHeight / 2);
     }
 
-    fill_note_events(track_index, track)
+    fill_note_events(track_index)
     {
         var highest_note = 0;
         var lowest_note = this._num_notes;
+        var track;
+
+        track = this._song.tracks[track_index];
 
         for (const event of track.events)
         {
@@ -490,12 +492,34 @@ class pianowin
             event_rect.setAttribute("height", height);
             event_rect.setAttribute("style", "fill:" + this._note_color + ";stroke:black;stroke-width:1;fill-opacity:0.5;stroke-opacity:1.0");
             this._tracks_canvas.appendChild(event_rect);
+            this._track_events.push(event_rect);
         }
         
         return parseInt((highest_note + lowest_note) / 2);
     }
 
 
+    find_note_center(track_index, tick_start, tick_end)
+    {
+        var highest_note = 0;
+        var lowest_note = this._num_notes;
+        var track = this._song.tracks[track_index];
+        
+        for (const event of track.events)
+        {
+            if (event.type != 'note')
+            {
+                continue;
+            }
+            
+            var note = event.note;
+            highest_note = parseInt(Math.max(highest_note, note));
+            lowest_note = parseInt(Math.min(lowest_note, note));
+        }
+        
+        return parseInt((highest_note + lowest_note) / 2);
+    }
+    
     note2line(note)
     {
         return this._num_notes - (note + 1);
@@ -576,9 +600,22 @@ class pianowin
         {
             this._playhead_ticks = this._song.second2tick(time);
             this.position_playhead();
-            var xpos = this._playhead_ticks * this._pixels_per_tick;
             //output("pos: " + xpos + " scrollLeft: " + this._tracks_frame.scrollLeft);
-            
+
+            this.scroll_to_tick(this._playhead_ticks, false);
+        }
+    }
+
+    scroll_to_tick(tick, exact)
+    {
+        var xpos = tick * this._pixels_per_tick;
+
+        if (exact)
+        {
+            this._tracks_frame.scrollLeft = xpos;
+        }
+        else
+        {
             if (xpos > (this._tracks_frame.clientWidth + this._tracks_frame.scrollLeft - (this._tracks_frame.clientWidth / 10)))
             {
                 this._tracks_frame.scrollLeft = xpos;
@@ -588,6 +625,15 @@ class pianowin
                 this._tracks_frame.scrollLeft = xpos - this._tracks_frame.clientWidth;
             }
         }
+    }
+    
+    scroll_to_notes(start_tick, track_index)
+    {
+        var end_tick = start_tick + (this._tracks_frame.clientWidth / this._pixels_per_tick);
+        var middle_note = this.find_note_center(track_index, start_tick, end_tick);        
+        var middle_y = this._track_y + (this.note2line(middle_note) * this._note_height);
+        var pianowin_frame = document.getElementById("pianowin_frame");
+        pianowin_frame.scrollTop = middle_y - (pianowin_frame.clientHeight / 2);
     }
     
     create_playhead()

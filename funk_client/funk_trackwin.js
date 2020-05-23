@@ -162,6 +162,7 @@ class trackwin
                     output("play: start = " + bar.start);
                     this._playing = true;
                     play_midi_file(this._song.tick2second(bar.start));
+                    break;
                 }
             }
         }
@@ -180,9 +181,21 @@ class trackwin
                     track_index = this._song.tracks.length - 1;
                 }
                 
-                pianowin_object.remove_current_track();
-                pianowin_object.create_rulers();
-                pianowin_object.create_track(track_index);
+                pianowin_object.remove_track_events();
+                pianowin_object.fill_note_events(track_index);
+                
+                var tick = parseInt(x / this._pixels_per_tick);
+                for (const bar of this._song.bars)
+                {
+                    if ((tick >= bar.start) && (tick < bar.end))
+                    {
+                        tick = bar.start;
+                        break;
+                    }
+                }
+
+                pianowin_object.scroll_to_tick(tick - this._song.ticks_per_beat, true);
+                pianowin_object.scroll_to_notes(tick, track_index);
             }
         }
     }
