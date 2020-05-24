@@ -652,17 +652,8 @@ class trackwin
     {
         var track_index = 0;
         var track_width = 0;
-        var track_width_tmp;
-        
-        for (const track of this._song.tracks)
-        {
-            track_width_tmp = this.create_track_bars(track_index, this._song.bars);
-            if (track_width_tmp > track_width)
-            {
-                track_width = track_width_tmp;
-            }
-            track_index++;
-        }
+
+        track_width = this.create_track_bars(this._song.bars);
         
         var width_style = "width:" + (track_width + 100).toString() + ";";
         var height_style = "height:" + ((this._track_height * this._song.tracks.length) + this._track_y).toString() + ";";
@@ -701,6 +692,8 @@ class trackwin
         width_style = "width:" + (info_width).toString() + ";";
 
         this._info_canvas.setAttribute("style", width_style);
+
+        this.create_track_lines();
 
         this.create_playhead();
     }
@@ -753,11 +746,11 @@ class trackwin
         for (const bar of this._song.bars)
         {
             var width = 1;
-            var bar_space = parseInt(bar.ticks * this._pixels_per_tick);
+            var x = parseInt(bar.start * this._pixels_per_tick);
             var ruler_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             ruler_line.id = 'bars_ruler_' + bar_index.toString();
-            ruler_line.setAttribute("x1", bar_index * bar_space);
-            ruler_line.setAttribute("x2", bar_index * bar_space);
+            ruler_line.setAttribute("x1", x);
+            ruler_line.setAttribute("x2", x);
             ruler_line.setAttribute("y1", (this._ruler_height / 2) + 1);
             ruler_line.setAttribute("y2", (this._ruler_height) - 2);
             ruler_line.setAttribute("style", "stroke:black;stroke-width:1;");
@@ -765,7 +758,7 @@ class trackwin
 
             var ruler_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
             ruler_text.id = 'bars_text' + bar_index.toString();
-            ruler_text.setAttribute("x", (bar_index * bar_space) + 2);
+            ruler_text.setAttribute("x", x + 2);
             ruler_text.setAttribute("y", 24);
             ruler_text.setAttribute("style", "fill:black;font-size:12px");
             ruler_text.textContent = (bar_index + 1).toString();
@@ -790,25 +783,47 @@ class trackwin
         this._menu_canvas.setAttribute("style", width_style + height_style);
     }
     
-    create_track_bars(track_index, bars)
+    create_track_bars(bars)
     {
+        var height = this._track_height * this._song.tracks.length;
         var bar_index = 0;
-        for (const bar of bars)
+        for (const bar of this._song.bars)
         {
-            var width = parseInt(bar.ticks * this._pixels_per_tick);
-            var bar_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            var x = parseInt(bar.start * this._pixels_per_tick);
+            var bar_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            bar_line.id = 'trackwin_bar_' + bar_index.toString();
+            bar_line.setAttribute("x1", x);
+            bar_line.setAttribute("x2", x);
+            bar_line.setAttribute("y1", this._track_y);
+            bar_line.setAttribute("y2", height);
+            bar_line.setAttribute("style", "stroke:black;stroke-width:1;");
+            this._tracks_canvas.appendChild(bar_line);
 
-            bar_rect.id = 'track_' + track_index.toString() + '_' + bar_index.toString();
-            bar_rect.setAttribute("height", this._track_height);
-            bar_rect.setAttribute("width", width);
-            bar_rect.setAttribute("x", bar_index * width);
-            bar_rect.setAttribute("y", this._track_y + (track_index * this._track_height));
-            bar_rect.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
-            this._tracks_canvas.appendChild(bar_rect);
             bar_index++;
         }
 
-        return bar_index * width;
+        return x;
+    }
+
+
+    create_track_lines()
+    {
+        var i;
+        
+        for (i = 0; i < this._song.tracks.length + 1; i++)
+        {
+            var y = this._track_height * i;
+            var track_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            track_line.id = 'trackwin_track_line_' + i.toString();
+            track_line.setAttribute("x1", 0);
+            track_line.setAttribute("x2", this._tracks_width);
+            track_line.setAttribute("y1", y);
+            track_line.setAttribute("y2", y);
+            track_line.setAttribute("style", "stroke:black;stroke-width:1;");
+            this._tracks_canvas.appendChild(track_line);
+        }
+
+        return y;
     }
 
 

@@ -428,11 +428,11 @@ class pianowin
         for (const bar of this._song.bars)
         {
             var width = 1;
-            var bar_space = parseInt(bar.ticks * this._pixels_per_tick);
+            var x = parseInt(bar.start * this._pixels_per_tick);
             var ruler_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             ruler_line.id = 'bars_ruler_' + bar_index.toString();
-            ruler_line.setAttribute("x1", bar_index * bar_space);
-            ruler_line.setAttribute("x2", bar_index * bar_space);
+            ruler_line.setAttribute("x1", x);
+            ruler_line.setAttribute("x2", x);
             ruler_line.setAttribute("y1", (this._ruler_height / 2) + 1);
             ruler_line.setAttribute("y2", (this._ruler_height) - 2);
             ruler_line.setAttribute("style", "stroke:black;stroke-width:1;");
@@ -440,7 +440,7 @@ class pianowin
 
             var ruler_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
             ruler_text.id = 'bars_text' + bar_index.toString();
-            ruler_text.setAttribute("x", (bar_index * bar_space) + 2);
+            ruler_text.setAttribute("x", x + 2);
             ruler_text.setAttribute("y", 24);
             ruler_text.setAttribute("style", "fill:black;font-size:12px");
             ruler_text.textContent = (bar_index + 1).toString();
@@ -485,14 +485,7 @@ class pianowin
 
         track = this._song.tracks[track_index];
 
-        for (note = 0; note < this._num_notes; note++)
-        {
-            notes_width_tmp = this.create_note_bars(note, this._song.bars);
-            if (notes_width_tmp > notes_width)
-            {
-                notes_width = notes_width_tmp;
-            }
-        }
+        notes_width = this.create_bars(this._song.bars);
         
         var width_style = "width:" + (notes_width + 100).toString() + ";";
         var height_style = "height:" + ((this._note_height * this._num_notes) + this._track_y).toString() + ";";
@@ -548,6 +541,8 @@ class pianowin
         width_style = "width:" + (info_width).toString() + ";";
 
         this._info_canvas.setAttribute("style", width_style);
+
+        this.create_note_lines();
 
         this.create_playhead();
 
@@ -627,25 +622,47 @@ class pianowin
     }
     
     
-    create_note_bars(note, bars)
+    create_bars(bars)
     {
         var bar_index = 0;
+        var height = this._note_height * this._num_notes;
         for (const bar of bars)
         {
-            var width = parseInt(bar.ticks * this._pixels_per_tick);
-            var bar_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            var x = parseInt(bar.start * this._pixels_per_tick);
+            var bar_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
 
-            bar_rect.id = 'note_' + note.toString() + '_' + bar_index.toString();
-            bar_rect.setAttribute("height", this._note_height);
-            bar_rect.setAttribute("width", width);
-            bar_rect.setAttribute("x", bar_index * width);
-            bar_rect.setAttribute("y", this._track_y + (this.note2line(note) * this._note_height));
-            bar_rect.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
-            this._tracks_canvas.appendChild(bar_rect);
+            bar_line.id = 'pianowin_bar_' + bar_index.toString();
+            bar_line.setAttribute("x1", x);
+            bar_line.setAttribute("x2", x);
+            bar_line.setAttribute("y1", 0);
+            bar_line.setAttribute("y2", height);
+            bar_line.setAttribute("style", "stroke:black;stroke-width:1;");
+            this._tracks_canvas.appendChild(bar_line);
             bar_index++;
         }
 
-        return bar_index * width;
+        return x;
+    }
+
+
+    create_note_lines()
+    {
+        var i;
+        for (i = 0; i < this._num_notes + 1; i++)
+        {
+            var y = i * this._note_height;
+            var note_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+
+            note_line.id = 'tw_noteline_' + i.toString();
+            note_line.setAttribute("x1", 0);
+            note_line.setAttribute("x2", this._notes_width);
+            note_line.setAttribute("y1", y);
+            note_line.setAttribute("y2", y);
+            note_line.setAttribute("style", "stroke:black;stroke-width:1;");
+            this._tracks_canvas.appendChild(note_line);
+        }
+
+        return y;
     }
 
 
