@@ -1,10 +1,10 @@
 class trackwin
 {
-    constructor(info_frame, tracks_frame, song)
+    constructor(menu_frame, rulers_frame, info_frame, tracks_frame, song)
     {
         this._song = song;
         this._ruler_height = 30;
-        this._track_y = this._ruler_height;
+        this._track_y = 0;
         this._pixels_per_tick = 0.05;
         this._track_height = 20;
         this._info_width = 100;
@@ -41,7 +41,10 @@ class trackwin
         this._tracks_canvas.setAttribute("class", "trackwin-tracks-canvas");
         this._tracks_canvas.id = 'trackwin_tracks_canvas';
         
+        this._menu_frame = menu_frame;
+        this._rulers_frame = rulers_frame;
         this._tracks_frame = tracks_frame;
+        this._info_frame = info_frame;
         
         tracks_frame.appendChild(this._tracks_canvas);
         
@@ -58,20 +61,37 @@ class trackwin
         this._height = wh.height;
         this._tracks_width = wh.width;
         
-        this._info_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        
+        this._info_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");        
         this._info_canvas.setAttribute("class", "trackwin-info-canvas");
         this._info_canvas.id = 'trackwin_info_canvas';
         
         info_frame.appendChild(this._info_canvas);
-        
+
         this._info_canvas.addEventListener('click', this.info_clickhandler);
         this._info_canvas.addEventListener('mouseover', this.info_mouseoverhandler);
         this._info_canvas.addEventListener('mouseout', this.info_mouseouthandler);
         
+        this._rulers_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        this._rulers_canvas.id = 'trackwin_rulers_canvas';
+        rulers_frame.appendChild(this._rulers_canvas);
+        rulers_frame.addEventListener('scroll', this.rulers_scrollhandler);
+        
+        this._rulers_canvas.addEventListener('click', this.rulers_clickhandler);
+        this._rulers_canvas.addEventListener('mousedown', this.rulers_mousedownhandler);
+        this._rulers_canvas.addEventListener('mouseup', this.rulers_mouseuphandler);
+        this._rulers_canvas.addEventListener('mousemove', this.rulers_mousemovehandler);
+
+        this._menu_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        this._menu_canvas.id = 'trackwin_menu_canvas';
+        menu_frame.appendChild(this._menu_canvas);
+        
         
         this._bar_highlight_element = null;
         this._track_highlight_element = null;
+
+        this.create_tracks();
+        this.create_rulers();
+        this.create_menu();
     }
     
     tracks_clickhandler(event)
@@ -97,6 +117,67 @@ class trackwin
         let y = event.clientY - bound.top - svg.clientTop;
         
         trackwin_object.tracks_handle_mouse_move(x, y);
+    }
+    
+    rulers_scrollhandler()
+    {
+        var tracks_element = document.getElementById("trackwin_tracks_container");
+        var rulers_element = document.getElementById("trackwin_rulers_rulers_container");
+        
+        tracks_element.scrollLeft = rulers_element.scrollLeft;
+    }
+    
+    rulers_clickhandler(event)
+    {
+        let svg = event.currentTarget;
+        let bound = svg.getBoundingClientRect();
+        
+        let x = event.clientX - bound.left - svg.clientLeft;
+        let y = event.clientY - bound.top - svg.clientTop;
+        
+        output("click: " + x + " " + y);
+        output("button: " + event.button);
+        
+        trackwin_object.rulers_handle_click(x, y, event.button);
+    }
+    
+    rulers_mousedownhandler(event)
+    {
+        let svg = event.currentTarget;
+        let bound = svg.getBoundingClientRect();
+        
+        let x = event.clientX - bound.left - svg.clientLeft;
+        let y = event.clientY - bound.top - svg.clientTop;
+        
+        output("mousedown: " + x + " " + y);
+        output("button: " + event.button);
+        
+        trackwin_object.rulers_handle_mousedown(x, y, event.button);
+    }
+    
+    rulers_mouseuphandler(event)
+    {
+        let svg = event.currentTarget;
+        let bound = svg.getBoundingClientRect();
+        
+        let x = event.clientX - bound.left - svg.clientLeft;
+        let y = event.clientY - bound.top - svg.clientTop;
+        
+        output("mouseup: " + x + " " + y);
+        output("button: " + event.button);
+        
+        trackwin_object.rulers_handle_mouseup(x, y, event.button);
+    }
+    
+    rulers_mousemovehandler(event)
+    {
+        let svg = event.currentTarget;
+        let bound = svg.getBoundingClientRect();
+        
+        let x = event.clientX - bound.left - svg.clientLeft;
+        let y = event.clientY - bound.top - svg.clientTop;
+        
+        trackwin_object.rulers_handle_mouse_move(x, y);
     }
     
     solo_mouseoverhandler(event)
@@ -144,105 +225,9 @@ class trackwin
 
     tracks_handle_click(x, y, button)
     {
-        if (y < this._ruler_height)
+        if (button == 2)
         {
-            if (this._playing)
-            {
-                stop();
-                this._playing = false;
-                return;
-            }
-            
-            var tick = parseInt(x / this._pixels_per_tick);
-            
-            for (const bar of this._song.bars)
-            {
-                if ((tick >= bar.start) && (tick < bar.end))
-                {
-                    output("play: start = " + bar.start);
-                    this._playing = true;
-                    play_midi_file(this._song.tick2second(bar.start));
-                    break;
-                }
-            }
-        }
-        else
-        {
-            if (button == 2)
-            {
-                // right click
-                var track_index = parseInt((y - this._track_y) / this._track_height);
-                if (track_index < 0)
-                {
-                    track_index = 0;
-                }
-                else if (track_index >= (this._song.tracks.length))
-                {
-                    track_index = this._song.tracks.length - 1;
-                }
-                
-                pianowin_object.remove_track_events();
-                pianowin_object.fill_note_events(track_index);
-                
-                var tick = parseInt(x / this._pixels_per_tick);
-                for (const bar of this._song.bars)
-                {
-                    if ((tick >= bar.start) && (tick < bar.end))
-                    {
-                        tick = bar.start;
-                        break;
-                    }
-                }
-
-                pianowin_object.scroll_to_tick(tick - this._song.ticks_per_beat, true);
-                pianowin_object.scroll_to_notes(tick, track_index);
-            }
-        }
-    }
-    
-    tracks_handle_mouse_move(x, y)
-    {
-        // output("handle_mouse_over " + x + " " + y);
-        var tick = parseInt(x / this._pixels_per_tick);
-        
-        if (y < this._ruler_height)
-        {
-            for (const bar of this._song.bars)
-            {
-                if ((tick >= bar.start) && (tick < bar.end))
-                {
-                    if (this._bar_highlight_element)
-                    {
-                        this._bar_highlight_element.remove();
-                    }
-                    
-                    var xpos = parseInt(bar.start * this._pixels_per_tick);
-                    var width = parseInt(bar.ticks * this._pixels_per_tick);
-                    this._bar_highlight_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                    this._bar_highlight_element.id = "tw_bar_highlight";
-                    this._bar_highlight_element.setAttribute("height", this._track_height * this._song.tracks.length);
-                    this._bar_highlight_element.setAttribute("width", width);
-                    this._bar_highlight_element.setAttribute("x", xpos);
-                    this._bar_highlight_element.setAttribute("y", this._track_y);
-                    this._bar_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
-                    this._tracks_canvas.appendChild(this._bar_highlight_element);
-                }                
-            }
-            
-            if (this._track_highlight_element)
-            {
-                this._track_highlight_element.remove();
-                this._track_highlight_element = null;
-            }
-        }
-        else if (y >= this._ruler_height)
-        {
-            if (this._bar_highlight_element)
-            {
-                this._bar_highlight_element.remove();
-                this._bar_highlight_element = null;
-            }
-
+            // right click
             var track_index = parseInt((y - this._track_y) / this._track_height);
             if (track_index < 0)
             {
@@ -253,21 +238,126 @@ class trackwin
                 track_index = this._song.tracks.length - 1;
             }
             
-            if (this._track_highlight_element)
+            pianowin_object.remove_track_events();
+            pianowin_object.fill_note_events(track_index);
+            
+            var tick = parseInt(x / this._pixels_per_tick);
+            for (const bar of this._song.bars)
             {
-                this._track_highlight_element.remove();
+                if ((tick >= bar.start) && (tick < bar.end))
+                {
+                    tick = bar.start;
+                    break;
+                }
             }
             
-            this._track_highlight_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            var width = this._info_width;
+            pianowin_object.scroll_to_tick(tick - this._song.ticks_per_beat, true);
+            pianowin_object.scroll_to_notes(tick, track_index);
+        }
+    }
+    
+    tracks_handle_mouse_move(x, y)
+    {
+        // output("handle_mouse_over " + x + " " + y);
+        var tick = parseInt(x / this._pixels_per_tick);
+        
+        if (this._bar_highlight_element)
+        {
+            this._bar_highlight_element.remove();
+            this._bar_highlight_element = null;
+        }
+
+        var track_index = parseInt((y - this._track_y) / this._track_height);
+        if (track_index < 0)
+        {
+            track_index = 0;
+        }
+        else if (track_index >= (this._song.tracks.length))
+        {
+            track_index = this._song.tracks.length - 1;
+        }
             
-            this._track_highlight_element.id = 'tw_track_highlight';
-            this._track_highlight_element.setAttribute("height", this._track_height);
-            this._track_highlight_element.setAttribute("width", width);
-            this._track_highlight_element.setAttribute("x", 0);
-            this._track_highlight_element.setAttribute("y", this._track_y + (track_index * this._track_height));
-            this._track_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
-            this._info_canvas.appendChild(this._track_highlight_element);
+        if (this._track_highlight_element)
+        {
+            this._track_highlight_element.remove();
+        }
+            
+        this._track_highlight_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        var width = this._info_width;
+            
+        this._track_highlight_element.id = 'tw_track_highlight';
+        this._track_highlight_element.setAttribute("height", this._track_height);
+        this._track_highlight_element.setAttribute("width", width);
+        this._track_highlight_element.setAttribute("x", 0);
+        this._track_highlight_element.setAttribute("y", this._track_y + (track_index * this._track_height));
+        this._track_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
+        this._info_canvas.appendChild(this._track_highlight_element);
+    }
+   
+    
+    
+    rulers_handle_click(x, y, button)
+    {
+        if (this._playing)
+        {
+            stop();
+            this._playing = false;
+            return;
+        }
+        
+        var tick = parseInt(x / this._pixels_per_tick);
+        
+        for (const bar of this._song.bars)
+        {
+            if ((tick >= bar.start) && (tick < bar.end))
+            {
+                output("play: start = " + bar.start);
+                this._playing = true;
+                play_midi_file(this._song.tick2second(bar.start));
+                break;
+            }
+        }
+    }
+    
+    rulers_handle_mousedown(x, y, button)
+    {
+    }
+    
+    rulers_handle_mouseup(x, y, button)
+    {
+    }
+    
+    rulers_handle_mouse_move(x, y)
+    {
+//         output("handle_mouse_move " + x + " " + y);
+        var tick = parseInt(x / this._pixels_per_tick);
+        
+        for (const bar of this._song.bars)
+        {
+            if ((tick >= bar.start) && (tick < bar.end))
+            {
+                if (this._bar_highlight_element)
+                {
+                    this._bar_highlight_element.remove();
+                }
+                
+                var xpos = parseInt(bar.start * this._pixels_per_tick);
+                var width = parseInt(bar.ticks * this._pixels_per_tick);
+                this._bar_highlight_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                this._bar_highlight_element.id = "tw_bar_highlight";
+                this._bar_highlight_element.setAttribute("height", this._track_height * this._song.tracks.length);
+                this._bar_highlight_element.setAttribute("width", width);
+                this._bar_highlight_element.setAttribute("x", xpos);
+                this._bar_highlight_element.setAttribute("y", this._track_y);
+                this._bar_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
+                this._tracks_canvas.appendChild(this._bar_highlight_element);
+            }                
+        }
+        
+        if (this._track_highlight_element)
+        {
+            this._track_highlight_element.remove();
+            this._track_highlight_element = null;
         }
     }
    
@@ -512,10 +602,12 @@ class trackwin
             
             if (xpos > (this._tracks_frame.clientWidth + this._tracks_frame.scrollLeft - (this._tracks_frame.clientWidth / 10)))
             {
+                this._rulers_frame.scrollLeft = xpos;
                 this._tracks_frame.scrollLeft = xpos;
             }
             else if (xpos < this._tracks_frame.scrollLeft)
             {
+                this._rulers_frame.scrollLeft = xpos - this._tracks_frame.clientWidth;
                 this._tracks_frame.scrollLeft = xpos - this._tracks_frame.clientWidth;
             }
         }
@@ -633,7 +725,7 @@ class trackwin
                 ruler_line.setAttribute("y1", 1);
                 ruler_line.setAttribute("y2", (this._ruler_height / 2) - 1);
                 ruler_line.setAttribute("style", "stroke:black;stroke-width:1;");
-                this._tracks_canvas.appendChild(ruler_line);
+                this._rulers_canvas.appendChild(ruler_line);
                                         
                 var ruler_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
                 ruler_text.id = 'seconds_text_' + tick.toString();
@@ -649,7 +741,7 @@ class trackwin
                 }
                 
                 ruler_text.textContent = mins.toString() + ':' + secs_string;
-                this._tracks_canvas.appendChild(ruler_text);
+                this._rulers_canvas.appendChild(ruler_text);
 
                 next_seconds += 5;
             }
@@ -669,7 +761,7 @@ class trackwin
             ruler_line.setAttribute("y1", (this._ruler_height / 2) + 1);
             ruler_line.setAttribute("y2", (this._ruler_height) - 2);
             ruler_line.setAttribute("style", "stroke:black;stroke-width:1;");
-            this._tracks_canvas.appendChild(ruler_line);
+            this._rulers_canvas.appendChild(ruler_line);
 
             var ruler_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
             ruler_text.id = 'bars_text' + bar_index.toString();
@@ -677,12 +769,25 @@ class trackwin
             ruler_text.setAttribute("y", 24);
             ruler_text.setAttribute("style", "fill:black;font-size:12px");
             ruler_text.textContent = (bar_index + 1).toString();
-            this._tracks_canvas.appendChild(ruler_text);
+            this._rulers_canvas.appendChild(ruler_text);
 
             bar_index++;
         }
+        
+        var width_style = "width:" + this._tracks_width.toString() + ";";
+        var height_style = "height:" + this._ruler_height.toString() + ";";
 
-        return bar_index * width;
+        this._rulers_canvas.setAttribute("style", width_style + height_style);
+
+        return this._tracks_width;
+    }
+
+    create_menu()
+    {
+        var width_style = "width:" + this._info_width.toString() + ";";
+        var height_style = "height:" + this._ruler_height.toString() + ";";
+
+        this._menu_canvas.setAttribute("style", width_style + height_style);
     }
     
     create_track_bars(track_index, bars)

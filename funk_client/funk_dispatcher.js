@@ -389,13 +389,15 @@ function handle_editor_file_loaded(msg)
 
     var trackwin_tracks_frame = document.getElementById("trackwin_tracks_container");
     var trackwin_info_frame = document.getElementById("trackwin_info_container");
-    trackwin_object = new trackwin(trackwin_info_frame, trackwin_tracks_frame, song);
-    trackwin_object.create_rulers();
-    trackwin_object.create_tracks();
+    var trackwin_menu_frame = document.getElementById("trackwin_rulers_menu_container");
+    var trackwin_rulers_frame = document.getElementById("trackwin_rulers_rulers_container");
+    trackwin_object = new trackwin(trackwin_menu_frame, trackwin_rulers_frame, trackwin_info_frame, trackwin_tracks_frame, song);
 
     var pianowin_tracks_frame = document.getElementById("pianowin_tracks_container");
     var pianowin_info_frame = document.getElementById("pianowin_info_container");
-    pianowin_object = new pianowin(pianowin_info_frame, pianowin_tracks_frame, song);
+    var pianowin_menu_frame = document.getElementById("pianowin_rulers_menu_container");
+    var pianowin_rulers_frame = document.getElementById("pianowin_rulers_rulers_container");
+    pianowin_object = new pianowin(pianowin_menu_frame, pianowin_rulers_frame, pianowin_info_frame, pianowin_tracks_frame, song);
 }
 
 function base64_decode(b64) {
