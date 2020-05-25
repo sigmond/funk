@@ -1,6 +1,31 @@
 var ws_ctrl;
 var ws_midi;
 
+var global_ctrl_down = false;
+
+function keydownhandler(event)
+{
+//     output("keycode down: " + event.keyCode);
+    if (event.keyCode == 17)
+    {
+        global_ctrl_down = true;
+    }
+}
+
+function keyuphandler(event)
+{
+//     output("keycode up: " + event.keyCode);
+    if (event.keyCode == 17)
+    {
+        global_ctrl_down = false;
+    }
+}
+    
+document.addEventListener("keydown", keydownhandler);
+document.addEventListener("keyup", keyuphandler);
+    
+
+
 function ctrl_onopen()
 {
     output("ctrl_onopen");

@@ -54,6 +54,14 @@ class trackwin
                                                  trackwin_object.tracks_clickhandler(ev);
                                                  return false;
                                              }, false);
+        this._tracks_canvas.addEventListener('wheel', function(ev) {
+                                                 if (global_ctrl_down)
+                                                 {
+                                                     ev.preventDefault();
+                                                     trackwin_object.tracks_wheelhandler(ev);
+                                                     return false;
+                                                 }
+                                             }, false);
         this._tracks_canvas.addEventListener('click', this.tracks_clickhandler);
         this._tracks_canvas.addEventListener('auxclick', this.tracks_clickhandler);
         this._tracks_canvas.addEventListener('mousemove', this.tracks_mousemovehandler);
@@ -100,6 +108,28 @@ class trackwin
         this._rulers_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._ruler_height.toString());
     }
     
+    x2tick(x)
+    {
+        return parseInt(x / this._pixels_per_tick);
+    }
+    
+    x2tick_zoomed(x)
+    {
+        return parseInt(x / (this._pixels_per_tick * this._tracks_zoom_x));
+    }
+    
+    tick2x(tick)
+    {
+        return parseInt(tick * this._pixels_per_tick);
+    }
+    
+    tick2x_zoomed(tick)
+    {
+        return parseInt((tick * this._pixels_per_tick) / this._tracks_zoom_x);
+    }
+    
+
+
     tracks_clickhandler(event)
     {
         let svg = event.currentTarget;
@@ -124,7 +154,15 @@ class trackwin
         
         trackwin_object.tracks_handle_mouse_move(x, y);
     }
-    
+
+    tracks_wheelhandler(event)
+    {
+        if (global_ctrl_down)
+        {
+            trackwin_object.tracks_handle_wheel(event.deltaY);
+        }
+    }
+
     rulers_scrollhandler()
     {
         var tracks_element = document.getElementById("trackwin_tracks_container");
@@ -262,40 +300,9 @@ class trackwin
         }
         else if (button == 0)
         {
-            var width_style = "width :" + (this._tracks_width * 2).toString() + ";";
-            var rulers_height_style = "height :" + this._ruler_height.toString() + ";";
-            var tracks_height_style = "height :" + this._height.toString() + ";";
-            this._rulers_canvas.setAttribute("style", width_style + rulers_height_style);
-            this._tracks_canvas.setAttribute("style", width_style + tracks_height_style);
-            this._tracks_zoom_x *= 2;
-            output("x: " + this._tracks_canvas.viewBox.baseVal.x);
-            output("y: " + this._tracks_canvas.viewBox.baseVal.y);
-            output("width: " + this._tracks_canvas.viewBox.baseVal.width);
-            output("height: " + this._tracks_canvas.viewBox.baseVal.height);
         }
     }
 
-    x2tick(x)
-    {
-        return parseInt(x / this._pixels_per_tick);
-    }
-    
-    x2tick_zoomed(x)
-    {
-        return parseInt(x / (this._pixels_per_tick * this._tracks_zoom_x));
-    }
-    
-    tick2x(tick)
-    {
-        return parseInt(tick * this._pixels_per_tick);
-    }
-    
-    tick2x_zoomed(tick)
-    {
-        return parseInt((tick * this._pixels_per_tick) / this._tracks_zoom_x);
-    }
-    
-    
     tracks_handle_mouse_move(x, y)
     {
         // output("handle_mouse_over " + x + " " + y);
@@ -333,8 +340,34 @@ class trackwin
         this._track_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
         this._info_canvas.appendChild(this._track_highlight_element);
     }
-   
-    
+
+    tracks_handle_wheel(delta_y)
+    {
+        output("delta y: " + delta_y);
+
+        this.tracks_do_zoom_x((delta_y < 0));        
+    }
+
+    tracks_do_zoom_x(zoom_in)
+    {
+        if (zoom_in)
+        {
+            this._tracks_zoom_x += 0.2;
+        }
+        else
+        {
+            if (this._tracks_zoom_x > 0.3)
+            {
+                this._tracks_zoom_x -= 0.2;
+            }
+        }
+        
+        var width_style = "width :" + (this._tracks_width * this._tracks_zoom_x).toString() + ";";
+        var rulers_height_style = "height :" + this._ruler_height.toString() + ";";
+        var tracks_height_style = "height :" + this._height.toString() + ";";
+        this._rulers_canvas.setAttribute("style", width_style + rulers_height_style);
+        this._tracks_canvas.setAttribute("style", width_style + tracks_height_style);
+    }
     
     rulers_handle_click(x, y, button)
     {
