@@ -6,6 +6,7 @@ class trackwin
         this._ruler_height = 30;
         this._track_y = 0;
         this._pixels_per_tick = 0.05;
+        this._tracks_zoom_x = 1.0;
         this._track_height = 20;
         this._info_width = 100;
         
@@ -92,6 +93,11 @@ class trackwin
         this.create_tracks();
         this.create_rulers();
         this.create_menu();
+
+        this._tracks_canvas.setAttribute("preserveAspectRatio", "none");
+        this._tracks_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._height.toString());
+        this._rulers_canvas.setAttribute("preserveAspectRatio", "none");
+        this._rulers_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._ruler_height.toString());
     }
     
     tracks_clickhandler(event)
@@ -241,7 +247,7 @@ class trackwin
             pianowin_object.remove_track_events();
             pianowin_object.fill_note_events(track_index);
             
-            var tick = parseInt(x / this._pixels_per_tick);
+            var tick = this.x2tick_zoomed(x);
             for (const bar of this._song.bars)
             {
                 if ((tick >= bar.start) && (tick < bar.end))
@@ -254,12 +260,46 @@ class trackwin
             pianowin_object.scroll_to_tick(tick - this._song.ticks_per_beat, true);
             pianowin_object.scroll_to_notes(tick, track_index);
         }
+        else if (button == 0)
+        {
+            var width_style = "width :" + (this._tracks_width * 2).toString() + ";";
+            var rulers_height_style = "height :" + this._ruler_height.toString() + ";";
+            var tracks_height_style = "height :" + this._height.toString() + ";";
+            this._rulers_canvas.setAttribute("style", width_style + rulers_height_style);
+            this._tracks_canvas.setAttribute("style", width_style + tracks_height_style);
+            this._tracks_zoom_x *= 2;
+            output("x: " + this._tracks_canvas.viewBox.baseVal.x);
+            output("y: " + this._tracks_canvas.viewBox.baseVal.y);
+            output("width: " + this._tracks_canvas.viewBox.baseVal.width);
+            output("height: " + this._tracks_canvas.viewBox.baseVal.height);
+        }
     }
+
+    x2tick(x)
+    {
+        return parseInt(x / this._pixels_per_tick);
+    }
+    
+    x2tick_zoomed(x)
+    {
+        return parseInt(x / (this._pixels_per_tick * this._tracks_zoom_x));
+    }
+    
+    tick2x(tick)
+    {
+        return parseInt(tick * this._pixels_per_tick);
+    }
+    
+    tick2x_zoomed(tick)
+    {
+        return parseInt((tick * this._pixels_per_tick) / this._tracks_zoom_x);
+    }
+    
     
     tracks_handle_mouse_move(x, y)
     {
         // output("handle_mouse_over " + x + " " + y);
-        var tick = parseInt(x / this._pixels_per_tick);
+        var tick = this.x2tick_zoomed(x);
         
         if (this._bar_highlight_element)
         {
@@ -305,7 +345,7 @@ class trackwin
             return;
         }
         
-        var tick = parseInt(x / this._pixels_per_tick);
+        var tick = this.x2tick_zoomed(x);
         
         for (const bar of this._song.bars)
         {
@@ -330,7 +370,8 @@ class trackwin
     rulers_handle_mouse_move(x, y)
     {
 //         output("handle_mouse_move " + x + " " + y);
-        var tick = parseInt(x / this._pixels_per_tick);
+//         output("pixels_per_tick: " + this._pixels_per_tick);
+        var tick = this.x2tick_zoomed(x);
         
         for (const bar of this._song.bars)
         {
@@ -341,8 +382,8 @@ class trackwin
                     this._bar_highlight_element.remove();
                 }
                 
-                var xpos = parseInt(bar.start * this._pixels_per_tick);
-                var width = parseInt(bar.ticks * this._pixels_per_tick);
+                var xpos = parseInt(this.tick2x(bar.start));
+                var width = parseInt(this.tick2x(bar.ticks));
                 this._bar_highlight_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
                 this._bar_highlight_element.id = "tw_bar_highlight";
                 this._bar_highlight_element.setAttribute("height", this._track_height * this._song.tracks.length);
@@ -597,7 +638,7 @@ class trackwin
         {
             this._playhead_ticks = this._song.second2tick(time);
             this.position_playhead();
-            var xpos = this._playhead_ticks * this._pixels_per_tick;
+            var xpos = this.tick2x(this._playhead_ticks);
             //output("pos: " + xpos + " scrollLeft: " + this._tracks_frame.scrollLeft);
             
             if (xpos > (this._tracks_frame.clientWidth + this._tracks_frame.scrollLeft - (this._tracks_frame.clientWidth / 10)))
@@ -710,7 +751,7 @@ class trackwin
             if (seconds > next_seconds)
             {
                 var width = 1;
-                var xpos = parseInt(tick * this._pixels_per_tick);
+                var xpos = this.tick2x(tick);
                 var ruler_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                 ruler_line.id = 'seconds_ruler_' + tick.toString();
                 ruler_line.setAttribute("x1", xpos);
@@ -746,7 +787,7 @@ class trackwin
         for (const bar of this._song.bars)
         {
             var width = 1;
-            var x = parseInt(bar.start * this._pixels_per_tick);
+            var x = this.tick2x(bar.start);
             var ruler_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             ruler_line.id = 'bars_ruler_' + bar_index.toString();
             ruler_line.setAttribute("x1", x);
@@ -789,7 +830,7 @@ class trackwin
         var bar_index = 0;
         for (const bar of this._song.bars)
         {
-            var x = parseInt(bar.start * this._pixels_per_tick);
+            var x = this.tick2x(bar.start);
             var bar_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             bar_line.id = 'trackwin_bar_' + bar_index.toString();
             bar_line.setAttribute("x1", x);
@@ -920,7 +961,7 @@ class trackwin
         {
             if (event.start > last_painted_tick)
             {
-                var xpos = parseInt(event.start * this._pixels_per_tick);
+                var xpos = this.tick2x(event.start);
                 var event_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                 event_line.id = 'tw_event_' + track_index.toString() + '_' + event.start.toString();
                 event_line.setAttribute("x1", xpos);
@@ -937,7 +978,7 @@ class trackwin
 
     create_playhead()
     {
-        var xpos = parseInt(this._playhead_ticks * this._pixels_per_tick);
+        var xpos = this.tick2x(this._playhead_ticks);
         var playhead_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         playhead_line.id = 'tw_playhead';
         playhead_line.setAttribute("x1", xpos);
@@ -951,7 +992,7 @@ class trackwin
     
     position_playhead()
     {
-        var xpos = parseInt(this._playhead_ticks * this._pixels_per_tick);
+        var xpos = this.tick2x(this._playhead_ticks);
         this._playhead_element.setAttribute("x1", xpos);
         this._playhead_element.setAttribute("x2", xpos);
     }
