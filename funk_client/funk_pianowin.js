@@ -5,7 +5,8 @@ class pianowin
         this._song = song;
         this._ruler_height = 30;
         this._track_y = 0;
-        this._pixels_per_tick = 0.5;
+        this._pixels_per_tick = 0.3;
+        this._tracks_zoom_x = 1.0;
         this._note_height = 14;
         this._info_width = 100;
         this._white_notes = [0, 2, 4, 5, 7, 9, 11];
@@ -38,10 +39,14 @@ class pianowin
         
         this._tracks_canvas.addEventListener('click', this.tracks_clickhandler);
         this._tracks_canvas.addEventListener('mousemove', this.tracks_mousemovehandler);
-        
-        var wh = this._tracks_canvas.getClientRects()[0];
-        this._height = wh.height;
-        this._tracks_width = wh.width;
+        this._tracks_canvas.addEventListener('wheel', function(ev) {
+                                                 if (global_ctrl_down)
+                                                 {
+                                                     ev.preventDefault();
+                                                     pianowin_object.tracks_wheelhandler(ev);
+                                                     return false;
+                                                 }
+                                             }, false);
         
         this._info_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         
@@ -76,6 +81,15 @@ class pianowin
         this.create_track(1);
         this.create_rulers();
         this.create_menu();
+
+        var wh = this._tracks_canvas.getClientRects()[0];
+        this._height = wh.height;
+        this._tracks_width = wh.width;
+        
+        this._tracks_canvas.setAttribute("preserveAspectRatio", "none");
+        this._tracks_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._height.toString());
+        this._rulers_canvas.setAttribute("preserveAspectRatio", "none");
+        this._rulers_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._ruler_height.toString());
     }
     
 
@@ -103,6 +117,14 @@ class pianowin
         pianowin_object.tracks_handle_mouse_move(x, y);
     }
     
+    tracks_wheelhandler(event)
+    {
+        if (global_ctrl_down)
+        {
+            pianowin_object.tracks_handle_wheel(event.deltaY);
+        }
+    }
+
 
     rulers_scrollhandler()
     {
@@ -165,6 +187,28 @@ class pianowin
         pianowin_object.rulers_handle_mouse_move(x, y);
     }
     
+    x2tick(x)
+    {
+        return parseInt(x / this._pixels_per_tick);
+    }
+    
+    x2tick_zoomed(x)
+    {
+        return parseInt(x / (this._pixels_per_tick * this._tracks_zoom_x));
+    }
+    
+    tick2x(tick)
+    {
+        return parseInt(tick * this._pixels_per_tick);
+    }
+    
+    tick2x_zoomed(tick)
+    {
+        return parseInt(tick * this._pixels_per_tick * this._tracks_zoom_x);
+    }
+    
+
+
     tracks_handle_click(x, y)
     {
     }
@@ -173,7 +217,7 @@ class pianowin
     tracks_handle_mouse_move(x, y)
     {
         // output("handle_mouse_over " + x + " " + y);
-        var tick = parseInt(x / this._pixels_per_tick);
+        var tick = this.x2tick_zoomed(x);
         
         if (this._xgrid_highlight_element)
         {
@@ -219,6 +263,34 @@ class pianowin
         }
     }
 
+    tracks_handle_wheel(delta_y)
+    {
+        output("delta y: " + delta_y);
+
+        this.tracks_do_zoom_x((delta_y < 0));        
+    }
+
+    tracks_do_zoom_x(zoom_in)
+    {
+        if (zoom_in)
+        {
+            this._tracks_zoom_x += 0.2;
+        }
+        else
+        {
+            if (this._tracks_zoom_x > 0.3)
+            {
+                this._tracks_zoom_x -= 0.2;
+            }
+        }
+        
+        var width_style = "width :" + (this._tracks_width * this._tracks_zoom_x).toString() + ";";
+        var rulers_height_style = "height :" + this._ruler_height.toString() + ";";
+        var tracks_height_style = "height :" + this._height.toString() + ";";
+        this._rulers_canvas.setAttribute("style", width_style + rulers_height_style);
+        this._tracks_canvas.setAttribute("style", width_style + tracks_height_style);
+    }
+    
     rulers_handle_click(x, y)
     {
         if (trackwin_object._playing)
@@ -228,7 +300,7 @@ class pianowin
             return;
         }
         
-        var tick = parseInt(x / this._pixels_per_tick);
+        var tick = this.x2tick_zoomed(x);
         
         // TODO: snap to xgrid
         
@@ -241,7 +313,7 @@ class pianowin
     rulers_handle_mouse_move(x, y)
     {
         // output("handle_mouse_over " + x + " " + y);
-        var tick = parseInt(x / this._pixels_per_tick);
+        var tick = this.x2tick_zoomed(x);
         
         for (const bar of this._song.bars)
         {
@@ -252,8 +324,8 @@ class pianowin
                     this._xgrid_highlight_element.remove();
                 }
                 
-                var xpos = parseInt(bar.start * this._pixels_per_tick);
-                var width = parseInt(bar.ticks * this._pixels_per_tick);
+                var xpos = this.tick2x(bar.start);
+                var width = this.tick2x(bar.ticks);
                 this._xgrid_highlight_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
                 this._xgrid_highlight_element.id = "pw_xgrid_highlight";
                 this._xgrid_highlight_element.setAttribute("height", this._note_height * this._num_notes);
@@ -316,7 +388,6 @@ class pianowin
     info_handle_mouse_move(x, y)
     {
         // output("handle_mouse_over " + x + " " + y);
-        var tick = parseInt(x / this._pixels_per_tick);
         
         if (y < this._ruler_height)
         {
@@ -392,7 +463,7 @@ class pianowin
             if (seconds > next_seconds)
             {
                 var width = 1;
-                var xpos = parseInt(tick * this._pixels_per_tick);
+                var xpos = this.tick2x(tick);
                 var ruler_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
                 ruler_line.id = 'seconds_ruler_' + tick.toString();
                 ruler_line.setAttribute("x1", xpos);
@@ -428,7 +499,7 @@ class pianowin
         for (const bar of this._song.bars)
         {
             var width = 1;
-            var x = parseInt(bar.start * this._pixels_per_tick);
+            var x = this.tick2x(bar.start);
             var ruler_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             ruler_line.id = 'bars_ruler_' + bar_index.toString();
             ruler_line.setAttribute("x1", x);
@@ -571,10 +642,10 @@ class pianowin
             highest_note = parseInt(Math.max(highest_note, note));
             lowest_note = parseInt(Math.min(lowest_note, note));
             
-            var width = parseInt((event.end - event.start) * this._pixels_per_tick);
+            var width = this.tick2x(event.end - event.start);
             var height = this._note_height - 4;
             var y = this._track_y + (this.note2line(note) * this._note_height) + 2;
-            var x = parseInt(event.start * this._pixels_per_tick);
+            var x = this.tick2x(event.start);
             var event_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
             event_rect.id = 'pw_event_' + track_index.toString() + '_' + note.toString() + '_' + event.start.toString();
             event_rect.setAttribute("x", x);
@@ -628,7 +699,7 @@ class pianowin
         var height = this._note_height * this._num_notes;
         for (const bar of bars)
         {
-            var x = parseInt(bar.start * this._pixels_per_tick);
+            var x = this.tick2x(bar.start);
             var bar_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
 
             bar_line.id = 'pianowin_bar_' + bar_index.toString();
@@ -719,9 +790,10 @@ class pianowin
         }
     }
 
+
     scroll_to_tick(tick, exact)
     {
-        var xpos = tick * this._pixels_per_tick;
+        var xpos = this.tick2x_zoomed(tick);
 
         if (exact)
         {
@@ -732,8 +804,8 @@ class pianowin
         {
             if (xpos > (this._tracks_frame.clientWidth + this._tracks_frame.scrollLeft - (this._tracks_frame.clientWidth / 10)))
             {
-                this._rulers_frame.scrollLeft = xpos;
-                this._tracks_frame.scrollLeft = xpos;
+                this._rulers_frame.scrollLeft = xpos - 100;
+                this._tracks_frame.scrollLeft = xpos - 100;
             }
             else if (xpos < this._tracks_frame.scrollLeft)
             {
@@ -745,7 +817,7 @@ class pianowin
     
     scroll_to_notes(start_tick, track_index)
     {
-        var end_tick = start_tick + (this._tracks_frame.clientWidth / this._pixels_per_tick);
+        var end_tick = start_tick + this.x2tick(this._tracks_frame.clientWidth);
         var middle_note = this.find_note_center(track_index, start_tick, end_tick);        
         var middle_y = this._track_y + (this.note2line(middle_note) * this._note_height);
         var pianowin_frame = document.getElementById("pianowin_frame");
@@ -754,7 +826,7 @@ class pianowin
     
     create_playhead()
     {
-        var xpos = parseInt(this._playhead_ticks * this._pixels_per_tick);
+        var xpos = this.tick2x(this._playhead_ticks);
         var playhead_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         playhead_line.id = 'pw_playhead';
         playhead_line.setAttribute("x1", xpos);
@@ -768,7 +840,7 @@ class pianowin
     
     position_playhead()
     {
-        var xpos = parseInt(this._playhead_ticks * this._pixels_per_tick);
+        var xpos = this.tick2x(this._playhead_ticks);
         this._playhead_element.setAttribute("x1", xpos);
         this._playhead_element.setAttribute("x2", xpos);
     }

@@ -14,6 +14,7 @@ import mido
 import zmq
 import time
 from mido import MidiFile, Message, MetaMessage, tempo2bpm
+from mido.frozen import freeze_message, thaw_message
 
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -146,7 +147,7 @@ class funk_player():
         start_time = time.time()
         input_time = 0.0
 
-        for msg, track_number in map(None, self.midi_file, self.track_number_messages):
+        for msg in self.midi_file:
             input_time += msg.time
         
             playback_time = time.time() - start_time + start_play
@@ -177,7 +178,7 @@ class funk_player():
             if isinstance(msg, MetaMessage) and not meta_messages:
                 continue
             else:
-                yield {'msg' : msg, 'track_number' : track_number}
+                yield msg
 
     def prepare_file(self):
     
@@ -191,32 +192,18 @@ class funk_player():
             print('  {:2d}: {!r}'.format(i, track.name.strip()))
 
         ## Instant mute/unmute track
-        track_file = mido.MidiFile(type=1)
-        print('track_file ' + repr(track_file))
-        for i, channel_track in enumerate(self.midi_file.tracks):
-##        print('track ' + repr(i) + ' ' + repr(channel_track))
-            track_track = mido.MidiTrack()
-            for msg in channel_track:
-                track_msg = msg.copy()
-                if hasattr(track_msg, 'channel'):
-##                print('changing from ' + repr(getattr(msg,'channel')) + ' to ' + repr(i))
-                    setattr(track_msg, 'channel', i)
-##                print('msg ' + repr(msg))
-##                print('track_msg ' + repr(track_msg))
-                    track_track.append(track_msg)
-            track_file.tracks.append(track_track)
+##        self.frozen_file = mido.MidiFile(type=1)
+##        self.frozen_msg_dict = {}
+##        for i, channel_track in enumerate(self.midi_file.tracks):
+##            frozen_track = mido.MidiTrack()
+##            for msg in channel_track:
+##                frozen_msg = freeze_message(msg)
+##                self.frozen_msg_dict[frozen_msg] = i
+##                frozen_track.append(frozen_msg)
+##            self.frozen_file.tracks.append(frozen_track)
 
-        ##print('midi_file ' + repr(self.midi_file))
-        ##print('track_file ' + repr(track_file))
-    
-        self.track_number_messages = []
-        for msg in track_file:
-            if hasattr(msg, 'channel'):
-                self.track_number_messages.append(getattr(msg,'channel'))
-            else:
-                self.track_number_messages.append(None)
-    
-        ##print('track number messages ' + repr(len(self.track_number_messages)))
+        print('midi_file ' + repr(self.midi_file))
+##        print('frozen_file ' + repr(self.frozen_file))
 
     def all_sounds_off_message(channel):
         ALL_SOUNDS_OFF = 120
@@ -231,22 +218,15 @@ class funk_player():
 
         self.playing = True
         
-        for message_dict in self.play(start_time, time_unit, meta_messages=True):
-            if print_messages:
-                print(repr(message_dict))
-
-            message = message_dict['msg']
-            track_number = message_dict['track_number']
+        for message in self.play(start_time, time_unit, meta_messages=True):
             if isinstance(message, Message):
                 muted = False
-                if hasattr(message, 'channel'):
-                    if getattr(message, 'channel') in self.muted_channels:
-                        if getattr(message, 'velocity') != 0:
-                            muted = True
-                if track_number in self.muted_tracks:
-                    if hasattr(message, 'velocity'):
-                        if getattr(message, 'velocity') != 0:
-                            muted = True
+##                if getattr(message, 'time') > 0:
+##                    if track_index in self.muted_tracks:
+##                        if hasattr(message, 'velocity'):
+##                            if getattr(message, 'velocity') > 0:
+##                                muted = True
+##                        muted = True
 
                 if not muted:
                     self.pub_socket.send_string('midi_play', flags=zmq.SNDMORE)
@@ -285,8 +265,8 @@ class funk_player():
             print ('calling play')
             self.play_file(msg['start'], msg['unit'], self.print_messages)
 
-        self.muted_channels = []
-        self.muted_tracks = []
+##        self.muted_channels = []
+##        self.muted_tracks = []
         return ''
         
     def handle_channel_command(self, msg):    
@@ -301,8 +281,8 @@ class funk_player():
         
     def handle_stop_command(self, msg):    
         print('Got stop command, playing = ' + repr(self.playing))
-        self.muted_channels = []
-        self.muted_tracks = []
+##        self.muted_channels = []
+##        self.muted_tracks = []
         self.send_panic()
         return 'stop'
         

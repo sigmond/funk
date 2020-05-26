@@ -125,7 +125,7 @@ class trackwin
     
     tick2x_zoomed(tick)
     {
-        return parseInt((tick * this._pixels_per_tick) / this._tracks_zoom_x);
+        return parseInt(tick * this._pixels_per_tick * this._tracks_zoom_x);
     }
     
 
@@ -671,13 +671,13 @@ class trackwin
         {
             this._playhead_ticks = this._song.second2tick(time);
             this.position_playhead();
-            var xpos = this.tick2x(this._playhead_ticks);
+            var xpos = this.tick2x_zoomed(this._playhead_ticks);
             //output("pos: " + xpos + " scrollLeft: " + this._tracks_frame.scrollLeft);
             
             if (xpos > (this._tracks_frame.clientWidth + this._tracks_frame.scrollLeft - (this._tracks_frame.clientWidth / 10)))
             {
-                this._rulers_frame.scrollLeft = xpos;
-                this._tracks_frame.scrollLeft = xpos;
+                this._rulers_frame.scrollLeft = xpos - 100;
+                this._tracks_frame.scrollLeft = xpos - 100;
             }
             else if (xpos < this._tracks_frame.scrollLeft)
             {
