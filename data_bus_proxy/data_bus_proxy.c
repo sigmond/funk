@@ -1,3 +1,18 @@
+/*
+    The FUNK Midi Sequencer
+
+    Copyright (C) 2020  Per Sigmond
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+*/
 #include "data_bus_proxy.h"
 #include <getopt.h>
 #include <stdbool.h>
@@ -84,7 +99,6 @@ int main (int argc, char **argv)
     rc = zmq_bind (backend, out_path);
     assert (rc == 0);
 
-    printf("My process ID: %d\n", getpid());
     
     //  Start the proxy
     if (verbose)
