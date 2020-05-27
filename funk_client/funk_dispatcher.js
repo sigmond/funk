@@ -18,13 +18,18 @@ var ws_ctrl;
 var ws_midi;
 
 var global_ctrl_down = false;
+var global_shift_down = false;
 
 function keydownhandler(event)
 {
-//     output("keycode down: " + event.keyCode);
+//    output("keycode down: " + event.keyCode);
     if (event.keyCode == 17)
     {
         global_ctrl_down = true;
+    }
+    else if (event.keyCode == 16)
+    {
+        global_shift_down = true;
     }
 }
 
@@ -34,6 +39,10 @@ function keyuphandler(event)
     if (event.keyCode == 17)
     {
         global_ctrl_down = false;
+    }
+    else if (event.keyCode == 16)
+    {
+        global_shift_down = false;
     }
 }
     

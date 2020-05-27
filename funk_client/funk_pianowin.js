@@ -23,6 +23,7 @@ class pianowin
         this._track_y = 0;
         this._pixels_per_tick = 0.3;
         this._tracks_zoom_x = 1.0;
+        this._tracks_zoom_y = 1.0;
         this._note_height = 14;
         this._info_width = 100;
         this._white_notes = [0, 2, 4, 5, 7, 9, 11];
@@ -56,7 +57,7 @@ class pianowin
         this._tracks_canvas.addEventListener('click', this.tracks_clickhandler);
         this._tracks_canvas.addEventListener('mousemove', this.tracks_mousemovehandler);
         this._tracks_canvas.addEventListener('wheel', function(ev) {
-                                                 if (global_ctrl_down)
+                                                 if (global_ctrl_down || global_shift_down)
                                                  {
                                                      ev.preventDefault();
                                                      pianowin_object.tracks_wheelhandler(ev);
@@ -71,6 +72,14 @@ class pianowin
         
         info_frame.appendChild(this._info_canvas);
         
+        this._info_canvas.addEventListener('wheel', function(ev) {
+                                               if (global_shift_down)
+                                               {
+                                                   ev.preventDefault();
+                                                   pianowin_object.info_wheelhandler(ev);
+                                                   return false;
+                                               }
+                                           }, false);
         this._info_canvas.addEventListener('click', this.info_clickhandler);
         this._info_canvas.addEventListener('mousemove', this.info_mousemovehandler);
         
@@ -80,6 +89,14 @@ class pianowin
         rulers_frame.appendChild(this._rulers_canvas);
         rulers_frame.addEventListener('scroll', this.rulers_scrollhandler);
         
+        this._rulers_canvas.addEventListener('wheel', function(ev) {
+                                                 if (global_ctrl_down)
+                                                 {
+                                                     ev.preventDefault();
+                                                     pianowin_object.rulers_wheelhandler(ev);
+                                                     return false;
+                                                 }
+                                             }, false);
         this._rulers_canvas.addEventListener('click', this.rulers_clickhandler);
         this._rulers_canvas.addEventListener('mousemove', this.rulers_mousemovehandler);
 
@@ -106,6 +123,8 @@ class pianowin
         this._tracks_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._height.toString());
         this._rulers_canvas.setAttribute("preserveAspectRatio", "none");
         this._rulers_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._ruler_height.toString());
+        this._info_canvas.setAttribute("preserveAspectRatio", "none");
+        this._info_canvas.setAttribute("viewBox", "0 0 " + this._info_width.toString() + ' ' + this._height.toString());
     }
     
 
@@ -135,7 +154,7 @@ class pianowin
     
     tracks_wheelhandler(event)
     {
-        if (global_ctrl_down)
+        if (global_ctrl_down || global_shift_down)
         {
             pianowin_object.tracks_handle_wheel(event.deltaY);
         }
@@ -203,6 +222,15 @@ class pianowin
         pianowin_object.rulers_handle_mouse_move(x, y);
     }
     
+    rulers_wheelhandler(event)
+    {
+        if (global_ctrl_down)
+        {
+            pianowin_object.rulers_handle_wheel(event.deltaY);
+        }
+    }
+
+
     x2tick(x)
     {
         return parseInt(x / this._pixels_per_tick);
@@ -223,6 +251,15 @@ class pianowin
         return parseInt(tick * this._pixels_per_tick * this._tracks_zoom_x);
     }
     
+    y2note(y)
+    {
+        return parseInt((y - this._track_y) / this._note_height);
+    }
+    
+    y2note_zoomed(y)
+    {
+        return parseInt((y - this._track_y) / (this._note_height * this._tracks_zoom_y));
+    }
 
 
     tracks_handle_click(x, y)
@@ -241,7 +278,7 @@ class pianowin
             this._xgrid_highlight_element = null;
         }
         
-        var line_index = parseInt((y - this._track_y) / this._note_height);
+        var line_index = this.y2note_zoomed(y);
         if (line_index < 0)
         {
             line_index = 0;
@@ -282,8 +319,14 @@ class pianowin
     tracks_handle_wheel(delta_y)
     {
         output("delta y: " + delta_y);
-
-        this.tracks_do_zoom_x((delta_y < 0));        
+        if (global_ctrl_down)
+        {
+            this.tracks_do_zoom_x((delta_y < 0));
+        }
+        else if (global_shift_down)
+        {
+            this.tracks_do_zoom_y((delta_y < 0));
+        }
     }
 
     tracks_do_zoom_x(zoom_in)
@@ -305,6 +348,28 @@ class pianowin
         var tracks_height_style = "height :" + this._height.toString() + ";";
         this._rulers_canvas.setAttribute("style", width_style + rulers_height_style);
         this._tracks_canvas.setAttribute("style", width_style + tracks_height_style);
+    }
+    
+    tracks_do_zoom_y(zoom_in)
+    {
+        if (zoom_in)
+        {
+            this._tracks_zoom_y += 0.2;
+        }
+        else
+        {
+            if (this._tracks_zoom_y > 0.3)
+            {
+                this._tracks_zoom_y -= 0.2;
+            }
+        }
+        
+        var tracks_width_style = "width :" + (this._tracks_width * this._tracks_zoom_x).toString() + ";";
+        var tracks_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
+        var info_width_style = "width :" + this._info_width.toString() + ";";
+        var info_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
+        this._tracks_canvas.setAttribute("style", tracks_width_style + tracks_height_style);
+        this._info_canvas.setAttribute("style", info_width_style + info_height_style);
     }
     
     rulers_handle_click(x, y)
@@ -368,6 +433,17 @@ class pianowin
     }
 
 
+    rulers_handle_wheel(delta_y)
+    {
+        output("delta y: " + delta_y);
+
+        if (global_ctrl_down)
+        {
+            this.tracks_do_zoom_x((delta_y < 0));
+        }
+    }
+
+
     info_clickhandler(event)
     {
         let svg = event.currentTarget;
@@ -391,6 +467,15 @@ class pianowin
         
         pianowin_object.info_handle_mouse_move(x, y);
     }
+
+    info_wheelhandler(event)
+    {
+        if (global_shift_down)
+        {
+            pianowin_object.info_handle_wheel(event.deltaY);
+        }
+    }
+
 
 
     info_handle_click(x, y)
@@ -428,7 +513,7 @@ class pianowin
                 this._xgrid_highlight_element = null;
             }
 
-            var line_index = parseInt((y - this._track_y) / this._note_height);
+            var line_index = this.y2note_zoomed(y);
             if (line_index < 0)
             {
                 line_index = 0;
@@ -464,6 +549,15 @@ class pianowin
                 this._key_highlight_element.style.fill = this._black_key_highlight_color;
                 this._key_highlight_type = 'black_key';
             }
+        }
+    }
+
+    info_handle_wheel(delta_y)
+    {
+        output("delta y: " + delta_y);
+        if (global_shift_down)
+        {
+            this.tracks_do_zoom_y((delta_y < 0));
         }
     }
 

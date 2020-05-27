@@ -23,6 +23,7 @@ class trackwin
         this._track_y = 0;
         this._pixels_per_tick = 0.05;
         this._tracks_zoom_x = 1.0;
+        this._tracks_zoom_y = 1.0;
         this._track_height = 20;
         this._info_width = 100;
         
@@ -71,7 +72,7 @@ class trackwin
                                                  return false;
                                              }, false);
         this._tracks_canvas.addEventListener('wheel', function(ev) {
-                                                 if (global_ctrl_down)
+                                                 if (global_ctrl_down || global_shift_down)
                                                  {
                                                      ev.preventDefault();
                                                      trackwin_object.tracks_wheelhandler(ev);
@@ -92,15 +93,30 @@ class trackwin
         
         info_frame.appendChild(this._info_canvas);
 
+        this._info_canvas.addEventListener('wheel', function(ev) {
+                                               if (global_shift_down)
+                                               {
+                                                   ev.preventDefault();
+                                                   trackwin_object.info_wheelhandler(ev);
+                                                   return false;
+                                               }
+                                           }, false);
         this._info_canvas.addEventListener('click', this.info_clickhandler);
-        this._info_canvas.addEventListener('mouseover', this.info_mouseoverhandler);
-        this._info_canvas.addEventListener('mouseout', this.info_mouseouthandler);
+        this._info_canvas.addEventListener('mousemove', this.info_mousemovehandler);
         
         this._rulers_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         this._rulers_canvas.id = 'trackwin_rulers_canvas';
         rulers_frame.appendChild(this._rulers_canvas);
         rulers_frame.addEventListener('scroll', this.rulers_scrollhandler);
         
+        this._rulers_canvas.addEventListener('wheel', function(ev) {
+                                                 if (global_ctrl_down)
+                                                 {
+                                                     ev.preventDefault();
+                                                     trackwin_object.rulers_wheelhandler(ev);
+                                                     return false;
+                                                 }
+                                             }, false);
         this._rulers_canvas.addEventListener('click', this.rulers_clickhandler);
         this._rulers_canvas.addEventListener('mousedown', this.rulers_mousedownhandler);
         this._rulers_canvas.addEventListener('mouseup', this.rulers_mouseuphandler);
@@ -122,6 +138,8 @@ class trackwin
         this._tracks_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._height.toString());
         this._rulers_canvas.setAttribute("preserveAspectRatio", "none");
         this._rulers_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._ruler_height.toString());
+        this._info_canvas.setAttribute("preserveAspectRatio", "none");
+        this._info_canvas.setAttribute("viewBox", "0 0 " + this._info_width.toString() + ' ' + this._height.toString());
     }
     
     x2tick(x)
@@ -142,6 +160,16 @@ class trackwin
     tick2x_zoomed(tick)
     {
         return parseInt(tick * this._pixels_per_tick * this._tracks_zoom_x);
+    }
+    
+    y2track(y)
+    {
+        return parseInt((y - this._track_y) / this._track_height);
+    }
+    
+    y2track_zoomed(y)
+    {
+        return parseInt((y - this._track_y) / (this._track_height * this._tracks_zoom_y));
     }
     
 
@@ -173,9 +201,15 @@ class trackwin
 
     tracks_wheelhandler(event)
     {
-        if (global_ctrl_down)
+        if (global_ctrl_down || global_shift_down)
         {
-            trackwin_object.tracks_handle_wheel(event.deltaY);
+            let svg = event.currentTarget;
+            let bound = svg.getBoundingClientRect();
+            
+            let x = event.clientX - bound.left - svg.clientLeft;
+            let y = event.clientY - bound.top - svg.clientTop;
+
+            trackwin_object.tracks_handle_wheel(x, y, event.deltaY);
         }
     }
 
@@ -240,10 +274,24 @@ class trackwin
         trackwin_object.rulers_handle_mouse_move(x, y);
     }
     
+    rulers_wheelhandler(event)
+    {
+        if (global_ctrl_down)
+        {
+            let svg = event.currentTarget;
+            let bound = svg.getBoundingClientRect();
+            
+            let x = event.clientX - bound.left - svg.clientLeft;
+            let y = event.clientY - bound.top - svg.clientTop;
+        
+            trackwin_object.rulers_handle_wheel(x, y, event.deltaY);
+        }
+    }
+
     solo_mouseoverhandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.fillOpacity = 0.1;
+        svg.style.fillOpacity = 0.05;
     }
 
     solo_mouseouthandler(event)
@@ -264,7 +312,7 @@ class trackwin
     mute_mouseoverhandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.fillOpacity = 0.1;
+        svg.style.fillOpacity = 0.05;
     }
 
     mute_mouseouthandler(event)
@@ -288,7 +336,7 @@ class trackwin
         if (button == 2)
         {
             // right click
-            var track_index = parseInt((y - this._track_y) / this._track_height);
+            var track_index = this.y2track_zoomed(y);
             if (track_index < 0)
             {
                 track_index = 0;
@@ -330,7 +378,7 @@ class trackwin
             this._bar_highlight_element = null;
         }
 
-        var track_index = parseInt((y - this._track_y) / this._track_height);
+        var track_index = this.y2track_zoomed(y);
         if (track_index < 0)
         {
             track_index = 0;
@@ -357,15 +405,24 @@ class trackwin
         this._info_canvas.appendChild(this._track_highlight_element);
     }
 
-    tracks_handle_wheel(delta_y)
+    tracks_handle_wheel(x, y, delta_y)
     {
-        output("delta y: " + delta_y);
+        output("x: " + x);
 
-        this.tracks_do_zoom_x((delta_y < 0));        
+        if (global_ctrl_down)
+        {
+            this.tracks_do_zoom_x(x, (delta_y < 0));
+        }
+        else if (global_shift_down)
+        {
+            this.tracks_do_zoom_y(y, (delta_y < 0));
+        }
     }
 
-    tracks_do_zoom_x(zoom_in)
+    tracks_do_zoom_x(x, zoom_in)
     {
+        var k = (x - this._rulers_frame.scrollLeft) / (this._rulers_frame.clientWidth / this._tracks_zoom_x);
+
         if (zoom_in)
         {
             this._tracks_zoom_x += 0.2;
@@ -377,12 +434,37 @@ class trackwin
                 this._tracks_zoom_x -= 0.2;
             }
         }
+
         
         var width_style = "width :" + (this._tracks_width * this._tracks_zoom_x).toString() + ";";
         var rulers_height_style = "height :" + this._ruler_height.toString() + ";";
-        var tracks_height_style = "height :" + this._height.toString() + ";";
+        var tracks_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
         this._rulers_canvas.setAttribute("style", width_style + rulers_height_style);
         this._tracks_canvas.setAttribute("style", width_style + tracks_height_style);
+
+        this._rulers_frame.scrollLeft = x - ((k * this._rulers_frame.clientWidth) / this._tracks_zoom_x);
+    }
+    
+    tracks_do_zoom_y(y, zoom_in)
+    {
+        if (zoom_in)
+        {
+            this._tracks_zoom_y += 0.2;
+        }
+        else
+        {
+            if (this._tracks_zoom_y > 0.3)
+            {
+                this._tracks_zoom_y -= 0.2;
+            }
+        }
+        
+        var tracks_width_style = "width :" + (this._tracks_width * this._tracks_zoom_x).toString() + ";";
+        var tracks_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
+        var info_width_style = "width :" + this._info_width.toString() + ";";
+        var info_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
+        this._tracks_canvas.setAttribute("style", tracks_width_style + tracks_height_style);
+        this._info_canvas.setAttribute("style", info_width_style + info_height_style);
     }
     
     rulers_handle_click(x, y, button)
@@ -451,6 +533,14 @@ class trackwin
         }
     }
    
+    rulers_handle_wheel(x, y, delta_y)
+    {
+        if (global_ctrl_down)
+        {
+            this.tracks_do_zoom_x(x, (delta_y < 0));
+        }
+    }
+
     
     
     info_clickhandler(event)
@@ -466,7 +556,7 @@ class trackwin
         trackwin_object.info_handle_click(x, y);
     }
     
-    info_mouseoverhandler(event)
+    info_mousemovehandler(event)
     {
         let svg = event.currentTarget;
         let bound = svg.getBoundingClientRect();
@@ -474,20 +564,23 @@ class trackwin
         let x = event.clientX - bound.left - svg.clientLeft;
         let y = event.clientY - bound.top - svg.clientTop;
         
-        trackwin_object.info_handle_mouse_over(x, y);
+        trackwin_object.info_handle_mouse_move(x, y);
     }
     
-    info_mouseouthandler(event)
+    info_wheelhandler(event)
     {
-        let svg = event.currentTarget;
-        let bound = svg.getBoundingClientRect();
+        if (global_shift_down)
+        {
+            let svg = event.currentTarget;
+            let bound = svg.getBoundingClientRect();
+            
+            let x = event.clientX - bound.left - svg.clientLeft;
+            let y = event.clientY - bound.top - svg.clientTop;
         
-        let x = event.clientX - bound.left - svg.clientLeft;
-        let y = event.clientY - bound.top - svg.clientTop;
-        
-        trackwin_object.info_handle_mouse_out(x, y);
+            trackwin_object.info_handle_wheel(x, y, event.deltaY);
+        }
     }
-    
+
     
     info_handle_click(x, y)
     {
@@ -496,7 +589,7 @@ class trackwin
         }
     }
     
-    info_handle_mouse_over(x, y)
+    info_handle_mouse_move(x, y)
     {
         // output("handle_mouse_over " + x + " " + y);
         if (this._bar_highlight_element)
@@ -505,58 +598,33 @@ class trackwin
             this._bar_highlight_element = null;
         }
 
-        if ((y < this._ruler_height) || (x < this._info_width))
+        if (this._track_highlight_element)
         {
-            if (this._track_highlight_element)
-            {
-                this._track_highlight_element.remove();
-                this._track_highlight_element = null;
-            }
-        }
-
-        var track_index = parseInt((y - this._track_y) / this._track_height);
-
-        if (x >= this._info_width)
-        {
-            if (track_index < 0)
-            {
-                track_index = 0;
-            }
-            else if (track_index >= (this._song.tracks.length))
-            {
-                track_index = this._song.tracks.length - 1;
-            }
-
-            if (this._track_highlight_element)
-            {
-                this._track_highlight_element.remove();
-            }
-            
-            this._track_highlight_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            var width = this._info_width;
-            
-            this._track_highlight_element.id = 'tw_track_highlight';
-            this._track_highlight_element.setAttribute("height", this._track_height);
-            this._track_highlight_element.setAttribute("width", width);
-            this._track_highlight_element.setAttribute("x", 0);
-            this._track_highlight_element.setAttribute("y", this._track_y + (track_index * this._track_height));
-            this._track_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.5;stroke-opacity:0.0");
-            this._info_canvas.appendChild(this._track_highlight_element);
+            this._track_highlight_element.remove();
+            this._track_highlight_element = null;
         }
     }
     
 
-    info_handle_mouse_out(x, y)
+
+    info_handle_wheel(x, y, delta_y)
     {
-//         output("handle_mouse_out " + x + " " + y);
-        if (y < this._ruler_height)
+        if (global_shift_down)
         {
-            if (this._track_highlight_element)
-            {
-                this._track_highlight_element.remove();
-                this._track_highlight_element = null;
-            }
+            this.tracks_do_zoom_y(y, (delta_y < 0));
         }
+    }
+
+    track_info_mouseoverhandler(event)
+    {
+        let svg = event.currentTarget;
+        svg.style.fillOpacity = 0.2;
+    }
+
+    track_info_mouseouthandler(event)
+    {
+        let svg = event.currentTarget;
+        svg.style.fillOpacity = 0.1;
     }
 
 
@@ -975,6 +1043,8 @@ class trackwin
         info_rect.setAttribute("x", 0);
         info_rect.setAttribute("y", this._track_y + (track_index * this._track_height));
         info_rect.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
+        info_rect.addEventListener('mouseover', this.track_info_mouseoverhandler);
+        info_rect.addEventListener('mouseout', this.track_info_mouseouthandler);
         this._info_canvas.appendChild(info_rect);
 
         this._info_canvas.appendChild(this.create_solo_button(track_index, false));
