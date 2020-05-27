@@ -176,7 +176,12 @@ class funk_player():
         # this will give all messages of all tracks ordered by absolute tick
         # msg.time will be in delta ticks though
         for msg in mido.merge_tracks(self.midi_file.tracks):
+
+            # remember absolute time of this message
             input_tick += msg.time
+
+            # convert message to absolute time (needed for track number lookup)
+            msg.time = input_tick
             
             # if tempo changes, recalculate the sleep time
             if msg.type == 'set_tempo':
@@ -219,6 +224,7 @@ class funk_player():
                 # play this event now
                 yield msg
 
+
     def prepare_file(self):
     
         print('Preparing')
@@ -230,19 +236,15 @@ class funk_player():
         for i, track in enumerate(self.midi_file.tracks):
             print('  {:2d}: {!r}'.format(i, track.name.strip()))
 
-        ## Instant mute/unmute track
-##        self.frozen_file = mido.MidiFile(type=1)
-##        self.frozen_msg_dict = {}
-##        for i, channel_track in enumerate(self.midi_file.tracks):
-##            frozen_track = mido.MidiTrack()
-##            for msg in channel_track:
-##                frozen_msg = freeze_message(msg)
-##                self.frozen_msg_dict[frozen_msg] = i
-##                frozen_track.append(frozen_msg)
-##            self.frozen_file.tracks.append(frozen_track)
+        # create dictionary of all messages in file giving the track index of the message
+        self.frozen_msg_dict = {}
+        for track_index, track in enumerate(self.midi_file.tracks):
+            now = 0
+            for msg in track:
+                now += msg.time
+                self.frozen_msg_dict[freeze_message(msg.copy(time=now))] = track_index
 
         print('midi_file ' + repr(self.midi_file))
-##        print('frozen_file ' + repr(self.frozen_file))
 
     def all_sounds_off_message(channel):
         ALL_SOUNDS_OFF = 120
@@ -256,17 +258,26 @@ class funk_player():
     def play_file(self, start_tick, print_messages):
 
         self.playing = True
-        
+
+        # loop the message generator (will yield at appropriate realtime)
         for message in self.play(start_tick, meta_messages=True):
+            # Instant mute/unmute track:
+            # lookup track index of message
+            track_index = self.frozen_msg_dict[freeze_message(message)]
+            # only mute Message
             if isinstance(message, Message):
                 muted = False
-##                if getattr(message, 'time') > 0:
-##                    if track_index in self.muted_tracks:
-##                        if hasattr(message, 'velocity'):
-##                            if getattr(message, 'velocity') > 0:
-##                                muted = True
-##                        muted = True
+                # don't mute messages as time 0
+                if message.time > 0:
+                    if track_index in self.muted_tracks:
+                        # mute
+                        muted = True
+                        if hasattr(message, 'velocity') or (message.type == 'note_off'):
+                            if getattr(message, 'velocity') == 0:
+                                # ... except if it is a note-off (to prevent hanging notes, works fine most of the time...)
+                                muted = False
 
+                # play if not muted
                 if not muted:
                     self.pub_socket.send_string('midi_play', flags=zmq.SNDMORE)
                     self.pub_socket.send_pyobj(message)
