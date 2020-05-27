@@ -162,8 +162,7 @@ class funk_editor():
                 self.send_ctrl_msg('player', obj)
                 self.midi_file_changed_since_load = False
             obj = {'command': 'play',
-                   'start' : msg['start'],
-                   'unit' : msg['unit']
+                   'start' : msg['start']
                    }
             self.send_ctrl_msg('player', obj)
         else:

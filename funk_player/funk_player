@@ -61,6 +61,8 @@ def parse_args():
     return parser.parse_args()
 
 
+
+
 class funk_player():
     context = None
     ctrl_socket = None
@@ -133,10 +135,8 @@ class funk_player():
         obj = {'command': 'panic'}
         self.send_ctrl_msg(self.pub_socket, 'outputter', obj)
 
-    def send_time(self, start_time, start_play):
-        obj = {'unit': 'seconds',
-               'time': time.time() - start_time + start_play
-               }
+    def send_time(self, tick_now):
+        obj = {'t': tick_now}
         self.send_ctrl_msg(self.pub_socket, 'time', obj)
 
 
@@ -157,43 +157,66 @@ class funk_player():
         except:
             error('got exception:' + repr(sys.exc_info()))
     
+    
+    
+    def play(self, start_tick, meta_messages=False):
 
-    def play(self, start_play, time_unit, meta_messages=False):
+        # start with a default tempo
+        tempo = 500000
 
-        start_time = time.time()
-        input_time = 0.0
+        # sleep a maximum time between each check for control messages
+        max_sleep_ticks = mido.second2tick(0.1, self.midi_file.ticks_per_beat, tempo)
 
-        for msg in self.midi_file:
-            input_time += msg.time
-        
-            playback_time = time.time() - start_time + start_play
-            duration_to_next_event = input_time - playback_time
+        # always send all events with time 0 (typically channel setup)
+        input_tick = 0
 
-##        print('input_time ' + repr(input_time) + ' start_play ' + repr(start_play) + ' sleep duration ' + repr(duration_to_next_event))
-        
-            if (input_time > 0) and (input_time < start_play):
+        # allow a little time for the module to be ready after the tick-zero events
+        tick_now = start_tick - max_sleep_ticks
+
+        # this will give all messages of all tracks ordered by absolute tick
+        # msg.time will be in delta ticks though
+        for msg in mido.merge_tracks(self.midi_file.tracks):
+            input_tick += msg.time
+            
+            # if tempo changes, recalculate the sleep time
+            if msg.type == 'set_tempo':
+                tempo = msg.tempo
+                max_sleep_ticks = mido.second2tick(0.1, self.midi_file.ticks_per_beat, tempo)
+
+            # skip all events between zero and start tick
+            if (input_tick > 0) and (input_tick < start_tick):
                 continue
 
+            # calculate how long to wait until next event is to be played
+            ticks_to_next_event = input_tick - tick_now
 
-            while duration_to_next_event > 0.1:
+            # chop up the waiting (sleeping) to allow checking for control messages and inform client about timing
+            while ticks_to_next_event > max_sleep_ticks:
+                # check for control messages
                 command = self.poll_ctrl_command()
                 if command == 'stop':
                     return
-                self.send_time(start_time, start_play)
+                self.send_time(tick_now)
                 time.sleep(0.1)
-                duration_to_next_event = duration_to_next_event - 0.1
+                ticks_to_next_event = ticks_to_next_event - max_sleep_ticks
+                tick_now = tick_now + max_sleep_ticks
+
+            # if remaining time less than max waiting time, wait that time
+            if ticks_to_next_event > 0:
+                self.send_time(tick_now)
+                time.sleep(mido.tick2second(ticks_to_next_event, self.midi_file.ticks_per_beat, tempo))
+                tick_now = tick_now + ticks_to_next_event
             
-            if duration_to_next_event > 0.0:
-                self.send_time(start_time, start_play)
-                time.sleep(duration_to_next_event)
-            
+            # check for control messages
             command = self.poll_ctrl_command()
             if command == 'stop':
                 return
-            
+
             if isinstance(msg, MetaMessage) and not meta_messages:
+                # don't play metamessages
                 continue
             else:
+                # play this event now
                 yield msg
 
     def prepare_file(self):
@@ -230,11 +253,11 @@ class funk_player():
             )
 
             
-    def play_file(self, start_time, time_unit, print_messages):
+    def play_file(self, start_tick, print_messages):
 
         self.playing = True
         
-        for message in self.play(start_time, time_unit, meta_messages=True):
+        for message in self.play(start_tick, meta_messages=True):
             if isinstance(message, Message):
                 muted = False
 ##                if getattr(message, 'time') > 0:
@@ -279,7 +302,7 @@ class funk_player():
         print('Got play command')
         if self.midi_file != None:
             print ('calling play')
-            self.play_file(msg['start'], msg['unit'], self.print_messages)
+            self.play_file(msg['start'], self.print_messages)
 
 ##        self.muted_channels = []
 ##        self.muted_tracks = []

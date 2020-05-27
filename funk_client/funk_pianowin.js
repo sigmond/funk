@@ -322,7 +322,7 @@ class pianowin
         
         output("play: start = " + tick);
         trackwin_object._playing = true;
-        play_midi_file(this._song.tick2second(tick));
+        play_midi_file(tick);
     }
     
 
@@ -794,16 +794,13 @@ class pianowin
         return width;
     }
 
-    handle_time(time, unit)
+    handle_time(tick)
     {
-        if (unit == 'seconds')
-        {
-            this._playhead_ticks = this._song.second2tick(time);
-            this.position_playhead();
-            //output("pos: " + xpos + " scrollLeft: " + this._tracks_frame.scrollLeft);
-
-            this.scroll_to_tick(this._playhead_ticks, false);
-        }
+        this._playhead_ticks = tick;
+        this.position_playhead();
+        //output("pos: " + xpos + " scrollLeft: " + this._tracks_frame.scrollLeft);
+        
+        this.scroll_to_tick(this._playhead_ticks, false);
     }
 
 

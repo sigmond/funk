@@ -241,8 +241,7 @@ class funk_controller():
         print('handle_play')
         obj = {'command': 'play',
                'what' : 'file',
-               'start' : msg['start'],
-               'unit' : msg['unit']
+               'start' : msg['start']
                }
         self.com.send_bus_msg('editor', obj)
     
@@ -288,8 +287,7 @@ class funk_controller():
     
     def handle_record(self, msg):
         obj = {'command': 'record',
-               'start' : msg['start'],
-               'unit' : msg['unit']
+               'start' : msg['start']
                }
         self.com.send_bus_msg('recorder', obj)
         obj['command'] = 'play'

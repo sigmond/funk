@@ -402,7 +402,7 @@ class trackwin
             {
                 output("play: start = " + bar.start);
                 this._playing = true;
-                play_midi_file(this._song.tick2second(bar.start));
+                play_midi_file(bar.start);
                 break;
             }
         }
@@ -681,25 +681,22 @@ class trackwin
 
 
 
-    handle_time(time, unit)
+    handle_time(tick)
     {
-        if (unit == 'seconds')
+        this._playhead_ticks = tick;
+        this.position_playhead();
+        var xpos = this.tick2x_zoomed(this._playhead_ticks);
+        //output("pos: " + xpos + " scrollLeft: " + this._tracks_frame.scrollLeft);
+        
+        if (xpos > (this._tracks_frame.clientWidth + this._tracks_frame.scrollLeft - (this._tracks_frame.clientWidth / 10)))
         {
-            this._playhead_ticks = this._song.second2tick(time);
-            this.position_playhead();
-            var xpos = this.tick2x_zoomed(this._playhead_ticks);
-            //output("pos: " + xpos + " scrollLeft: " + this._tracks_frame.scrollLeft);
-            
-            if (xpos > (this._tracks_frame.clientWidth + this._tracks_frame.scrollLeft - (this._tracks_frame.clientWidth / 10)))
-            {
-                this._rulers_frame.scrollLeft = xpos - 100;
-                this._tracks_frame.scrollLeft = xpos - 100;
-            }
-            else if (xpos < this._tracks_frame.scrollLeft)
-            {
-                this._rulers_frame.scrollLeft = xpos - this._tracks_frame.clientWidth;
-                this._tracks_frame.scrollLeft = xpos - this._tracks_frame.clientWidth;
-            }
+            this._rulers_frame.scrollLeft = xpos - 100;
+            this._tracks_frame.scrollLeft = xpos - 100;
+        }
+        else if (xpos < this._tracks_frame.scrollLeft)
+        {
+            this._rulers_frame.scrollLeft = xpos - this._tracks_frame.clientWidth;
+            this._tracks_frame.scrollLeft = xpos - this._tracks_frame.clientWidth;
         }
     }
 

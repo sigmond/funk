@@ -214,7 +214,7 @@ function play_midi_file(start)
     var cmd;
     var msg;
 
-    cmd = { "command" : "play", "start" : start, "unit" : "seconds" };
+    cmd = { "command" : "play", "start" : start };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
@@ -227,7 +227,7 @@ function record_midi_file(start)
     var cmd;
     var msg;
 
-    cmd = { "command" : "record", "start" : start, "unit" : "seconds" };
+    cmd = { "command" : "record", "start" : start };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
@@ -461,6 +461,6 @@ function handle_editor_download(msg)
 
 function handle_time(msg)
 {
-    trackwin_object.handle_time(msg['time'], msg['unit']);
-    pianowin_object.handle_time(msg['time'], msg['unit']);
+    trackwin_object.handle_time(msg['t']);
+    pianowin_object.handle_time(msg['t']);
 }
