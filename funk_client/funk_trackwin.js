@@ -94,12 +94,15 @@ class trackwin
         info_frame.appendChild(this._info_canvas);
 
         this._info_canvas.addEventListener('wheel', function(ev) {
-                                               if (global_shift_down)
+                                               if (global_ctrl_down || global_shift_down)
                                                {
                                                    ev.preventDefault();
-                                                   trackwin_object.info_wheelhandler(ev);
+                                                   if (global_shift_down)
+                                                   {
+                                                       trackwin_object.info_wheelhandler(ev);
+                                                   }
                                                    return false;
-                                               }
+                                               }    
                                            }, false);
         this._info_canvas.addEventListener('click', this.info_clickhandler);
         this._info_canvas.addEventListener('mousemove', this.info_mousemovehandler);
@@ -110,10 +113,13 @@ class trackwin
         rulers_frame.addEventListener('scroll', this.rulers_scrollhandler);
         
         this._rulers_canvas.addEventListener('wheel', function(ev) {
-                                                 if (global_ctrl_down)
+                                                 if (global_ctrl_down || global_shift_down)
                                                  {
                                                      ev.preventDefault();
-                                                     trackwin_object.rulers_wheelhandler(ev);
+                                                     if (global_ctrl_down)
+                                                     {
+                                                         trackwin_object.rulers_wheelhandler(ev);
+                                                     }
                                                      return false;
                                                  }
                                              }, false);
@@ -421,7 +427,8 @@ class trackwin
 
     tracks_do_zoom_x(x, zoom_in)
     {
-        var k = (x - this._rulers_frame.scrollLeft) / (this._rulers_frame.clientWidth / this._tracks_zoom_x);
+        var k = (x - this._rulers_frame.scrollLeft) / this._rulers_frame.clientWidth;
+        var old_zoom = this._tracks_zoom_x;
 
         if (zoom_in)
         {
@@ -442,12 +449,15 @@ class trackwin
         this._rulers_canvas.setAttribute("style", width_style + rulers_height_style);
         this._tracks_canvas.setAttribute("style", width_style + tracks_height_style);
 
-        this._rulers_frame.scrollLeft = x - ((k * this._rulers_frame.clientWidth) / this._tracks_zoom_x);
+        var new_x = x * (this._tracks_zoom_x / old_zoom);
+        this._rulers_frame.scrollLeft = new_x - (k * this._rulers_frame.clientWidth);
     }
     
     tracks_do_zoom_y(y, zoom_in)
     {
-        var k = (y - this._tracks_frame.scrollTop) / (this._tracks_frame.clientHeight / this._tracks_zoom_y);
+        var trackwin_frame = document.getElementById("trackwin_frame");
+        var k = (y - trackwin_frame.scrollTop) / trackwin_frame.clientHeight;
+        var old_zoom = this._tracks_zoom_y;
 
         if (zoom_in)
         {
@@ -468,7 +478,8 @@ class trackwin
         this._tracks_canvas.setAttribute("style", tracks_width_style + tracks_height_style);
         this._info_canvas.setAttribute("style", info_width_style + info_height_style);
 
-        this._tracks_frame.scrollTop = y - ((k * this._tracks_frame.clientHeight) / this._tracks_zoom_y);
+        var new_y = y * (this._tracks_zoom_y / old_zoom);
+        trackwin_frame.scrollTop = new_y - (k * trackwin_frame.clientHeight);
     }
     
     rulers_handle_click(x, y, button)

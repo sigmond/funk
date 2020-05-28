@@ -73,12 +73,15 @@ class pianowin
         info_frame.appendChild(this._info_canvas);
         
         this._info_canvas.addEventListener('wheel', function(ev) {
-                                               if (global_shift_down)
-                                               {
-                                                   ev.preventDefault();
-                                                   pianowin_object.info_wheelhandler(ev);
-                                                   return false;
-                                               }
+                                                 if (global_ctrl_down || global_shift_down)
+                                                 {
+                                                     ev.preventDefault();
+                                                     if (global_shift_down)
+                                                     {
+                                                         pianowin_object.info_wheelhandler(ev);
+                                                     }
+                                                     return false;
+                                                 }
                                            }, false);
         this._info_canvas.addEventListener('click', this.info_clickhandler);
         this._info_canvas.addEventListener('mousemove', this.info_mousemovehandler);
@@ -90,10 +93,13 @@ class pianowin
         rulers_frame.addEventListener('scroll', this.rulers_scrollhandler);
         
         this._rulers_canvas.addEventListener('wheel', function(ev) {
-                                                 if (global_ctrl_down)
+                                                 if (global_ctrl_down || global_shift_down)
                                                  {
                                                      ev.preventDefault();
-                                                     pianowin_object.rulers_wheelhandler(ev);
+                                                     if (global_ctrl_down)
+                                                     {
+                                                         pianowin_object.rulers_wheelhandler(ev);
+                                                     }
                                                      return false;
                                                  }
                                              }, false);
@@ -173,6 +179,8 @@ class pianowin
         var rulers_element = document.getElementById("pianowin_rulers_rulers_container");
         
         tracks_element.scrollLeft = rulers_element.scrollLeft;
+
+//        output('left ' + rulers_element.scrollLeft);
     }
     
     rulers_clickhandler(event)
@@ -281,7 +289,7 @@ class pianowin
 
     tracks_handle_mouse_move(x, y)
     {
-        // output("handle_mouse_over " + x + " " + y);
+        //output("handle_mouse_over " + x + " " + y);
         var tick = this.x2tick_zoomed(x);
         
         if (this._xgrid_highlight_element)
@@ -343,7 +351,8 @@ class pianowin
 
     tracks_do_zoom_x(x, zoom_in)
     {
-        var k = (x - this._rulers_frame.scrollLeft) / (this._rulers_frame.clientWidth / this._tracks_zoom_x);
+        var k = (x - this._rulers_frame.scrollLeft) / this._rulers_frame.clientWidth;
+        var old_zoom = this._tracks_zoom_x;
 
         if (zoom_in)
         {
@@ -359,18 +368,19 @@ class pianowin
         
         var width_style = "width :" + (this._tracks_width * this._tracks_zoom_x).toString() + ";";
         var rulers_height_style = "height :" + this._ruler_height.toString() + ";";
-        var tracks_height_style = "height :" + this._height.toString() + ";";
+        var tracks_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
         this._rulers_canvas.setAttribute("style", width_style + rulers_height_style);
         this._tracks_canvas.setAttribute("style", width_style + tracks_height_style);
 
-        this._rulers_frame.scrollLeft = x - ((k * this._rulers_frame.clientWidth) / this._tracks_zoom_x);
+        var new_x = x * (this._tracks_zoom_x / old_zoom);
+        this._rulers_frame.scrollLeft = new_x - (k * this._rulers_frame.clientWidth);
     }
     
     tracks_do_zoom_y(y, zoom_in)
     {
         var pianowin_frame = document.getElementById("pianowin_frame");
-//         var k = (y - pianowin_frame.scrollTop) / (this._tracks_frame.clientHeight / this._tracks_zoom_y);
-        var note = this.y2note_zoomed(y);
+        var k = (y - pianowin_frame.scrollTop) / pianowin_frame.clientHeight;
+        var old_zoom = this._tracks_zoom_y;
 
         if (zoom_in)
         {
@@ -391,10 +401,8 @@ class pianowin
         this._tracks_canvas.setAttribute("style", tracks_width_style + tracks_height_style);
         this._info_canvas.setAttribute("style", info_width_style + info_height_style);
 
-        var middle_y = this._track_y + ((this.note2line(note) * this._note_height) * this._tracks_zoom_y);
-        pianowin_frame.scrollTop = middle_y - (pianowin_frame.clientHeight / 2);
-//         this._tracks_frame.scrollTop = y - (this._tracks_frame.clientHeight / 2);
-//         pianowin_frame.scrollTop = y - ((k * this._tracks_frame.clientHeight) / this._tracks_zoom_y);
+        var new_y = y * (this._tracks_zoom_y / old_zoom);
+        pianowin_frame.scrollTop = new_y - (k * pianowin_frame.clientHeight);
     }
     
     rulers_handle_click(x, y)
