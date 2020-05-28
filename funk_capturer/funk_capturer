@@ -33,12 +33,12 @@ def parse_args():
 
     arg('-i', '--data-bus-in',
         dest='data_bus_in',
-        default='ipc:///tmp/data_bus_proxy_out',
+        default='ipc:///tmp/funk_proxy_out',
         help='path to input socket')
 
     arg('-o', '--data-bus-out',
         dest='data_bus_out',
-        default='ipc:///tmp/data_bus_proxy_in',
+        default='ipc:///tmp/funk_proxy_in',
         help='path to output socket')
 
     arg('-p', '--midi-port-in',

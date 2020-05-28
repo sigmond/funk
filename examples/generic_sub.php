@@ -7,7 +7,7 @@ $topic = $options['t'];
     and echoes back the received message
 */
 $pull = new ZMQSocket(new ZMQContext(), ZMQ::SOCKET_SUB);
-$pull->connect("ipc:///tmp/data_bus_proxy_out");
+$pull->connect("ipc:///tmp/funk_proxy_out");
 $pull->setSockOpt(ZMQ::SOCKOPT_SUBSCRIBE, $topic);
 
 while (true) {

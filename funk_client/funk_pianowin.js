@@ -156,7 +156,13 @@ class pianowin
     {
         if (global_ctrl_down || global_shift_down)
         {
-            pianowin_object.tracks_handle_wheel(event.deltaY);
+            let svg = event.currentTarget;
+            let bound = svg.getBoundingClientRect();
+            
+            let x = event.clientX - bound.left - svg.clientLeft;
+            let y = event.clientY - bound.top - svg.clientTop;
+        
+            pianowin_object.tracks_handle_wheel(x, y, event.deltaY);
         }
     }
 
@@ -226,7 +232,13 @@ class pianowin
     {
         if (global_ctrl_down)
         {
-            pianowin_object.rulers_handle_wheel(event.deltaY);
+            let svg = event.currentTarget;
+            let bound = svg.getBoundingClientRect();
+            
+            let x = event.clientX - bound.left - svg.clientLeft;
+            let y = event.clientY - bound.top - svg.clientTop;
+        
+            pianowin_object.rulers_handle_wheel(x, y, event.deltaY);
         }
     }
 
@@ -316,21 +328,23 @@ class pianowin
         }
     }
 
-    tracks_handle_wheel(delta_y)
+    tracks_handle_wheel(x, y, delta_y)
     {
         output("delta y: " + delta_y);
         if (global_ctrl_down)
         {
-            this.tracks_do_zoom_x((delta_y < 0));
+            this.tracks_do_zoom_x(x, (delta_y < 0));
         }
         else if (global_shift_down)
         {
-            this.tracks_do_zoom_y((delta_y < 0));
+            this.tracks_do_zoom_y(y, (delta_y < 0));
         }
     }
 
-    tracks_do_zoom_x(zoom_in)
+    tracks_do_zoom_x(x, zoom_in)
     {
+        var k = (x - this._rulers_frame.scrollLeft) / (this._rulers_frame.clientWidth / this._tracks_zoom_x);
+
         if (zoom_in)
         {
             this._tracks_zoom_x += 0.2;
@@ -348,10 +362,16 @@ class pianowin
         var tracks_height_style = "height :" + this._height.toString() + ";";
         this._rulers_canvas.setAttribute("style", width_style + rulers_height_style);
         this._tracks_canvas.setAttribute("style", width_style + tracks_height_style);
+
+        this._rulers_frame.scrollLeft = x - ((k * this._rulers_frame.clientWidth) / this._tracks_zoom_x);
     }
     
-    tracks_do_zoom_y(zoom_in)
+    tracks_do_zoom_y(y, zoom_in)
     {
+        var pianowin_frame = document.getElementById("pianowin_frame");
+//         var k = (y - pianowin_frame.scrollTop) / (this._tracks_frame.clientHeight / this._tracks_zoom_y);
+        var note = this.y2note_zoomed(y);
+
         if (zoom_in)
         {
             this._tracks_zoom_y += 0.2;
@@ -370,6 +390,11 @@ class pianowin
         var info_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
         this._tracks_canvas.setAttribute("style", tracks_width_style + tracks_height_style);
         this._info_canvas.setAttribute("style", info_width_style + info_height_style);
+
+        var middle_y = this._track_y + ((this.note2line(note) * this._note_height) * this._tracks_zoom_y);
+        pianowin_frame.scrollTop = middle_y - (pianowin_frame.clientHeight / 2);
+//         this._tracks_frame.scrollTop = y - (this._tracks_frame.clientHeight / 2);
+//         pianowin_frame.scrollTop = y - ((k * this._tracks_frame.clientHeight) / this._tracks_zoom_y);
     }
     
     rulers_handle_click(x, y)
@@ -433,13 +458,13 @@ class pianowin
     }
 
 
-    rulers_handle_wheel(delta_y)
+    rulers_handle_wheel(x, y, delta_y)
     {
         output("delta y: " + delta_y);
 
         if (global_ctrl_down)
         {
-            this.tracks_do_zoom_x((delta_y < 0));
+            this.tracks_do_zoom_x(x, (delta_y < 0));
         }
     }
 
@@ -472,7 +497,13 @@ class pianowin
     {
         if (global_shift_down)
         {
-            pianowin_object.info_handle_wheel(event.deltaY);
+            let svg = event.currentTarget;
+            let bound = svg.getBoundingClientRect();
+            
+            let x = event.clientX - bound.left - svg.clientLeft;
+            let y = event.clientY - bound.top - svg.clientTop;
+        
+            pianowin_object.info_handle_wheel(x, y, event.deltaY);
         }
     }
 
@@ -552,12 +583,12 @@ class pianowin
         }
     }
 
-    info_handle_wheel(delta_y)
+    info_handle_wheel(x, y, delta_y)
     {
         output("delta y: " + delta_y);
         if (global_shift_down)
         {
-            this.tracks_do_zoom_y((delta_y < 0));
+            this.tracks_do_zoom_y(y, (delta_y < 0));
         }
     }
 
@@ -727,7 +758,7 @@ class pianowin
 
         this.create_playhead();
 
-        var middle_y = this._track_y + (this.note2line(middle_note) * this._note_height);
+        var middle_y = this._track_y + ((this.note2line(middle_note) * this._note_height) * this._tracks_zoom_y);
         var pianowin_frame = document.getElementById("pianowin_frame");
         pianowin_frame.scrollTop = middle_y - (pianowin_frame.clientHeight / 2);
     }
@@ -925,8 +956,8 @@ class pianowin
     scroll_to_notes(start_tick, track_index)
     {
         var end_tick = start_tick + this.x2tick(this._tracks_frame.clientWidth);
-        var middle_note = this.find_note_center(track_index, start_tick, end_tick);        
-        var middle_y = this._track_y + (this.note2line(middle_note) * this._note_height);
+        var middle_note = this.find_note_center(track_index, start_tick, end_tick);
+        var middle_y = this._track_y + ((this.note2line(middle_note) * this._note_height) * this._tracks_zoom_y);
         var pianowin_frame = document.getElementById("pianowin_frame");
         pianowin_frame.scrollTop = middle_y - (pianowin_frame.clientHeight / 2);
     }

@@ -22,7 +22,7 @@ int main(int argc, char **argv)
     printf("Starting bus\n");
     if (!fork())
     {
-        execl("data_bus_proxy/data_bus_proxy", "data_bus_proxy", NULL);
+        execl("funk_proxy/funk_proxy", "funk_proxy", NULL);
     }
 
     sleep(1);

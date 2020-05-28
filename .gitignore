@@ -1,6 +1,6 @@
 *~
 *.o
 *.pyc
-data_bus_proxy/data_bus_proxy
-data_bus_proxy/print_version
+funk_proxy/funk_proxy
+funk_proxy/print_version
 funk

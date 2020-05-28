@@ -447,6 +447,8 @@ class trackwin
     
     tracks_do_zoom_y(y, zoom_in)
     {
+        var k = (y - this._tracks_frame.scrollTop) / (this._tracks_frame.clientHeight / this._tracks_zoom_y);
+
         if (zoom_in)
         {
             this._tracks_zoom_y += 0.2;
@@ -465,6 +467,8 @@ class trackwin
         var info_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
         this._tracks_canvas.setAttribute("style", tracks_width_style + tracks_height_style);
         this._info_canvas.setAttribute("style", info_width_style + info_height_style);
+
+        this._tracks_frame.scrollTop = y - ((k * this._tracks_frame.clientHeight) / this._tracks_zoom_y);
     }
     
     rulers_handle_click(x, y, button)

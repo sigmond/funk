@@ -1,0 +1,6 @@
+#ifndef FUNK_PROXY_VERSION_H
+#define FUNK_PROXY_VERSION_H
+
+#define FUNK_PROXY_VERSION "1.0.0"
+
+#endif

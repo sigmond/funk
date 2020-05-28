@@ -13,7 +13,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 */
-#include "data_bus_proxy.h"
+#include "funk_proxy.h"
 #include <getopt.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -23,10 +23,10 @@
 #include <unistd.h>
 #include <signal.h>
 #include <assert.h>
-#include "data_bus_proxy_version.h"
+#include "funk_proxy_version.h"
 
-static char *in_path = DATA_BUS_PROXY_DEFAULT_SUB_PATH;
-static char *out_path = DATA_BUS_PROXY_DEFAULT_PUB_PATH;
+static char *in_path = FUNK_PROXY_DEFAULT_SUB_PATH;
+static char *out_path = FUNK_PROXY_DEFAULT_PUB_PATH;
 static void *frontend;
 static void *backend;
 static void *context;
@@ -127,8 +127,8 @@ int main (int argc, char **argv)
 
 static void version(char *prog)
 {
-    fprintf(stderr, "%s version %s (%s), built %s %s\n",
-            prog, DATA_BUS_PROXY_VERSION, RELEASE_VERSION, __DATE__, __TIME__);
+    fprintf(stderr, "%s version %s, built %s %s\n",
+            prog, FUNK_PROXY_VERSION, __DATE__, __TIME__);
 }
 
 
