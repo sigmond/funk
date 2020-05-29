@@ -48,6 +48,7 @@ class trackwin extends eventwin
         
         this._playing = false;
         
+        this._mouse_button_1_down = false;
         
         this._tracks_canvas.addEventListener('contextmenu', function(ev) {
                                                  ev.preventDefault();
@@ -64,6 +65,8 @@ class trackwin extends eventwin
                                              }, false);
         this._tracks_canvas.addEventListener('click', this.tracks_clickhandler);
         this._tracks_canvas.addEventListener('auxclick', this.tracks_clickhandler);
+        this._tracks_canvas.addEventListener('mousedown', this.tracks_mousedownhandler);
+        this._tracks_canvas.addEventListener('mouseup', this.tracks_mouseuphandler);
         this._tracks_canvas.addEventListener('mousemove', this.tracks_mousemovehandler);
         
         
@@ -101,6 +104,7 @@ class trackwin extends eventwin
         
         this._bar_highlight_element = null;
         this._track_highlight_element = null;
+        this._track_select_element = null;
 
         this.create_tracks();
         this.create_rulers();
@@ -145,6 +149,28 @@ class trackwin extends eventwin
         trackwin_object.tracks_handle_click(x, y, event.button);
     }
     
+    tracks_mousedownhandler(event)
+    {
+        let svg = event.currentTarget;
+        let bound = svg.getBoundingClientRect();
+        
+        let x = event.clientX - bound.left - svg.clientLeft;
+        let y = event.clientY - bound.top - svg.clientTop;
+        
+        trackwin_object.tracks_handle_mouse_down(x, y, event.button);
+    }
+
+    tracks_mouseuphandler(event)
+    {
+        let svg = event.currentTarget;
+        let bound = svg.getBoundingClientRect();
+        
+        let x = event.clientX - bound.left - svg.clientLeft;
+        let y = event.clientY - bound.top - svg.clientTop;
+        
+        trackwin_object.tracks_handle_mouse_up(x, y, event.button);
+    }
+
     tracks_mousemovehandler(event)
     {
         let svg = event.currentTarget;
@@ -324,6 +350,38 @@ class trackwin extends eventwin
         }
     }
 
+    tracks_handle_mouse_down(x, y, button)
+    {
+        output("mouse down x " + x + " y " + y + " button " + button);
+        
+        if (button == 0)
+        {
+            if (this._track_select_element)
+            {
+                if (global_shift_down)
+                {
+                    this.adjust_select_area(x, y, true);
+                }
+                else
+                {
+                    this._track_select_element.remove();
+                    this._track_select_element = null;
+                }
+            }
+            this._mouse_button_1_down = true;
+        }
+    }
+
+    tracks_handle_mouse_up(x, y, button)
+    {
+        output("mouse up x " + x + " y " + y + " button " + button);
+        
+        if (button == 0)
+        {
+            this._mouse_button_1_down = false;
+        }
+    }
+
     tracks_handle_mouse_move(x, y)
     {
         // output("handle_mouse_over " + x + " " + y);
@@ -360,9 +418,97 @@ class trackwin extends eventwin
         this._track_highlight_element.setAttribute("y", this._track_y + (track_index * this._track_height));
         this._track_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
         this._info_canvas.appendChild(this._track_highlight_element);
+
+        if (this._mouse_button_1_down)
+        {
+            this.adjust_select_area(x, y, false);
+        }
     }
 
     
+
+    
+    adjust_select_area(x, y, extend)
+    {
+        var tick = this.x2tick_zoomed(x);
+        
+        for (const bar of this._song.bars)
+        {
+            if ((tick >= bar.start) && (tick < bar.end))
+            {                
+                var track_index = this.y2track_zoomed(y);
+                var xpos = parseInt(this.tick2x(bar.start));
+                var ypos = this._track_y + (track_index * this._track_height);
+                
+                if (!this._track_select_element)
+                {
+                    var width = parseInt(this.tick2x(bar.ticks));
+                    var height = this._track_height;
+                    
+                    this._track_select_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    this._track_select_element.id = 'tw_track_select';
+                    this._track_select_element.setAttribute("height", this._track_height);
+                    this._track_select_element.setAttribute("width", width);
+                    this._track_select_element.setAttribute("x", xpos);
+                    this._track_select_element.setAttribute("y", ypos);
+                    this._track_select_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.2;stroke-opacity:0.0");
+                    this._tracks_canvas.appendChild(this._track_select_element);
+                    this._track_select_x1 = xpos;
+                    this._track_select_y1 = ypos;
+                    this._track_select_width = width;
+                    this._track_select_height = this._track_height;
+                }
+                else
+                {
+                    if (ypos > this._track_select_y1)
+                    {
+                        this._track_select_height = ypos - this._track_select_y1 + this._track_height;
+                        this._track_select_element.setAttribute("height", this._track_select_height);
+                    }
+                    else
+                    {
+                        if (extend)
+                        {
+                            this._track_select_element.setAttribute("y", ypos);
+                            this._track_select_height += this._track_select_y1 - ypos;
+                            this._track_select_y1 = ypos;
+                            this._track_select_element.setAttribute("height", this._track_select_height);
+                        }
+                        else
+                        {
+                            this._track_select_height = this._track_select_y1 - ypos + this._track_height;
+                            this._track_select_element.setAttribute("y", ypos);
+                            this._track_select_element.setAttribute("height", this._track_select_height);
+                        }
+                    }
+                    
+                    if (xpos > this._track_select_x1)
+                    {
+                        this._track_select_width = xpos - this._track_select_x1 + parseInt(this.tick2x(bar.ticks));
+                        this._track_select_element.setAttribute("width", this._track_select_width); 
+                    }
+                    else
+                    {
+                        if (extend)
+                        {
+                            this._track_select_element.setAttribute("x", xpos);
+                            this._track_select_width += this._track_select_x1 - xpos;
+                            this._track_select_x1 = xpos;
+                            this._track_select_element.setAttribute("width", this._track_select_width); 
+                        }
+                        else
+                        {
+                            this._track_select_width = this._track_select_x1 - xpos + parseInt(this.tick2x(bar.ticks));
+                            this._track_select_element.setAttribute("x", xpos);
+                            this._track_select_element.setAttribute("width", this._track_select_width); 
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+
     rulers_handle_click(x, y, button)
     {
         if (this._playing)
