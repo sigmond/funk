@@ -28,7 +28,6 @@ class eventwin
 
         this._bg_color = "blue";
         
-        this._playing = false;
         this._playhead_ticks = 0;
         this._playhead_xpos = 0;
         
@@ -54,17 +53,6 @@ class eventwin
         this._menu_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         this._menu_canvas.id = this._prefix + '_menu_canvas';
         menu_frame.appendChild(this._menu_canvas);        
-        
-        this.create_tracks();
-        this.create_rulers();
-        this.create_menu();
-
-        this._tracks_canvas.setAttribute("preserveAspectRatio", "none");
-        this._tracks_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._height.toString());
-        this._rulers_canvas.setAttribute("preserveAspectRatio", "none");
-        this._rulers_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._ruler_height.toString());
-        this._info_canvas.setAttribute("preserveAspectRatio", "none");
-        this._info_canvas.setAttribute("viewBox", "0 0 " + this._info_width.toString() + ' ' + this._height.toString());
     }
 
     x2tick(x)
@@ -207,10 +195,6 @@ class eventwin
         }
     }
 
-    get playing()
-    {
-        return this._playing;
-    }
     
     get song()
     {

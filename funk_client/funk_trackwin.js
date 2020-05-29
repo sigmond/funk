@@ -14,18 +14,14 @@
     GNU General Public License for more details.
 */
 
-class trackwin
+class trackwin extends eventwin
 {
-    constructor(menu_frame, rulers_frame, info_frame, tracks_frame, song)
+    constructor(prefix, menu_frame, rulers_frame, info_frame, tracks_frame, song)
     {
-        this._song = song;
-        this._ruler_height = 30;
-        this._track_y = 0;
+        super(prefix, menu_frame, rulers_frame, info_frame, tracks_frame, song);
+
         this._pixels_per_tick = 0.05;
-        this._tracks_zoom_x = 1.0;
-        this._tracks_zoom_y = 1.0;
         this._track_height = 20;
-        this._info_width = 100;
         
         this._button_padding = 4;
         this._button_width = this._track_height - (2 * this._button_padding);
@@ -51,20 +47,7 @@ class trackwin
         this._all_solo_highlighted = false;
         
         this._playing = false;
-        this._playhead_ticks = 0;
-        this._playhead_xpos = 0;
         
-        this._tracks_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        
-        this._tracks_canvas.setAttribute("class", "trackwin-tracks-canvas");
-        this._tracks_canvas.id = 'trackwin_tracks_canvas';
-        
-        this._menu_frame = menu_frame;
-        this._rulers_frame = rulers_frame;
-        this._tracks_frame = tracks_frame;
-        this._info_frame = info_frame;
-        
-        tracks_frame.appendChild(this._tracks_canvas);
         
         this._tracks_canvas.addEventListener('contextmenu', function(ev) {
                                                  ev.preventDefault();
@@ -83,15 +66,7 @@ class trackwin
         this._tracks_canvas.addEventListener('auxclick', this.tracks_clickhandler);
         this._tracks_canvas.addEventListener('mousemove', this.tracks_mousemovehandler);
         
-        var wh = this._tracks_canvas.getClientRects()[0];
-        this._height = wh.height;
-        this._tracks_width = wh.width;
         
-        this._info_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");        
-        this._info_canvas.setAttribute("class", "trackwin-info-canvas");
-        this._info_canvas.id = 'trackwin_info_canvas';
-        
-        info_frame.appendChild(this._info_canvas);
 
         this._info_canvas.addEventListener('wheel', function(ev) {
                                                if (global_ctrl_down || global_shift_down)
@@ -107,11 +82,7 @@ class trackwin
         this._info_canvas.addEventListener('click', this.info_clickhandler);
         this._info_canvas.addEventListener('mousemove', this.info_mousemovehandler);
         
-        this._rulers_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        this._rulers_canvas.id = 'trackwin_rulers_canvas';
-        rulers_frame.appendChild(this._rulers_canvas);
-        rulers_frame.addEventListener('scroll', this.rulers_scrollhandler);
-        
+        rulers_frame.addEventListener('scroll', this.rulers_scrollhandler);        
         this._rulers_canvas.addEventListener('wheel', function(ev) {
                                                  if (global_ctrl_down || global_shift_down)
                                                  {
@@ -126,12 +97,7 @@ class trackwin
         this._rulers_canvas.addEventListener('click', this.rulers_clickhandler);
         this._rulers_canvas.addEventListener('mousedown', this.rulers_mousedownhandler);
         this._rulers_canvas.addEventListener('mouseup', this.rulers_mouseuphandler);
-        this._rulers_canvas.addEventListener('mousemove', this.rulers_mousemovehandler);
-
-        this._menu_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        this._menu_canvas.id = 'trackwin_menu_canvas';
-        menu_frame.appendChild(this._menu_canvas);
-        
+        this._rulers_canvas.addEventListener('mousemove', this.rulers_mousemovehandler);        
         
         this._bar_highlight_element = null;
         this._track_highlight_element = null;
@@ -139,6 +105,10 @@ class trackwin
         this.create_tracks();
         this.create_rulers();
         this.create_menu();
+
+        var wh = this._tracks_canvas.getClientRects()[0];
+        this._height = wh.height;
+        this._tracks_width = wh.width;
 
         this._tracks_canvas.setAttribute("preserveAspectRatio", "none");
         this._tracks_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._height.toString());
@@ -148,25 +118,6 @@ class trackwin
         this._info_canvas.setAttribute("viewBox", "0 0 " + this._info_width.toString() + ' ' + this._height.toString());
     }
     
-    x2tick(x)
-    {
-        return parseInt(x / this._pixels_per_tick);
-    }
-    
-    x2tick_zoomed(x)
-    {
-        return parseInt(x / (this._pixels_per_tick * this._tracks_zoom_x));
-    }
-    
-    tick2x(tick)
-    {
-        return parseInt(tick * this._pixels_per_tick);
-    }
-    
-    tick2x_zoomed(tick)
-    {
-        return parseInt(tick * this._pixels_per_tick * this._tracks_zoom_x);
-    }
     
     y2track(y)
     {
@@ -411,76 +362,6 @@ class trackwin
         this._info_canvas.appendChild(this._track_highlight_element);
     }
 
-    tracks_handle_wheel(x, y, delta_y)
-    {
-        output("x: " + x);
-
-        if (global_ctrl_down)
-        {
-            this.tracks_do_zoom_x(x, (delta_y < 0));
-        }
-        else if (global_shift_down)
-        {
-            this.tracks_do_zoom_y(y, (delta_y < 0));
-        }
-    }
-
-    tracks_do_zoom_x(x, zoom_in)
-    {
-        var k = (x - this._rulers_frame.scrollLeft) / this._rulers_frame.clientWidth;
-        var old_zoom = this._tracks_zoom_x;
-
-        if (zoom_in)
-        {
-            this._tracks_zoom_x += 0.2;
-        }
-        else
-        {
-            if (this._tracks_zoom_x > 0.3)
-            {
-                this._tracks_zoom_x -= 0.2;
-            }
-        }
-
-        
-        var width_style = "width :" + (this._tracks_width * this._tracks_zoom_x).toString() + ";";
-        var rulers_height_style = "height :" + this._ruler_height.toString() + ";";
-        var tracks_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
-        this._rulers_canvas.setAttribute("style", width_style + rulers_height_style);
-        this._tracks_canvas.setAttribute("style", width_style + tracks_height_style);
-
-        var new_x = x * (this._tracks_zoom_x / old_zoom);
-        this._rulers_frame.scrollLeft = new_x - (k * this._rulers_frame.clientWidth);
-    }
-    
-    tracks_do_zoom_y(y, zoom_in)
-    {
-        var trackwin_frame = document.getElementById("trackwin_frame");
-        var k = (y - trackwin_frame.scrollTop) / trackwin_frame.clientHeight;
-        var old_zoom = this._tracks_zoom_y;
-
-        if (zoom_in)
-        {
-            this._tracks_zoom_y += 0.2;
-        }
-        else
-        {
-            if (this._tracks_zoom_y > 0.3)
-            {
-                this._tracks_zoom_y -= 0.2;
-            }
-        }
-        
-        var tracks_width_style = "width :" + (this._tracks_width * this._tracks_zoom_x).toString() + ";";
-        var tracks_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
-        var info_width_style = "width :" + this._info_width.toString() + ";";
-        var info_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
-        this._tracks_canvas.setAttribute("style", tracks_width_style + tracks_height_style);
-        this._info_canvas.setAttribute("style", info_width_style + info_height_style);
-
-        var new_y = y * (this._tracks_zoom_y / old_zoom);
-        trackwin_frame.scrollTop = new_y - (k * trackwin_frame.clientHeight);
-    }
     
     rulers_handle_click(x, y, button)
     {
@@ -548,13 +429,6 @@ class trackwin
         }
     }
    
-    rulers_handle_wheel(x, y, delta_y)
-    {
-        if (global_ctrl_down)
-        {
-            this.tracks_do_zoom_x(x, (delta_y < 0));
-        }
-    }
 
     
     
@@ -622,13 +496,6 @@ class trackwin
     
 
 
-    info_handle_wheel(x, y, delta_y)
-    {
-        if (global_shift_down)
-        {
-            this.tracks_do_zoom_y(y, (delta_y < 0));
-        }
-    }
 
     track_info_mouseoverhandler(event)
     {
@@ -764,59 +631,12 @@ class trackwin
 
 
 
-    handle_time(tick)
-    {
-        this._playhead_ticks = tick;
-        this.position_playhead();
-        var xpos = this.tick2x_zoomed(this._playhead_ticks);
-        //output("pos: " + xpos + " scrollLeft: " + this._tracks_frame.scrollLeft);
-        
-        if (xpos > (this._tracks_frame.clientWidth + this._tracks_frame.scrollLeft - (this._tracks_frame.clientWidth / 10)))
-        {
-            this._rulers_frame.scrollLeft = xpos - 100;
-            this._tracks_frame.scrollLeft = xpos - 100;
-        }
-        else if (xpos < this._tracks_frame.scrollLeft)
-        {
-            this._rulers_frame.scrollLeft = xpos - this._tracks_frame.clientWidth;
-            this._tracks_frame.scrollLeft = xpos - this._tracks_frame.clientWidth;
-        }
-    }
 
     get playing()
     {
         return this._playing;
     }
     
-    get song()
-    {
-        return this._song;
-    }
-    
-    get tracks_canvas()
-    {
-        return this._tracks_canvas;
-    }
-
-    get info_canvas()
-    {
-        return this._info_canvas;
-    }
-
-    get height()
-    {
-        return this._height;
-    }
-
-    get tracks_width()
-    {
-        return this._tracks_width;
-    }
-
-    get info_width()
-    {
-        return this._info_width;
-    }
 
     create_tracks()
     {
@@ -1121,12 +941,6 @@ class trackwin
         this._tracks_canvas.appendChild(playhead_line);
     }
     
-    position_playhead()
-    {
-        var xpos = this.tick2x(this._playhead_ticks);
-        this._playhead_element.setAttribute("x1", xpos);
-        this._playhead_element.setAttribute("x2", xpos);
-    }
 }
     
 

@@ -16,9 +16,9 @@
 
 class pianowin extends eventwin
 {
-    constructor(menu_frame, rulers_frame, info_frame, tracks_frame, song)
+    constructor(prefix, menu_frame, rulers_frame, info_frame, tracks_frame, song)
     {
-        super(menu_frame, rulers_frame, info_frame, tracks_frame, song);
+        super(prefix, menu_frame, rulers_frame, info_frame, tracks_frame, song);
 
         this._pixels_per_tick = 0.3;
 
@@ -34,19 +34,12 @@ class pianowin extends eventwin
         this._black_key_color = "black";        
         this._white_key_highlight_color = "grey";
         this._black_key_highlight_color = "grey"; 
-        this._note_color = "lightgreen";
-        
-        this._tracks_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        
-        this._tracks_canvas.setAttribute("class", "pianowin-tracks-canvas");
-        this._tracks_canvas.id = 'pianowin_tracks_canvas';
+        this._note_color = "lightgreen";        
         
         this._menu_frame = menu_frame;
         this._rulers_frame = rulers_frame;
         this._info_frame = info_frame;
         this._tracks_frame = tracks_frame;
-        
-        this._tracks_frame.appendChild(this._tracks_canvas);
         
         this._tracks_canvas.addEventListener('click', this.tracks_clickhandler);
         this._tracks_canvas.addEventListener('mousemove', this.tracks_mousemovehandler);
@@ -59,12 +52,6 @@ class pianowin extends eventwin
                                                  }
                                              }, false);
         
-        this._info_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        
-        this._info_canvas.setAttribute("class", "pianowin-info-canvas");
-        this._info_canvas.id = 'pianowin_info_canvas';
-        
-        info_frame.appendChild(this._info_canvas);
         
         this._info_canvas.addEventListener('wheel', function(ev) {
                                                  if (global_ctrl_down || global_shift_down)
@@ -81,11 +68,7 @@ class pianowin extends eventwin
         this._info_canvas.addEventListener('mousemove', this.info_mousemovehandler);
         
 
-        this._rulers_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        this._rulers_canvas.id = 'pianowin_rulers_canvas';
-        rulers_frame.appendChild(this._rulers_canvas);
-        rulers_frame.addEventListener('scroll', this.rulers_scrollhandler);
-        
+        rulers_frame.addEventListener('scroll', this.rulers_scrollhandler);        
         this._rulers_canvas.addEventListener('wheel', function(ev) {
                                                  if (global_ctrl_down || global_shift_down)
                                                  {
@@ -99,10 +82,6 @@ class pianowin extends eventwin
                                              }, false);
         this._rulers_canvas.addEventListener('click', this.rulers_clickhandler);
         this._rulers_canvas.addEventListener('mousemove', this.rulers_mousemovehandler);
-
-        this._menu_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        this._menu_canvas.id = 'pianowin_menu_canvas';
-        menu_frame.appendChild(this._menu_canvas);
 
 
         this._track_events = [];
@@ -245,25 +224,6 @@ class pianowin extends eventwin
     }
 
 
-    x2tick(x)
-    {
-        return parseInt(x / this._pixels_per_tick);
-    }
-    
-    x2tick_zoomed(x)
-    {
-        return parseInt(x / (this._pixels_per_tick * this._tracks_zoom_x));
-    }
-    
-    tick2x(tick)
-    {
-        return parseInt(tick * this._pixels_per_tick);
-    }
-    
-    tick2x_zoomed(tick)
-    {
-        return parseInt(tick * this._pixels_per_tick * this._tracks_zoom_x);
-    }
     
     y2note(y)
     {
@@ -330,74 +290,6 @@ class pianowin extends eventwin
         }
     }
 
-    tracks_handle_wheel(x, y, delta_y)
-    {
-        output("delta y: " + delta_y);
-        if (global_ctrl_down)
-        {
-            this.tracks_do_zoom_x(x, (delta_y < 0));
-        }
-        else if (global_shift_down)
-        {
-            this.tracks_do_zoom_y(y, (delta_y < 0));
-        }
-    }
-
-    tracks_do_zoom_x(x, zoom_in)
-    {
-        var k = (x - this._rulers_frame.scrollLeft) / this._rulers_frame.clientWidth;
-        var old_zoom = this._tracks_zoom_x;
-
-        if (zoom_in)
-        {
-            this._tracks_zoom_x += 0.2;
-        }
-        else
-        {
-            if (this._tracks_zoom_x > 0.3)
-            {
-                this._tracks_zoom_x -= 0.2;
-            }
-        }
-        
-        var width_style = "width :" + (this._tracks_width * this._tracks_zoom_x).toString() + ";";
-        var rulers_height_style = "height :" + this._ruler_height.toString() + ";";
-        var tracks_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
-        this._rulers_canvas.setAttribute("style", width_style + rulers_height_style);
-        this._tracks_canvas.setAttribute("style", width_style + tracks_height_style);
-
-        var new_x = x * (this._tracks_zoom_x / old_zoom);
-        this._rulers_frame.scrollLeft = new_x - (k * this._rulers_frame.clientWidth);
-    }
-    
-    tracks_do_zoom_y(y, zoom_in)
-    {
-        var pianowin_frame = document.getElementById("pianowin_frame");
-        var k = (y - pianowin_frame.scrollTop) / pianowin_frame.clientHeight;
-        var old_zoom = this._tracks_zoom_y;
-
-        if (zoom_in)
-        {
-            this._tracks_zoom_y += 0.2;
-        }
-        else
-        {
-            if (this._tracks_zoom_y > 0.3)
-            {
-                this._tracks_zoom_y -= 0.2;
-            }
-        }
-        
-        var tracks_width_style = "width :" + (this._tracks_width * this._tracks_zoom_x).toString() + ";";
-        var tracks_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
-        var info_width_style = "width :" + this._info_width.toString() + ";";
-        var info_height_style = "height :" + (this._height * this._tracks_zoom_y).toString() + ";";
-        this._tracks_canvas.setAttribute("style", tracks_width_style + tracks_height_style);
-        this._info_canvas.setAttribute("style", info_width_style + info_height_style);
-
-        var new_y = y * (this._tracks_zoom_y / old_zoom);
-        pianowin_frame.scrollTop = new_y - (k * pianowin_frame.clientHeight);
-    }
     
     rulers_handle_click(x, y)
     {
@@ -460,15 +352,6 @@ class pianowin extends eventwin
     }
 
 
-    rulers_handle_wheel(x, y, delta_y)
-    {
-        output("delta y: " + delta_y);
-
-        if (global_ctrl_down)
-        {
-            this.tracks_do_zoom_x(x, (delta_y < 0));
-        }
-    }
 
 
     info_clickhandler(event)
@@ -585,14 +468,6 @@ class pianowin extends eventwin
         }
     }
 
-    info_handle_wheel(x, y, delta_y)
-    {
-        output("delta y: " + delta_y);
-        if (global_shift_down)
-        {
-            this.tracks_do_zoom_y(y, (delta_y < 0));
-        }
-    }
 
     create_rulers()
     {
@@ -921,14 +796,6 @@ class pianowin extends eventwin
         return width;
     }
 
-    handle_time(tick)
-    {
-        this._playhead_ticks = tick;
-        this.position_playhead();
-        //output("pos: " + xpos + " scrollLeft: " + this._tracks_frame.scrollLeft);
-        
-        this.scroll_to_tick(this._playhead_ticks, false);
-    }
 
 
     scroll_to_tick(tick, exact)
@@ -978,11 +845,5 @@ class pianowin extends eventwin
         this._tracks_canvas.appendChild(playhead_line);
     }
     
-    position_playhead()
-    {
-        var xpos = this.tick2x(this._playhead_ticks);
-        this._playhead_element.setAttribute("x1", xpos);
-        this._playhead_element.setAttribute("x2", xpos);
-    }
 }
     
