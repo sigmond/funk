@@ -14,33 +14,27 @@
     GNU General Public License for more details.
 */
 
-class pianowin
+class pianowin extends eventwin
 {
     constructor(menu_frame, rulers_frame, info_frame, tracks_frame, song)
     {
-        this._song = song;
-        this._ruler_height = 30;
-        this._track_y = 0;
+        super(menu_frame, rulers_frame, info_frame, tracks_frame, song);
+
         this._pixels_per_tick = 0.3;
-        this._tracks_zoom_x = 1.0;
-        this._tracks_zoom_y = 1.0;
+
         this._note_height = 14;
-        this._info_width = 100;
+
         this._white_notes = [0, 2, 4, 5, 7, 9, 11];
         this._white_note_height = (this._note_height * 12) / this._white_notes.length;
         this._white_key_num = [];
 
         this._num_notes = 128;
 
-        this._bg_color = "blue";
         this._white_key_color = "white";
         this._black_key_color = "black";        
         this._white_key_highlight_color = "grey";
         this._black_key_highlight_color = "grey"; 
         this._note_color = "lightgreen";
-        
-        this._playhead_xpos = 0;
-        this._playhead_ticks = 0;
         
         this._tracks_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         
