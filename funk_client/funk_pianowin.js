@@ -629,7 +629,14 @@ class pianowin extends eventwin
                 ruler_line.setAttribute("x2", xpos);
                 ruler_line.setAttribute("y1", 1);
                 ruler_line.setAttribute("y2", (this._ruler_height / 2) - 1);
-                ruler_line.setAttribute("style", "stroke:black;stroke-width:1;");
+                if ((seconds % 5) == 0)
+                {
+                    ruler_line.setAttribute("style", "stroke:black;stroke-width:1;stroke-opacity:1.0");
+                }
+                else
+                {
+                    ruler_line.setAttribute("style", "stroke:black;stroke-width:1;stroke-opacity:0.5");
+                }
                 this._rulers_canvas.appendChild(ruler_line);
                                         
                 var ruler_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -648,7 +655,7 @@ class pianowin extends eventwin
                 ruler_text.textContent = mins.toString() + ':' + secs_string;
                 this._rulers_canvas.appendChild(ruler_text);
 
-                next_seconds += 5;
+                next_seconds += 1;
             }
             
         }
@@ -660,13 +667,27 @@ class pianowin extends eventwin
             var width = 1;
             var x = this.tick2x(bar.start);
             var ruler_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            ruler_line.id = 'bars_ruler_' + bar_index.toString();
+            ruler_line.id = 'bars_ruler_' + bar_index.toString() + '_1';
             ruler_line.setAttribute("x1", x);
             ruler_line.setAttribute("x2", x);
             ruler_line.setAttribute("y1", (this._ruler_height / 2) + 1);
             ruler_line.setAttribute("y2", (this._ruler_height) - 2);
             ruler_line.setAttribute("style", "stroke:black;stroke-width:1;");
             this._rulers_canvas.appendChild(ruler_line);
+
+            var i;
+            for (i = 1; i < bar.beats; i++)
+            {
+                var x_beat = this.tick2x(bar.start + (i * this._song.ticks_per_beat));
+                var ruler_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                ruler_line.id = 'bars_ruler_' + bar_index.toString() + '_' + (i + 1).toString();
+                ruler_line.setAttribute("x1", x_beat);
+                ruler_line.setAttribute("x2", x_beat);
+                ruler_line.setAttribute("y1", (this._ruler_height / 2) + 1);
+                ruler_line.setAttribute("y2", (this._ruler_height) - 2);
+                ruler_line.setAttribute("style", "stroke:black;stroke-width:1;stroke-opacity:0.5");
+                this._rulers_canvas.appendChild(ruler_line);
+            }
 
             var ruler_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
             ruler_text.id = 'bars_text' + bar_index.toString();
@@ -686,7 +707,7 @@ class pianowin extends eventwin
 
         return this._tracks_width;
     }
-   
+
     create_menu()
     {
         var width_style = "width:" + this._info_width.toString() + ";";
@@ -861,13 +882,29 @@ class pianowin extends eventwin
             var x = this.tick2x(bar.start);
             var bar_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
 
-            bar_line.id = 'pianowin_bar_' + bar_index.toString();
+            bar_line.id = 'pianowin_bar_' + bar_index.toString() + '_0';
             bar_line.setAttribute("x1", x);
             bar_line.setAttribute("x2", x);
             bar_line.setAttribute("y1", 0);
             bar_line.setAttribute("y2", height);
-            bar_line.setAttribute("style", "stroke:black;stroke-width:1;");
+            bar_line.setAttribute("style", "stroke:black;stroke-width:1;stroke-opacity:1.0");
             this._tracks_canvas.appendChild(bar_line);
+
+            var i;
+            for (i = 1; i < bar.beats; i++)
+            {
+                var x_beat = this.tick2x(bar.start + (i * this._song.ticks_per_beat));
+                var bar_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                
+                bar_line.id = 'pianowin_bar_' + bar_index.toString() + '_' + (i + 1).toString();
+                bar_line.setAttribute("x1", x_beat);
+                bar_line.setAttribute("x2", x_beat);
+                bar_line.setAttribute("y1", 0);
+                bar_line.setAttribute("y2", height);
+                bar_line.setAttribute("style", "stroke:black;stroke-width:1;stroke-opacity:0.5");
+                this._tracks_canvas.appendChild(bar_line);
+            }
+
             bar_index++;
         }
 

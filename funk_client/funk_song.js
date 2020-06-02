@@ -163,6 +163,8 @@ class funk_bar
         this._start = start_tick;
         this._ticks = ticks_per_beat * 4;
         this._end = start_tick + this._ticks;
+
+        this._beats = 4;
     }
 
     get start() 
@@ -178,6 +180,11 @@ class funk_bar
     get ticks() 
     {
         return this._ticks;
+    }
+    
+    get beats() 
+    {
+        return this._beats;
     }
     
 }

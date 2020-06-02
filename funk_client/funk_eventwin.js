@@ -50,6 +50,7 @@ class eventwin
         this._rulers_canvas.id = this._prefix + '_rulers_canvas';
         rulers_frame.appendChild(this._rulers_canvas);
 
+
         this._menu_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         this._menu_canvas.id = this._prefix + '_menu_canvas';
         menu_frame.appendChild(this._menu_canvas);        
@@ -126,6 +127,7 @@ class eventwin
 
         var new_x = x * (this._tracks_zoom_x / old_zoom);
         this._rulers_frame.scrollLeft = new_x - (k * this._rulers_frame.clientWidth);
+
     }
     
     tracks_do_zoom_y(y, zoom_in)
@@ -174,6 +176,13 @@ class eventwin
         }
     }
 
+
+    remove_all_children(element)
+    {
+        while (element.firstChild) {
+            element.removeChild(element.lastChild);
+        }
+    }
 
 
     handle_time(tick)
