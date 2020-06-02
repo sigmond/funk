@@ -30,6 +30,8 @@ class pianowin extends eventwin
 
         this._num_notes = 128;
 
+        this._mouse_button_1_down = false;
+
         this._white_key_color = "white";
         this._black_key_color = "black";        
         this._white_key_highlight_color = "grey";
@@ -42,6 +44,8 @@ class pianowin extends eventwin
         this._tracks_frame = tracks_frame;
         
         this._tracks_canvas.addEventListener('click', this.tracks_clickhandler);
+        this._tracks_canvas.addEventListener('mousedown', this.tracks_mousedownhandler);
+        this._tracks_canvas.addEventListener('mouseup', this.tracks_mouseuphandler);
         this._tracks_canvas.addEventListener('mousemove', this.tracks_mousemovehandler);
         this._tracks_canvas.addEventListener('wheel', function(ev) {
                                                  if (global_ctrl_down || global_shift_down)
@@ -117,9 +121,31 @@ class pianowin extends eventwin
         
         output("click: " + x + " " + y);
         
-        pianowin_object.tracks_handle_click(x, y);
+        pianowin_object.tracks_handle_click(x, y, event.button);
     }
     
+    tracks_mousedownhandler(event)
+    {
+        let svg = event.currentTarget;
+        let bound = svg.getBoundingClientRect();
+        
+        let x = event.clientX - bound.left - svg.clientLeft;
+        let y = event.clientY - bound.top - svg.clientTop;
+        
+        pianowin_object.tracks_handle_mouse_down(x, y, event.button);
+    }
+
+    tracks_mouseuphandler(event)
+    {
+        let svg = event.currentTarget;
+        let bound = svg.getBoundingClientRect();
+        
+        let x = event.clientX - bound.left - svg.clientLeft;
+        let y = event.clientY - bound.top - svg.clientTop;
+        
+        pianowin_object.tracks_handle_mouse_up(x, y, event.button);
+    }
+
     tracks_mousemovehandler(event)
     {
         let svg = event.currentTarget;
@@ -236,10 +262,41 @@ class pianowin extends eventwin
     }
 
 
-    tracks_handle_click(x, y)
+    tracks_handle_click(x, y, button)
     {
     }
     
+    tracks_handle_mouse_down(x, y, button)
+    {
+        output("mouse down x " + x + " y " + y + " button " + button);
+        
+        if (button == 0)
+        {
+            if (this._notes_select_element)
+            {
+                if (global_shift_down)
+                {
+                    this.adjust_select_area(x, y, true);
+                }
+                else
+                {
+                    this._notes_select_element.remove();
+                    this._notes_select_element = null;
+                }
+            }
+            this._mouse_button_1_down = true;
+        }
+    }
+
+    tracks_handle_mouse_up(x, y, button)
+    {
+        output("mouse up x " + x + " y " + y + " button " + button);
+        
+        if (button == 0)
+        {
+            this._mouse_button_1_down = false;
+        }
+    }
 
     tracks_handle_mouse_move(x, y)
     {
@@ -288,10 +345,94 @@ class pianowin extends eventwin
             this._key_highlight_element.style.fill = this._black_key_highlight_color;
             this._key_highlight_type = 'black_key';
         }
+
+        if (this._mouse_button_1_down)
+        {
+            this.adjust_select_area(x, y, false);
+        }
     }
 
+
+    adjust_select_area(x, y, extend)
+    {
+        var tick = this.x2tick_zoomed(x);
+        
+        // TODO: snap to xgrid
+        var grid_width = 1;
+
+        var note = this.y2note_zoomed(y);
+        var xpos = parseInt(this.tick2x(tick));
+        var ypos = this._track_y + (note * this._note_height);
+                
+        if (!this._notes_select_element)
+        {
+            var width = parseInt(this.tick2x(grid_width));
+            var height = this._note_height;
+            
+            this._notes_select_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            this._notes_select_element.id = 'pw_notes_select';
+            this._notes_select_element.setAttribute("height", height);
+            this._notes_select_element.setAttribute("width", width);
+            this._notes_select_element.setAttribute("x", xpos);
+            this._notes_select_element.setAttribute("y", ypos);
+            this._notes_select_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.2;stroke-opacity:0.0");
+            this._tracks_canvas.appendChild(this._notes_select_element);
+            this._notes_select_x1 = xpos;
+            this._notes_select_y1 = ypos;
+            this._notes_select_width = width;
+            this._notes_select_height = height;
+        }
+        else
+        {
+            if (ypos > this._notes_select_y1)
+            {
+                this._notes_select_height = ypos - this._notes_select_y1 + this._note_height;
+                this._notes_select_element.setAttribute("height", this._notes_select_height);
+            }
+            else
+            {
+                if (extend)
+                {
+                    this._notes_select_element.setAttribute("y", ypos);
+                    this._notes_select_height += this._notes_select_y1 - ypos;
+                    this._notes_select_y1 = ypos;
+                    this._notes_select_element.setAttribute("height", this._notes_select_height);
+                }
+                else
+                {
+                    this._notes_select_height = this._notes_select_y1 - ypos + this._note_height;
+                    this._notes_select_element.setAttribute("y", ypos);
+                    this._notes_select_element.setAttribute("height", this._notes_select_height);
+                }
+            }
+            
+            if (xpos > this._notes_select_x1)
+            {
+                this._notes_select_width = xpos - this._notes_select_x1 + parseInt(this.tick2x(grid_width));
+                this._notes_select_element.setAttribute("width", this._notes_select_width); 
+            }
+            else
+            {
+                if (extend)
+                {
+                    this._notes_select_element.setAttribute("x", xpos);
+                    this._notes_select_width += this._notes_select_x1 - xpos;
+                    this._notes_select_x1 = xpos;
+                    this._notes_select_element.setAttribute("width", this._notes_select_width); 
+                }
+                else
+                {
+                    this._notes_select_width = this._notes_select_x1 - xpos + parseInt(this.tick2x(grid_width));
+                    this._notes_select_element.setAttribute("x", xpos);
+                    this._notes_select_element.setAttribute("width", this._notes_select_width); 
+                }
+            }
+        }
+    }
     
-    rulers_handle_click(x, y)
+
+    
+    rulers_handle_click(x, y, button)
     {
         if (trackwin_object._playing)
         {

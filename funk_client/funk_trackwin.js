@@ -447,7 +447,7 @@ class trackwin extends eventwin
                     
                     this._track_select_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
                     this._track_select_element.id = 'tw_track_select';
-                    this._track_select_element.setAttribute("height", this._track_height);
+                    this._track_select_element.setAttribute("height", height);
                     this._track_select_element.setAttribute("width", width);
                     this._track_select_element.setAttribute("x", xpos);
                     this._track_select_element.setAttribute("y", ypos);
@@ -504,6 +504,7 @@ class trackwin extends eventwin
                         }
                     }
                 }
+                break;
             }
         }
     }
