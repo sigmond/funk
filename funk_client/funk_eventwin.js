@@ -87,6 +87,33 @@ class eventwin
     }
 
 
+    tracks_handle_key_down(key)
+    {
+        output("tracks_handle_key_down: " + key);
+
+        if (this._mouse_over_tracks && (key == 80))
+        {
+            if (trackwin_object._playing)
+            {
+                stop();
+            }
+            
+            trackwin_object.handle_time(this._mouse_at_tick);
+            pianowin_object.handle_time(this._mouse_at_tick);
+            
+            if (trackwin_object._playing)
+            {
+                play_midi_file(this._mouse_at_tick);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+    
+
+
     tracks_handle_wheel(x, y, delta_y)
     {
 //         output("x: " + x);
@@ -158,7 +185,7 @@ class eventwin
         var new_y = y * (this._tracks_zoom_y / old_zoom);
         eventwin_frame.scrollTop = new_y - (k * eventwin_frame.clientHeight);
     }
-    
+
     rulers_handle_wheel(x, y, delta_y)
     {
         if (global_ctrl_down)
@@ -199,8 +226,8 @@ class eventwin
         }
         else if (xpos < this._tracks_frame.scrollLeft)
         {
-            this._rulers_frame.scrollLeft = xpos - this._tracks_frame.clientWidth;
-            this._tracks_frame.scrollLeft = xpos - this._tracks_frame.clientWidth;
+            this._rulers_frame.scrollLeft = xpos - this._tracks_frame.clientWidth + 100;
+            this._tracks_frame.scrollLeft = xpos - this._tracks_frame.clientWidth + 100;
         }
     }
 

@@ -39,6 +39,7 @@ class trackwin extends eventwin
         this._solo_engaged_color = "lawngreen";
         this._mute_color = "lightsalmon";
         this._mute_engaged_color = "lightsalmon";
+        this._playhead_color = "darkred";
 
         this._solo_state = [];
         this._mute_state = [];
@@ -49,6 +50,10 @@ class trackwin extends eventwin
         this._playing = false;
         
         this._mouse_button_1_down = false;
+
+        this._mouse_at_tick = 0;
+
+        this._mouse_over_tracks = false;
         
         this._tracks_canvas.addEventListener('contextmenu', function(ev) {
                                                  ev.preventDefault();
@@ -68,6 +73,8 @@ class trackwin extends eventwin
         this._tracks_canvas.addEventListener('mousedown', this.tracks_mousedownhandler);
         this._tracks_canvas.addEventListener('mouseup', this.tracks_mouseuphandler);
         this._tracks_canvas.addEventListener('mousemove', this.tracks_mousemovehandler);
+        this._tracks_canvas.addEventListener('mouseover', this.tracks_mouseoverhandler);
+        this._tracks_canvas.addEventListener('mouseout', this.tracks_mouseouthandler);
         
         
 
@@ -122,6 +129,39 @@ class trackwin extends eventwin
         this._info_canvas.setAttribute("viewBox", "0 0 " + this._info_width.toString() + ' ' + this._height.toString());
     }
     
+    go_to_start()
+    {
+        if (!this._playing)
+        {
+            this.handle_time(0);
+            pianowin_object.handle_time(0);
+        }
+    }
+    
+    
+    go_to_end()
+    {
+        if (!this._playing)
+        {
+            this.handle_time(this._song.length_ticks);
+            pianowin_object.handle_time(this._song.length_ticks);
+        }
+    }
+
+    play_at_playhead()
+    {
+        if (!this._playing)
+        {
+            this._playing = true;
+            play_midi_file(this._playhead_ticks);
+        }
+        else
+        {
+            stop();
+            this._playing = false;
+        }
+    }
+    
     
     y2track(y)
     {
@@ -133,7 +173,6 @@ class trackwin extends eventwin
         return parseInt((y - this._track_y) / (this._track_height * this._tracks_zoom_y));
     }
     
-
 
     tracks_clickhandler(event)
     {
@@ -180,6 +219,18 @@ class trackwin extends eventwin
         let y = event.clientY - bound.top - svg.clientTop;
         
         trackwin_object.tracks_handle_mouse_move(x, y);
+    }
+
+    tracks_mouseoverhandler(event)
+    {
+//         output("mouseover");
+        trackwin_object._mouse_over_tracks = true;
+    }
+
+    tracks_mouseouthandler(event)
+    {
+//         output("mouseout");
+        trackwin_object._mouse_over_tracks = false;
     }
 
     tracks_wheelhandler(event)
@@ -419,6 +470,15 @@ class trackwin extends eventwin
         this._track_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
         this._info_canvas.appendChild(this._track_highlight_element);
 
+        for (const bar of this._song.bars)
+        {
+            if ((tick >= bar.start) && (tick < bar.end))
+            {
+                this._mouse_at_tick = bar.start;
+                break;
+            }
+        }
+        
         if (this._mouse_button_1_down)
         {
             this.adjust_select_area(x, y, false);
@@ -566,7 +626,9 @@ class trackwin extends eventwin
                 this._bar_highlight_element.setAttribute("y", this._track_y);
                 this._bar_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
                 this._tracks_canvas.appendChild(this._bar_highlight_element);
-            }                
+
+                break;
+            }
         }
         
         if (this._track_highlight_element)
@@ -1083,7 +1145,7 @@ class trackwin extends eventwin
         playhead_line.setAttribute("x2", xpos);
         playhead_line.setAttribute("y1", this._track_y);
         playhead_line.setAttribute("y2", this._height);
-        playhead_line.setAttribute("style", "stroke:black;stroke-width:2;");
+        playhead_line.setAttribute("style", "stroke:" + this._playhead_color + ";stroke-width:3;");
         this._playhead_element = playhead_line;
         this._tracks_canvas.appendChild(playhead_line);
     }

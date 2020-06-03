@@ -22,15 +22,40 @@ var global_shift_down = false;
 
 function keydownhandler(event)
 {
-//    output("keycode down: " + event.keyCode);
+    output("keycode down: " + event.keyCode);
     if (event.keyCode == 17)
     {
+        event.preventDefault();
         global_ctrl_down = true;
     }
     else if (event.keyCode == 16)
     {
+        event.preventDefault();
         global_shift_down = true;
     }
+    else if (event.keyCode == 36)
+    {
+        event.preventDefault();
+        trackwin_object.go_to_start();
+    }
+    else if (event.keyCode == 35)
+    {
+        event.preventDefault();
+        trackwin_object.go_to_end();
+    }
+    else if (event.keyCode == 32)
+    {
+        event.preventDefault();
+        trackwin_object.play_at_playhead();
+    }
+    else if (event.keyCode == 80)
+    {
+        event.preventDefault();
+        trackwin_object.tracks_handle_key_down(event.keyCode);
+        pianowin_object.tracks_handle_key_down(event.keyCode);
+    }
+
+    return false;
 }
 
 function keyuphandler(event)

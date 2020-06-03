@@ -32,11 +32,14 @@ class pianowin extends eventwin
 
         this._mouse_button_1_down = false;
 
+        this._mouse_at_tick = 0;
+
         this._white_key_color = "white";
         this._black_key_color = "black";        
         this._white_key_highlight_color = "grey";
         this._black_key_highlight_color = "grey"; 
-        this._note_color = "lightgreen";        
+        this._note_color = "lightgreen";  
+        this._playhead_color = "darkred";
         
         this._menu_frame = menu_frame;
         this._rulers_frame = rulers_frame;
@@ -47,6 +50,8 @@ class pianowin extends eventwin
         this._tracks_canvas.addEventListener('mousedown', this.tracks_mousedownhandler);
         this._tracks_canvas.addEventListener('mouseup', this.tracks_mouseuphandler);
         this._tracks_canvas.addEventListener('mousemove', this.tracks_mousemovehandler);
+        this._tracks_canvas.addEventListener('mouseover', this.tracks_mouseoverhandler);
+        this._tracks_canvas.addEventListener('mouseout', this.tracks_mouseouthandler);
         this._tracks_canvas.addEventListener('wheel', function(ev) {
                                                  if (global_ctrl_down || global_shift_down)
                                                  {
@@ -157,6 +162,18 @@ class pianowin extends eventwin
         pianowin_object.tracks_handle_mouse_move(x, y);
     }
     
+    tracks_mouseoverhandler(event)
+    {
+//         output("mouseover");
+        pianowin_object._mouse_over_tracks = true;
+    }
+
+    tracks_mouseouthandler(event)
+    {
+//         output("mouseout");
+        pianowin_object._mouse_over_tracks = false;
+    }
+
     tracks_wheelhandler(event)
     {
         if (global_ctrl_down || global_shift_down)
@@ -345,6 +362,8 @@ class pianowin extends eventwin
             this._key_highlight_element.style.fill = this._black_key_highlight_color;
             this._key_highlight_type = 'black_key';
         }
+
+        this._mouse_at_tick = tick;
 
         if (this._mouse_button_1_down)
         {
@@ -1018,7 +1037,7 @@ class pianowin extends eventwin
         playhead_line.setAttribute("x2", xpos);
         playhead_line.setAttribute("y1", this._track_y);
         playhead_line.setAttribute("y2", this._height);
-        playhead_line.setAttribute("style", "stroke:black;stroke-width:2;");
+        playhead_line.setAttribute("style", "stroke:" + this._playhead_color + ";stroke-width:3;");
         this._playhead_element = playhead_line;
         this._tracks_canvas.appendChild(playhead_line);
     }
