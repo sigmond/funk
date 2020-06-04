@@ -31,6 +31,7 @@ class pianowin extends eventwin
         this._num_notes = 128;
 
         this._mouse_button_1_down = false;
+        this._note_mouse_button_down = -1;
 
         this._mouse_at_tick = 0;
 
@@ -75,6 +76,11 @@ class pianowin extends eventwin
                                            }, false);
         this._info_canvas.addEventListener('click', this.info_clickhandler);
         this._info_canvas.addEventListener('mousemove', this.info_mousemovehandler);
+        this._info_canvas.addEventListener('contextmenu', function(ev) {
+                                               ev.preventDefault();
+                                               //pianowin_object.tracks_clickhandler(ev);
+                                               return false;
+                                           }, false);
         
 
         rulers_frame.addEventListener('scroll', this.rulers_scrollhandler);        
@@ -313,6 +319,8 @@ class pianowin extends eventwin
         {
             this._mouse_button_1_down = false;
         }
+
+        this._note_mouse_button_down = -1;
     }
 
     tracks_handle_mouse_move(x, y)
@@ -524,7 +532,20 @@ class pianowin extends eventwin
         
         output("click: " + x + " " + y);
         
-        pianowin_object.info_handle_click(x, y);
+        pianowin_object.info_handle_click(x, y, event.button);
+    }
+    
+    info_mouseuphandler(event)
+    {
+        let svg = event.currentTarget;
+        let bound = svg.getBoundingClientRect();
+        
+        let x = event.clientX - bound.left - svg.clientLeft;
+        let y = event.clientY - bound.top - svg.clientTop;
+        
+        output("up: " + x + " " + y);
+        
+        pianowin_object.info_handle_mouse_up(x, y, event.button);
     }
     
     info_mousemovehandler(event)
@@ -554,11 +575,13 @@ class pianowin extends eventwin
 
 
 
-    info_handle_click(x, y)
+
+    info_handle_click(x, y, button)
     {
-        if (y < this._ruler_height)
-        {
-        }
+    }
+    
+    info_handle_mouse_up(x, y, button)
+    {
     }
     
 
@@ -625,6 +648,57 @@ class pianowin extends eventwin
                 this._key_highlight_element.style.fill = this._black_key_highlight_color;
                 this._key_highlight_type = 'black_key';
             }
+        }
+    }
+
+
+    note_mousedownhandler(event)
+    {
+        let svg = event.currentTarget;
+        let note = parseInt(svg.id.slice(svg.id.lastIndexOf('_') + 1));
+
+        pianowin_object._note_mouse_button_down = event.button;
+        pianowin_object.handle_note_down(svg, note);
+    }
+
+    note_mouseuphandler(event)
+    {
+        let svg = event.currentTarget;
+        let note = parseInt(svg.id.slice(svg.id.lastIndexOf('_') + 1));
+        pianowin_object._note_mouse_button_down = -1;
+        pianowin_object.handle_note_up(svg, note, true);
+    }
+
+    note_mouseoverhandler(event)
+    {
+        let svg = event.currentTarget;
+        let note = parseInt(svg.id.slice(svg.id.lastIndexOf('_') + 1));
+        pianowin_object.handle_note_down(svg, note);
+    }
+
+    note_mouseouthandler(event)
+    {
+        let svg = event.currentTarget;
+        let note = parseInt(svg.id.slice(svg.id.lastIndexOf('_') + 1));
+        pianowin_object.handle_note_up(svg, note, false);
+    }
+
+
+    handle_note_down(svg, note)
+    {
+        if (this._note_mouse_button_down >= 0)
+        {
+            svg.style.strokeWidth = 3 + this._note_mouse_button_down;
+            this._song.play_note(this._track_index, note, 47 + (40 * this._note_mouse_button_down));
+        }
+    }
+
+    handle_note_up(svg, note, force)
+    {
+        if (force || (this._note_mouse_button_down >= 0))
+        {
+            svg.style.strokeWidth = 1;
+            this._song.play_note(this._track_index, note, 0);
         }
     }
 
@@ -753,6 +827,7 @@ class pianowin extends eventwin
         var note;
         var track;
 
+        this._track_index = track_index;
         track = this._song.tracks[track_index];
 
         notes_width = this.create_bars(this._song.bars);
@@ -828,6 +903,7 @@ class pianowin extends eventwin
         var track;
 
         track = this._song.tracks[track_index];
+        this._track_index = track_index;
 
         for (const event of track.events)
         {
@@ -989,6 +1065,10 @@ class pianowin extends eventwin
         info_rect.setAttribute("x", 0);
         info_rect.setAttribute("y", y);
         info_rect.setAttribute("style", "fill:" + fill_color + ";stroke:black;stroke-width:1;fill-opacity:1.0;stroke-opacity:1.0");
+        info_rect.addEventListener('mousedown', this.note_mousedownhandler);
+        info_rect.addEventListener('mouseup', this.note_mouseuphandler);
+        info_rect.addEventListener('mouseover', this.note_mouseoverhandler);
+        info_rect.addEventListener('mouseout', this.note_mouseouthandler);
         this._info_canvas.appendChild(info_rect);
         
         return width;

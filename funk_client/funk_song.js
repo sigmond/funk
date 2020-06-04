@@ -27,6 +27,8 @@ class funk_song
 
         this._tracknames = [];
         this.get_tracknames();
+        this._channels = [];
+        this.get_channels();
         this._tempos = [];
         this.get_tempos();
 
@@ -67,6 +69,11 @@ class funk_song
     get tracknames()
     {
         return this._tracknames;
+    }
+
+    get channels()
+    {
+        return this._channels;
     }
 
     get tempos()
@@ -134,6 +141,25 @@ class funk_song
         this._tempos.push(tempo);
     }
 
+    get_channels()
+    {
+        for (const track of this._tracks)
+        {
+            var channel = -1;
+            
+            for (const event of track['events'])
+            {
+                if (event['channel'] !== undefined)
+                {
+                    channel = event['channel'];
+                    break;
+                }
+            }
+            this._channels.push(channel);
+        }
+    }
+
+
     tick2second(tick)
     {
         var seconds_per_tick;
@@ -152,6 +178,10 @@ class funk_song
         return parseInt(second / seconds_per_tick);
     }
 
+    play_note(track_index, note, velocity)
+    {
+        play_note(this._channels[track_index], note, velocity);
+    }
 }
     
 class funk_bar

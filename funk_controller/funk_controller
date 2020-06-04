@@ -128,6 +128,9 @@ class funk_controller():
             elif msg['command'] == 'stop':
                 # someone (e.g. the client) wants to stop playing and/or recording
                 self.handle_stop(msg)
+            elif msg['command'] == 'play_event':
+                # someone (e.g. the client) wants to play a midi event
+                self.handle_play_event(msg)
             elif msg['command'] == 'channel':
                 # someone (e.g. the client) wants to change the play-mode for specific channels (e.g. mute)
                 self.handle_channel(msg)
@@ -250,6 +253,10 @@ class funk_controller():
         obj = {'command': 'stop'}
         self.com.send_bus_msg('player', obj)
         self.com.send_bus_msg('recorder', obj)
+    
+    def handle_play_event(self, msg):
+        obj = mido.Message.from_dict(msg['midi_event'])
+        self.com.send_bus_msg('midi_play', obj)
     
     def handle_channel(self, msg):
         print('handle_channel')

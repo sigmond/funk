@@ -308,6 +308,23 @@ function send_mute_state(muted)
     ws_ctrl.send(json_message);
 }
 
+function play_note(channel, note, velocity)
+{ 
+    var cmd;
+    var msg;
+    var note_on;
+    
+    note_on = {"type" : "note_on", "channel" : channel, "note" : note, "velocity" : velocity, "time" : 0};
+    
+
+    cmd = { "command" : "play_event", "midi_event" : note_on };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
 function list_input_ports()
 { 
     var cmd;
