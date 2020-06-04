@@ -22,7 +22,7 @@ class pianowin extends eventwin
 
         this._pixels_per_tick = 0.3;
 
-        this._note_height = 14;
+        this._note_height = 12;
 
         this._white_notes = [0, 2, 4, 5, 7, 9, 11];
         this._white_note_height = (this._note_height * 12) / this._white_notes.length;
@@ -38,7 +38,7 @@ class pianowin extends eventwin
         this._black_key_color = "black";        
         this._white_key_highlight_color = "grey";
         this._black_key_highlight_color = "grey"; 
-        this._note_color = "lightgreen";  
+        this._note_color = "red";  
         this._playhead_color = "darkred";
         
         this._menu_frame = menu_frame;
@@ -837,13 +837,14 @@ class pianowin extends eventwin
             }
             
             var note = event.note;
+            var opacity = (event.velocity / this._num_notes).toString();
 
             highest_note = parseInt(Math.max(highest_note, note));
             lowest_note = parseInt(Math.min(lowest_note, note));
             
             var width = this.tick2x(event.end - event.start);
-            var height = this._note_height - 4;
-            var y = this._track_y + (this.note2line(note) * this._note_height) + 2;
+            var height = this._note_height - 6;
+            var y = this._track_y + (this.note2line(note) * this._note_height) + 3;
             var x = this.tick2x(event.start);
             var event_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
             event_rect.id = 'pw_event_' + track_index.toString() + '_' + note.toString() + '_' + event.start.toString();
@@ -851,7 +852,7 @@ class pianowin extends eventwin
             event_rect.setAttribute("y", y);
             event_rect.setAttribute("width", width);
             event_rect.setAttribute("height", height);
-            event_rect.setAttribute("style", "fill:" + this._note_color + ";stroke:black;stroke-width:1;fill-opacity:0.5;stroke-opacity:1.0");
+            event_rect.setAttribute("style", "fill:" + this._note_color + ";stroke:black;stroke-width:1;fill-opacity:" + opacity + ";stroke-opacity:1.0");
             this._tracks_canvas.appendChild(event_rect);
             this._track_events.push(event_rect);
         }

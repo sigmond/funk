@@ -20,7 +20,7 @@ class trackwin extends eventwin
     {
         super(prefix, menu_frame, rulers_frame, info_frame, tracks_frame, song);
 
-        this._pixels_per_tick = 0.05;
+        this._pixels_per_tick = 0.04;
         this._track_height = 20;
         
         this._button_padding = 4;
@@ -1114,22 +1114,27 @@ class trackwin extends eventwin
         var width = 1;
         var last_painted_tick = -1;
         
-        var y1 = this._track_y + (track_index * this._track_height) + 2;
-        var y2 = this._track_y + ((track_index + 1) * this._track_height - 2);
+        var y = this._track_y + (track_index * this._track_height) + 4;
+        var height = this._track_height - 8;
 
         for (const event of track.events)
         {
             if (event.start > last_painted_tick)
             {
                 var xpos = this.tick2x(event.start);
-                var event_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-                event_line.id = 'tw_event_' + track_index.toString() + '_' + event.start.toString();
-                event_line.setAttribute("x1", xpos);
-                event_line.setAttribute("x2", xpos);
-                event_line.setAttribute("y1", y1);
-                event_line.setAttribute("y2", y2);
-                event_line.setAttribute("style", "stroke:black;stroke-width:1;");
-                this._tracks_canvas.appendChild(event_line);
+                var width = this.tick2x(event.end - event.start);
+                if (width < 1)
+                {
+                    width = 1;
+                }
+                var event_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                event_rect.id = 'tw_event_' + track_index.toString() + '_' + event.start.toString();
+                event_rect.setAttribute("x", xpos);
+                event_rect.setAttribute("y", y);
+                event_rect.setAttribute("width", width);
+                event_rect.setAttribute("height", height);
+                event_rect.setAttribute("style", "fill:black;stroke:black;stroke-width:0;fill-opacity:0.8;stroke-opacity:1.0");
+                this._tracks_canvas.appendChild(event_rect);
                 last_painted_tick = event.start;
             }
         }
