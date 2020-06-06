@@ -17,38 +17,64 @@
 var ws_ctrl;
 var ws_midi;
 
+const key_ctrl = 17;
+const key_shift = 16;
+const key_home = 36;
+const key_end = 35;
+const key_space = 32;
+const key_p = 80;
+const key_x = 88;
+const key_c = 67;
+const key_v = 86;
+const key_z = 90;
+const key_r = 82;
+const key_i = 73;
+const key_d = 68;
+const key_k = 75;
+
+
 var global_ctrl_down = false;
 var global_shift_down = false;
 
 function keydownhandler(event)
 {
     output("keycode down: " + event.keyCode);
-    if (event.keyCode == 17)
+    if (event.keyCode == key_ctrl)
     {
         event.preventDefault();
         global_ctrl_down = true;
     }
-    else if (event.keyCode == 16)
+    else if (event.keyCode == key_shift)
     {
         event.preventDefault();
         global_shift_down = true;
     }
-    else if (event.keyCode == 36)
+    else if (event.keyCode == key_home)
     {
         event.preventDefault();
         trackwin_object.go_to_start();
     }
-    else if (event.keyCode == 35)
+    else if (event.keyCode == key_end)
     {
         event.preventDefault();
         trackwin_object.go_to_end();
     }
-    else if (event.keyCode == 32)
+    else if (event.keyCode == key_space)
     {
         event.preventDefault();
         trackwin_object.play_at_playhead();
     }
-    else if (event.keyCode == 80)
+    else if (
+             (event.keyCode == key_p) ||
+             (event.keyCode == key_x) ||
+             (event.keyCode == key_c) ||
+             (event.keyCode == key_v) ||
+             (event.keyCode == key_z) ||
+             (event.keyCode == key_r) ||
+             (event.keyCode == key_i) ||
+             (event.keyCode == key_d) ||
+             (event.keyCode == key_k)
+            )
     {
         event.preventDefault();
         trackwin_object.tracks_handle_key_down(event.keyCode);
@@ -526,3 +552,76 @@ function first_letter_uppercase(str)
 {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
+
+function cut_area(area)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { "command" : "cut_area", "area" : area };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function clear_area(area, remove_space)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { "command" : "clear_area", "area" : area, "remove_space" : remove_space };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function paste_area(from, to, overwrite_destination, insert_space)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { 
+        "command" : "paste_area",
+        "from" : from, 
+        "to" : to, 
+        "overwrite_destination" : overwrite_destination,
+        "insert_space" : insert_space
+    };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function undo_last_edit()
+{
+    var cmd;
+    var msg;    
+
+    cmd = { "command" : "undo_last_edit" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function redo_last_edit()
+{
+    var cmd;
+    var msg;    
+
+    cmd = { "command" : "redo_last_edit" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+

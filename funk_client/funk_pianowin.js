@@ -1208,5 +1208,24 @@ class pianowin extends eventwin
         this._tracks_canvas.appendChild(playhead_line);
     }
     
+    handle_cut(tick)
+    {
+    }
+    
+    handle_copy(tick)
+    {
+    }
+    
+    handle_paste(tick)
+    {
+    }
+    
+    handle_undo(tick)
+    {
+    }
+    
+    handle_redo(tick)
+    {
+    }
 }
     

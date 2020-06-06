@@ -30,6 +30,8 @@ class eventwin
         
         this._playhead_ticks = 0;
         this._playhead_xpos = 0;
+
+        this._area_copy_buffer = null;
         
         this._menu_frame = menu_frame;
         this._rulers_frame = rulers_frame;
@@ -91,22 +93,63 @@ class eventwin
     {
         output("tracks_handle_key_down: " + key);
 
-        if (this._mouse_over_tracks && (key == 80))
+        if (this._mouse_over_tracks)
         {
-            if (trackwin_object._playing)
+            if (key == key_p)
             {
-                stop();
-            }
-            
-            trackwin_object.handle_time(this._mouse_at_tick);
-            pianowin_object.handle_time(this._mouse_at_tick);
-            
-            if (trackwin_object._playing)
-            {
-                play_midi_file(this._mouse_at_tick);
+                if (trackwin_object._playing)
+                {
+                    stop();
+                }
+                
+                trackwin_object.handle_time(this._mouse_at_tick);
+                pianowin_object.handle_time(this._mouse_at_tick);
+                
+                if (trackwin_object._playing)
+                {
+                    play_midi_file(this._mouse_at_tick);
+                }
+                
+                return true;
             }
 
-            return true;
+            if (global_ctrl_down)
+            {
+                if (key == key_x)
+                {
+                    this.handle_cut(this._mouse_at_tick);
+                }
+                else if (key == key_k)
+                {
+                    this.handle_clear(this._mouse_at_tick, false);
+                }
+                else if (key == key_d)
+                {
+                    this.handle_clear(this._mouse_at_tick, true);
+                }
+                else if (key == key_c)
+                {
+                    this.handle_copy(this._mouse_at_tick);
+                }
+                else if (key == key_v)
+                {
+                    this.handle_paste_insert(this._mouse_at_tick, false);
+                }
+                else if (key == key_i)
+                {
+                    this.handle_paste_insert(this._mouse_at_tick, true);
+                }
+                else if (key == key_z)
+                {
+                    this.handle_undo(this._mouse_at_tick);
+                }
+                else if (key == key_r)
+                {
+                    this.handle_redo(this._mouse_at_tick);
+                }
+
+                return true;
+            }
         }
 
         return false;

@@ -1221,6 +1221,102 @@ class trackwin extends eventwin
         this._playhead_element = playhead_line;
         this._tracks_canvas.appendChild(playhead_line);
     }
+
+    select_tick_start()
+    {
+        return this.x2tick(this._track_select_x1);
+    }
+
+    select_tick_end()
+    {
+        return this.x2tick(this._track_select_x1) + this.x2tick(this._track_select_width);
+    }
+
+    select_track_start()
+    {
+        return this.y2track(this._track_select_y1);
+    }
+    
+    select_track_end()
+    {
+        return this.y2track(this._track_select_y1) + (this._track_select_height / this._track_height);
+    }    
+
+    select_tick_track_area()
+    {
+        return {'tick_start' : this.select_tick_start(),
+                'tick_end' : this.select_tick_end(),
+                'track_start' : this.select_track_start(),
+                'track_end' : this.select_track_end()
+                };
+    }
+
+
+    handle_cut(tick)
+    {
+        if (!this._track_select_element)
+        {
+            return;
+        }
+
+        this._area_copy_buffer = this.select_tick_track_area();
+        cut_area(this._area_copy_buffer);
+    }
+    
+    handle_clear(tick, do_remove_space)
+    {
+        if (!this._track_select_element)
+        {
+            return;
+        }
+
+        clear_area(this.select_tick_track_area(), do_remove_space);
+    }
+    
+    handle_copy(tick)
+    {
+        if (!this._track_select_element)
+        {
+            return;
+        }
+
+        this._area_copy_buffer = this.select_tick_track_area();
+    }
+    
+    handle_paste_insert(tick, do_insert)
+    {
+        if (!this._area_copy_buffer)
+        {
+            return;
+        }
+
+        if (!this._track_select_element)
+        {
+            // paste at playhead, same tracks as copy buffer
+            const paste_to =
+                {'tick_start' : this._playhead_ticks,
+                 'tick_end' : this._playhead_ticks + (this._area_copy_buffer['tick_end'] - this._area_copy_buffer['tick_start']),
+                 'track_start' : this._area_copy_buffer['track_start'],
+                 'track_end' : this._area_copy_buffer['track_end']
+                };
+            
+            paste_area(this._area_copy_buffer, paste_to, true, do_insert); // overwrite destination, maybe insert space
+        }
+        else
+        {
+            paste_area(this._area_copy_buffer, this.select_tick_track_area(), true, do_insert); // overwrite destination, maybe insert space
+        }
+    }
+    
+    handle_undo(tick)
+    {
+        undo_last_edit();
+    }
+    
+    handle_redo(tick)
+    {
+        redo_last_edit();
+    }
     
 }
     
