@@ -477,7 +477,7 @@ function handle_editor_file_loaded(msg)
     output("File length (ticks): " + msg['file']['length_ticks']);
     output("Tracks: " + msg['file']['tracks'].length);
 
-    var song = new funk_song(msg['file']['length_seconds'], msg['file']['length_ticks'], msg['file']['ticks_per_beat'], msg['file']['tracks']);
+    var song = new funk_song(msg['filename'], msg['file']['length_seconds'], msg['file']['length_ticks'], msg['file']['ticks_per_beat'], msg['file']['tracks']);
 
     var trackwin_tracks_frame = document.getElementById("trackwin_tracks_container");
     var trackwin_info_frame = document.getElementById("trackwin_info_container");
@@ -514,4 +514,15 @@ function handle_time(msg)
 {
     trackwin_object.handle_time(msg['t']);
     pianowin_object.handle_time(msg['t']);
+}
+
+function base_name(str) {
+    if (typeof str !== 'string') return;
+    var frags = str.split('.')
+    return frags.splice(0,frags.length-1).join('.');    
+}
+
+function first_letter_uppercase(str)
+{
+    return str.charAt(0).toUpperCase() + str.slice(1);
 }

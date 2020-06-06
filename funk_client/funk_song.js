@@ -16,8 +16,9 @@
 
 class funk_song 
 {
-    constructor(length_seconds, length_ticks, ticks_per_beat, tracks)
+    constructor(filename, length_seconds, length_ticks, ticks_per_beat, tracks)
     {
+        this._filename = filename;
         this._length_seconds = length_seconds;
         this._length_ticks = length_ticks;
         this._ticks = this._length_ticks * 2;
@@ -34,6 +35,11 @@ class funk_song
 
         this._bars = [];
         this.generate_bars();
+    }
+
+    get filename()
+    {
+        return this._filename;
     }
 
     get length_seconds()
@@ -79,6 +85,11 @@ class funk_song
     get tempos()
     {
         return this._tempos;
+    }
+
+    bpm()
+    {
+        return parseInt((60 * 1000000) / this.tempos[0]);
     }
 
     trackname(track_index)

@@ -40,6 +40,7 @@ class trackwin extends eventwin
         this._mute_color = "lightsalmon";
         this._mute_engaged_color = "lightsalmon";
         this._playhead_color = "darkred";
+        this._menu_bg_color = "black";
 
         this._solo_state = [];
         this._mute_state = [];
@@ -116,6 +117,8 @@ class trackwin extends eventwin
         this.create_tracks();
         this.create_rulers();
         this.create_menu();
+        this.fill_song_info();
+        this.fill_tempo_info();
 
         var wh = this._tracks_canvas.getClientRects()[0];
         this._height = wh.height;
@@ -380,8 +383,7 @@ class trackwin extends eventwin
                 track_index = this._song.tracks.length - 1;
             }
             
-            pianowin_object.remove_track_events();
-            pianowin_object.fill_note_events(track_index);
+            pianowin_object.update_track(track_index);
             
             var tick = this.x2tick_zoomed(x);
             for (const bar of this._song.bars)
@@ -855,7 +857,7 @@ class trackwin extends eventwin
         track_width = this.create_track_bars(this._song.bars);
         
         var width_style = "width:" + (track_width + 100).toString() + ";";
-        var height_style = "height:" + ((this._track_height * this._song.tracks.length) + this._track_y).toString() + ";";
+        var height_style = "height:" + ((this._track_height * (this._song.tracks.length + 1)) + this._track_y).toString() + ";";
 
         this._tracks_canvas.setAttribute("style", width_style + height_style);
 
@@ -901,6 +903,16 @@ class trackwin extends eventwin
     {
         var tick;
         var next_seconds = 0;
+
+        this._rulers_box_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        this._rulers_box_element.id = "tw_rulers_box";
+        this._rulers_box_element.setAttribute("height", this._ruler_height);
+        this._rulers_box_element.setAttribute("width", this._tracks_width);
+        this._rulers_box_element.setAttribute("x", 0);
+        this._rulers_box_element.setAttribute("y", 0);
+        this._rulers_box_element.setAttribute("style", "fill:" + this._menu_bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
+        this._rulers_canvas.appendChild(this._rulers_box_element);        
+        
         
         for (tick = 0; tick < this._song.ticks; tick++)
         {
@@ -977,9 +989,56 @@ class trackwin extends eventwin
     create_menu()
     {
         var width_style = "width:" + this._info_width.toString() + ";";
-        var height_style = "height:" + this._ruler_height.toString() + ";";
+        var height_style = "height:" + (this._ruler_height + 10).toString() + ";";
 
         this._menu_canvas.setAttribute("style", width_style + height_style);
+
+        this._menu_box_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        this._menu_box_element.id = "tw_menu_box";
+        this._menu_box_element.setAttribute("height", this._ruler_height + 10);
+        this._menu_box_element.setAttribute("width", this._info_width);
+        this._menu_box_element.setAttribute("x", 0);
+        this._menu_box_element.setAttribute("y", 0);
+        this._menu_box_element.setAttribute("style", "fill:" + this._menu_bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:1.0");
+        this._menu_canvas.appendChild(this._menu_box_element);
+    }
+
+    fill_song_info()
+    {
+        var song_info_element = document.getElementById("tw_song_info");
+        if (song_info_element != undefined)
+        {
+            song_info_element.remove();
+        }
+
+        var songname = first_letter_uppercase(base_name(this._song.filename));
+
+        song_info_element = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        song_info_element.id = 'tw_song_info';
+        song_info_element.setAttribute("x", 2);
+        song_info_element.setAttribute("y", 14);
+        song_info_element.setAttribute("style", "fill:black;font-size:14px;font-weight:bold");
+        song_info_element.textContent = songname;
+        this._menu_canvas.appendChild(song_info_element);        
+    }
+    
+    fill_tempo_info()
+    {
+        var tempo_info_element = document.getElementById("tw_tempo_info");
+        if (tempo_info_element != undefined)
+        {
+            tempo_info_element.remove();
+        }
+
+        var bpm = this._song.bpm();
+
+        tempo_info_element = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        tempo_info_element.id = 'tw_tempo_info';
+        tempo_info_element.setAttribute("x", 2);
+        tempo_info_element.setAttribute("y", 14 + 12);
+        tempo_info_element.setAttribute("style", "fill:black;font-size:12px;font-weight:normal");
+        tempo_info_element.textContent = bpm + ' bpm';
+        this._menu_canvas.appendChild(tempo_info_element);        
     }
     
     create_track_bars(bars)
@@ -1101,8 +1160,16 @@ class trackwin extends eventwin
         info_name_text.id = 'track_name_' + track_index.toString();
         info_name_text.setAttribute("x", 2);
         info_name_text.setAttribute("y", this._track_y + (track_index * this._track_height) + 12);
-        info_name_text.setAttribute("style", "fill:black;font-size:12px");
-        info_name_text.textContent = trackname;
+        info_name_text.setAttribute("style", "fill:black;font-size:12px;font-weight:bold");
+        if (track_index == 0)
+        {
+            info_name_text.textContent = track_index.toString() + ' Master';
+        }
+        else
+        {
+            info_name_text.textContent = track_index.toString() + ' ' + trackname;
+        }
+        
         this._info_canvas.appendChild(info_name_text);
         
         return width;
@@ -1149,7 +1216,7 @@ class trackwin extends eventwin
         playhead_line.setAttribute("x1", xpos);
         playhead_line.setAttribute("x2", xpos);
         playhead_line.setAttribute("y1", this._track_y);
-        playhead_line.setAttribute("y2", this._height);
+        playhead_line.setAttribute("y2", this._song.tracks.length * this._track_height);
         playhead_line.setAttribute("style", "stroke:" + this._playhead_color + ";stroke-width:3;");
         this._playhead_element = playhead_line;
         this._tracks_canvas.appendChild(playhead_line);

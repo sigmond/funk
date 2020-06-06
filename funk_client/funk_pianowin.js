@@ -26,7 +26,6 @@ class pianowin extends eventwin
 
         this._white_notes = [0, 2, 4, 5, 7, 9, 11];
         this._white_note_height = (this._note_height * 12) / this._white_notes.length;
-        this._white_key_num = [];
 
         this._num_notes = 128;
 
@@ -41,6 +40,7 @@ class pianowin extends eventwin
         this._black_key_highlight_color = "grey"; 
         this._note_color = "red";  
         this._playhead_color = "darkred";
+        this._menu_bg_color = "black";
         
         this._menu_frame = menu_frame;
         this._rulers_frame = rulers_frame;
@@ -105,9 +105,13 @@ class pianowin extends eventwin
         this._key_highlight_element = null;
         this._key_highlight_type = null;
 
-        this.create_track(1);
+        this._track_index = 1;
+
+        this.create_track();
         this.create_rulers();
         this.create_menu();
+        this.fill_track_info();
+        this.fill_channel_info();
 
         var wh = this._tracks_canvas.getClientRects()[0];
         this._height = wh.height;
@@ -119,6 +123,16 @@ class pianowin extends eventwin
         this._rulers_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._ruler_height.toString());
         this._info_canvas.setAttribute("preserveAspectRatio", "none");
         this._info_canvas.setAttribute("viewBox", "0 0 " + this._info_width.toString() + ' ' + this._height.toString());
+    }
+
+    update_track(track_index)
+    {
+        this._track_index = track_index;
+        this.remove_track_events();
+        this.fill_note_events();
+        this.fill_track_info();
+        this.fill_channel_info();
+        this.fill_note_info();
     }
     
 
@@ -708,6 +722,15 @@ class pianowin extends eventwin
         var tick;
         var next_seconds = 0;
         
+        this._rulers_box_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        this._rulers_box_element.id = "pw_rulers_box";
+        this._rulers_box_element.setAttribute("height", this._ruler_height);
+        this._rulers_box_element.setAttribute("width", this._notes_width);
+        this._rulers_box_element.setAttribute("x", 0);
+        this._rulers_box_element.setAttribute("y", 0);
+        this._rulers_box_element.setAttribute("style", "fill:" + this._menu_bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
+        this._rulers_canvas.appendChild(this._rulers_box_element);        
+
         for (tick = 0; tick < this._song.ticks; tick++)
         {
             var seconds = this._song.tick2second(tick);
@@ -804,9 +827,53 @@ class pianowin extends eventwin
     create_menu()
     {
         var width_style = "width:" + this._info_width.toString() + ";";
-        var height_style = "height:" + this._ruler_height.toString() + ";";
+        var height_style = "height:" + (this._ruler_height + 10).toString() + ";";
 
         this._menu_canvas.setAttribute("style", width_style + height_style);
+
+        this._menu_box_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        this._menu_box_element.id = "pw_menu_box";
+        this._menu_box_element.setAttribute("height", this._ruler_height + 10);
+        this._menu_box_element.setAttribute("width", this._info_width);
+        this._menu_box_element.setAttribute("x", 0);
+        this._menu_box_element.setAttribute("y", 0);
+        this._menu_box_element.setAttribute("style", "fill:" + this._menu_bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:1.0");
+        this._menu_canvas.appendChild(this._menu_box_element);        
+    }
+    
+    
+    fill_track_info()
+    {
+        var track_info_element = document.getElementById("pw_track_info");
+        if (track_info_element != undefined)
+        {
+            track_info_element.remove();
+        }
+
+        track_info_element = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        track_info_element.id = 'pw_track_info';
+        track_info_element.setAttribute("x", 2);
+        track_info_element.setAttribute("y", 14);
+        track_info_element.setAttribute("style", "fill:black;font-size:14px;font-weight:bold");
+        track_info_element.textContent = this._track_index.toString() + ' ' + this._song.tracknames[this._track_index];
+        this._menu_canvas.appendChild(track_info_element);        
+    }
+    
+    fill_channel_info()
+    {
+        var channel_info_element = document.getElementById("pw_channel_info");
+        if (channel_info_element != undefined)
+        {
+            channel_info_element.remove();
+        }
+
+        channel_info_element = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        channel_info_element.id = 'pw_channel_info';
+        channel_info_element.setAttribute("x", 2);
+        channel_info_element.setAttribute("y", 14 + 12);
+        channel_info_element.setAttribute("style", "fill:black;font-size:12px;font-weight:normal");
+        channel_info_element.textContent = 'Channel ' + (this._song.channels[this._track_index] + 1);
+        this._menu_canvas.appendChild(channel_info_element);        
     }
     
     
@@ -820,14 +887,15 @@ class pianowin extends eventwin
         }
     }
     
-    create_track(track_index)
+    create_track()
     {
         var notes_width = 0;
         var notes_width_tmp;
         var note;
         var track;
+        var track_index = this._track_index;
+        var info_width = this._info_width;
 
-        this._track_index = track_index;
         track = this._song.tracks[track_index];
 
         notes_width = this.create_bars(this._song.bars);
@@ -841,19 +909,43 @@ class pianowin extends eventwin
         this._height = wh.height;
         this._notes_width = wh.width;
 
-        var middle_note = this.fill_note_events(track_index, track);
+        var middle_note = this.fill_note_events(track_index);
 
+        this.fill_note_info();
+
+
+        width_style = "width:" + (info_width).toString() + ";";
+
+        this._info_canvas.setAttribute("style", width_style);
+
+        this.create_note_lines();
+
+        this.create_playhead();
+
+        var middle_y = this._track_y + ((this.note2line(middle_note) * this._note_height) * this._tracks_zoom_y);
+        var pianowin_frame = document.getElementById("pianowin_frame");
+        pianowin_frame.scrollTop = middle_y - (pianowin_frame.clientHeight / 2);
+    }
+
+
+    fill_note_info()
+    {
         var info_width = this._info_width;
         var info_width_tmp;
         var num_white = 0;
         var i;
+        var note;
+        var track;
+        
+        track = this._song.tracks[this._track_index];
+
+        
 
         for (i = 0; i < this._num_notes; i++)
         {
             if (this._white_notes.includes(i % 12))
             {
                 num_white++;
-                this._white_key_num.push(i);
             }
         }
 
@@ -882,28 +974,17 @@ class pianowin extends eventwin
                 }
             }
         }
-
-        width_style = "width:" + (info_width).toString() + ";";
-
-        this._info_canvas.setAttribute("style", width_style);
-
-        this.create_note_lines();
-
-        this.create_playhead();
-
-        var middle_y = this._track_y + ((this.note2line(middle_note) * this._note_height) * this._tracks_zoom_y);
-        var pianowin_frame = document.getElementById("pianowin_frame");
-        pianowin_frame.scrollTop = middle_y - (pianowin_frame.clientHeight / 2);
     }
+    
 
-    fill_note_events(track_index)
+    fill_note_events()
     {
         var highest_note = 0;
         var lowest_note = this._num_notes;
         var track;
+        var track_index = this._track_index;
 
         track = this._song.tracks[track_index];
-        this._track_index = track_index;
 
         for (const event of track.events)
         {
@@ -1031,7 +1112,13 @@ class pianowin extends eventwin
 
     create_note_info(note, is_white, white_key_num, track)
     {
-        var info_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        var info_rect = document.getElementById('note_info_' + note.toString());
+        if (info_rect != undefined)
+        {
+            info_rect.remove();
+        }
+
+        info_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         var height;
         var width;
         var y;
@@ -1057,8 +1144,7 @@ class pianowin extends eventwin
             y = this._track_y + (this.note2line(note) * this._note_height);
             fill_color = this._black_key_color;
         }
-        
-        
+
         info_rect.id = 'note_info_' + note.toString();
         info_rect.setAttribute("height", height);
         info_rect.setAttribute("width", width);
