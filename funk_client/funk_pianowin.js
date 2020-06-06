@@ -22,6 +22,9 @@ class pianowin extends eventwin
 
         this._pixels_per_tick = 0.3;
 
+        this._note_snap = 16;
+        this._tick_snap_width = (this._song.ticks_per_beat * 4) / this._note_snap;
+
         this._note_height = 12;
 
         this._white_notes = [0, 2, 4, 5, 7, 9, 11];
@@ -385,7 +388,7 @@ class pianowin extends eventwin
             this._key_highlight_type = 'black_key';
         }
 
-        this._mouse_at_tick = tick;
+        this._mouse_at_tick = this.tick2snap(tick);
 
         if (this._mouse_button_1_down)
         {
@@ -396,18 +399,17 @@ class pianowin extends eventwin
 
     adjust_select_area(x, y, extend)
     {
-        var tick = this.x2tick_zoomed(x);
+        var tick = this.tick2snap(this.x2tick_zoomed(x));
         
-        // TODO: snap to xgrid
-        var grid_width = 1;
+        var grid_width = this.tick2x(this._tick_snap_width);
 
         var note = this.y2note_zoomed(y);
-        var xpos = parseInt(this.tick2x(tick));
+        var xpos = this.tick2x(tick);
         var ypos = this._track_y + (note * this._note_height);
                 
         if (!this._notes_select_element)
         {
-            var width = parseInt(this.tick2x(grid_width));
+            var width = parseInt(grid_width);
             var height = this._note_height;
             
             this._notes_select_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -449,7 +451,7 @@ class pianowin extends eventwin
             
             if (xpos > this._notes_select_x1)
             {
-                this._notes_select_width = xpos - this._notes_select_x1 + parseInt(this.tick2x(grid_width));
+                this._notes_select_width = xpos - this._notes_select_x1 + parseInt(grid_width);
                 this._notes_select_element.setAttribute("width", this._notes_select_width); 
             }
             else
@@ -463,7 +465,7 @@ class pianowin extends eventwin
                 }
                 else
                 {
-                    this._notes_select_width = this._notes_select_x1 - xpos + parseInt(this.tick2x(grid_width));
+                    this._notes_select_width = this._notes_select_x1 - xpos + parseInt(grid_width);
                     this._notes_select_element.setAttribute("x", xpos);
                     this._notes_select_element.setAttribute("width", this._notes_select_width); 
                 }
@@ -483,41 +485,38 @@ class pianowin extends eventwin
         }
         
         var tick = this.x2tick_zoomed(x);
+        var tick_snapped = this.tick2snap(tick);
         
-        // TODO: snap to xgrid
-        
-        output("play: start = " + tick);
+        output("play: start = " + tick_snapped);
         trackwin_object._playing = true;
-        play_midi_file(tick);
+        play_midi_file(tick_snapped);
     }
-    
+
+    tick2snap(tick)
+    {
+        return (tick - parseInt(tick % this._tick_snap_width));
+    }
 
     rulers_handle_mouse_move(x, y)
     {
         // output("handle_mouse_over " + x + " " + y);
         var tick = this.x2tick_zoomed(x);
-        
-        for (const bar of this._song.bars)
+
+        if (this._xgrid_highlight_element)
         {
-            if ((tick >= bar.start) && (tick < bar.end))
-            {
-                if (this._xgrid_highlight_element)
-                {
-                    this._xgrid_highlight_element.remove();
-                }
-                
-                var xpos = this.tick2x(bar.start);
-                var width = this.tick2x(bar.ticks);
-                this._xgrid_highlight_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                this._xgrid_highlight_element.id = "pw_xgrid_highlight";
-                this._xgrid_highlight_element.setAttribute("height", this._note_height * this._num_notes);
-                this._xgrid_highlight_element.setAttribute("width", width);
-                this._xgrid_highlight_element.setAttribute("x", xpos);
-                this._xgrid_highlight_element.setAttribute("y", this._track_y);
-                this._xgrid_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
-                this._tracks_canvas.appendChild(this._xgrid_highlight_element);
-            }                
+            this._xgrid_highlight_element.remove();
         }
+
+        var xpos = this.tick2x(this.tick2snap(tick));
+        var width = this.tick2x(this._tick_snap_width);
+        this._xgrid_highlight_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        this._xgrid_highlight_element.id = "pw_xgrid_highlight";
+        this._xgrid_highlight_element.setAttribute("height", this._note_height * this._num_notes);
+        this._xgrid_highlight_element.setAttribute("width", width);
+        this._xgrid_highlight_element.setAttribute("x", xpos);
+        this._xgrid_highlight_element.setAttribute("y", this._track_y);
+        this._xgrid_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.2;stroke-opacity:0.0");
+        this._tracks_canvas.appendChild(this._xgrid_highlight_element);
         
         if (this._key_highlight_element)
         {
