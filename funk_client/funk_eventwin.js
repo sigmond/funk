@@ -155,6 +155,28 @@ class eventwin
                 {
                     this.tracks_do_zoom_x(this._mouse_at_x, false);
                 }
+                else if ((key == key_up) || (key == key_down))
+                {
+                    if (this._prefix == "pianowin")
+                    {
+                        if (key == key_up)
+                        {
+                            if (this._track_index > 0)
+                            {
+                                this._track_index--;
+                            }
+                        }
+                        else
+                        {
+                            if (this._track_index < (this._song.tracks.length - 1))
+                            {
+                                this._track_index++;
+                            }
+                        }
+                        this.update_track(this._track_index);
+                        this.scroll_to_notes(this.tick2x_zoomed(this._mouse_at_tick), this._track_index);
+                    }
+                }
 
                 return true;
             }
