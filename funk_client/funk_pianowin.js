@@ -36,6 +36,9 @@ class pianowin extends eventwin
         this._note_mouse_button_down = -1;
 
         this._mouse_at_tick = 0;
+        this._mouse_at_x = 0;
+        this._mouse_at_line = 0;
+        this._mouse_at_y = 0;
 
         this._white_key_color = "white";
         this._black_key_color = "black";        
@@ -291,14 +294,24 @@ class pianowin extends eventwin
 
 
     
-    y2note(y)
+    y2line(y)
     {
         return parseInt((y - this._track_y) / this._note_height);
     }
     
-    y2note_zoomed(y)
+    y2line_zoomed(y)
     {
         return parseInt((y - this._track_y) / (this._note_height * this._tracks_zoom_y));
+    }
+
+    line2y(line)
+    {
+        return parseInt(line * this._note_height);
+    }
+    
+    line2y_zoomed(line)
+    {
+        return parseInt(line * this._note_height * this._tracks_zoom_y);
     }
 
 
@@ -351,7 +364,7 @@ class pianowin extends eventwin
             this._xgrid_highlight_element = null;
         }
         
-        var line_index = this.y2note_zoomed(y);
+        var line_index = this.y2line_zoomed(y);
         if (line_index < 0)
         {
             line_index = 0;
@@ -360,6 +373,9 @@ class pianowin extends eventwin
         {
             line_index = this._num_notes - 1;
         }
+
+        this._mouse_at_line = line_index;
+        this._mouse_at_y = this.line2y_zoomed(line_index);
         
         if (this._key_highlight_element)
         {
@@ -389,6 +405,7 @@ class pianowin extends eventwin
         }
 
         this._mouse_at_tick = this.tick2snap(tick);
+        this._mouse_at_x = this.tick2x_zoomed(this._mouse_at_tick);
 
         if (this._mouse_button_1_down)
         {
@@ -403,7 +420,7 @@ class pianowin extends eventwin
         
         var grid_width = this.tick2x(this._tick_snap_width);
 
-        var note = this.y2note_zoomed(y);
+        var note = this.y2line_zoomed(y);
         var xpos = this.tick2x(tick);
         var ypos = this._track_y + (note * this._note_height);
                 
@@ -625,7 +642,7 @@ class pianowin extends eventwin
                 this._xgrid_highlight_element = null;
             }
 
-            var line_index = this.y2note_zoomed(y);
+            var line_index = this.y2line_zoomed(y);
             if (line_index < 0)
             {
                 line_index = 0;

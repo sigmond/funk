@@ -31,6 +31,8 @@ const key_r = 82;
 const key_i = 73;
 const key_d = 68;
 const key_k = 75;
+const key_plus = 187;
+const key_minus = 189;
 
 
 var global_ctrl_down = false;
@@ -73,7 +75,9 @@ function keydownhandler(event)
              (event.keyCode == key_r) ||
              (event.keyCode == key_i) ||
              (event.keyCode == key_d) ||
-             (event.keyCode == key_k)
+             (event.keyCode == key_k) ||
+             (event.keyCode == key_plus) ||
+             (event.keyCode == key_minus)
             )
     {
         event.preventDefault();

@@ -53,6 +53,9 @@ class trackwin extends eventwin
         this._mouse_button_1_down = false;
 
         this._mouse_at_tick = 0;
+        this._mouse_at_x = 0;
+        this._mouse_at_track = 0;
+        this._mouse_at_y = 0;
 
         this._mouse_over_tracks = false;
         
@@ -174,6 +177,16 @@ class trackwin extends eventwin
     y2track_zoomed(y)
     {
         return parseInt((y - this._track_y) / (this._track_height * this._tracks_zoom_y));
+    }
+    
+    track2y(track_index)
+    {
+        return parseInt((track_index * this._track_height) + this._track_y);
+    }
+    
+    track2y_zoomed(track_index)
+    {
+        return parseInt((track_index * this._track_height * this._tracks_zoom_y) + this._track_y);
     }
     
 
@@ -456,6 +469,9 @@ class trackwin extends eventwin
             track_index = this._song.tracks.length - 1;
         }
             
+        this._mouse_at_track = track_index;
+        this._mouse_at_y = this.track2y_zoomed(track_index);
+
         if (this._track_highlight_element)
         {
             this._track_highlight_element.remove();
@@ -477,6 +493,7 @@ class trackwin extends eventwin
             if ((tick >= bar.start) && (tick < bar.end))
             {
                 this._mouse_at_tick = bar.start;
+                this._mouse_at_x = this.tick2x_zoomed(bar.start);
                 break;
             }
         }

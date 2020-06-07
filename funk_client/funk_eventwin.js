@@ -147,6 +147,27 @@ class eventwin
                 {
                     this.handle_redo(this._mouse_at_tick);
                 }
+                else if (key == key_plus)
+                {
+                    this.tracks_do_zoom_x(this._mouse_at_x, true);
+                }
+                else if (key == key_minus)
+                {
+                    this.tracks_do_zoom_x(this._mouse_at_x, false);
+                }
+
+                return true;
+            }
+            else if (global_shift_down)
+            {
+                if (key == key_plus)
+                {
+                    this.tracks_do_zoom_y(this._mouse_at_y, true);
+                }
+                else if (key == key_minus)
+                {
+                    this.tracks_do_zoom_y(this._mouse_at_y, false);
+                }
 
                 return true;
             }
@@ -197,6 +218,8 @@ class eventwin
 
         var new_x = x * (this._tracks_zoom_x / old_zoom);
         this._rulers_frame.scrollLeft = new_x - (k * this._rulers_frame.clientWidth);
+        this._mouse_at_x = new_x;
+        this._mouse_at_tick = this.x2tick(new_x);
 
     }
     
@@ -227,6 +250,15 @@ class eventwin
 
         var new_y = y * (this._tracks_zoom_y / old_zoom);
         eventwin_frame.scrollTop = new_y - (k * eventwin_frame.clientHeight);
+        this._mouse_at_y = new_y;
+        if (this._mouse_at_track != undefined)
+        {
+            this._mouse_at_track = this.y2track(new_y);
+        }
+        else
+        {
+            this._mouse_at_line = this.y2line(new_y);
+        }
     }
 
     rulers_handle_wheel(x, y, delta_y)
