@@ -162,6 +162,12 @@ class funk_controller():
             elif msg['command'] == 'file_loaded':
                 # someone (e.g. the editor) wants to show loaded midi file
                 self.handle_file_loaded(msg)
+            elif msg['command'] == 'tracks_changed':
+                # someone (e.g. the editor) wants to show changed tracks
+                self.handle_tracks_changed(msg)
+            elif msg['command'] == 'cut_area':
+                # someone (e.g. the client) wants to cut an area in a midi file
+                self.handle_cut_area(msg)
             else:
                 self.log('Unknown controller command ' + repr(msg['command']))
                 print('Unknown controller command ' + repr(msg['command']))
@@ -292,6 +298,9 @@ class funk_controller():
     def handle_file_loaded(self, msg):
         self.com.send_client_ctrl_msg('editor', msg)
     
+    def handle_tracks_changed(self, msg):
+        self.com.send_client_ctrl_msg('editor', msg)
+    
     def handle_record(self, msg):
         obj = {'command': 'record',
                'start' : msg['start']
@@ -308,6 +317,16 @@ class funk_controller():
     
     def handle_time(self, msg):
         self.com.send_client_time_msg('time', msg)
+
+
+    def handle_cut_area(self, msg):
+        print('handle_cut_area')
+        obj = {'command': 'cut_area',
+               'area' : msg['area']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
     
 
 def main():

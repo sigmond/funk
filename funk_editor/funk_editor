@@ -60,7 +60,8 @@ class funk_editor():
     sub_socket = None
     subpoller = None
     midi_file = None
-    midi_file_changed_since_load = False
+    event_file = None
+    event_file_changed_since_load = False
     filename = ""
     midievent = None
     
@@ -114,6 +115,8 @@ class funk_editor():
                 self.handle_save(msg)
             elif msg['command'] == 'play':
                 self.handle_play(msg)
+            elif msg['command'] == 'cut_area':
+                self.handle_cut_area(msg)
             else:
                 print('Unknown editor command ' + repr(msg['command']))
                 self.log('Unknown editor command ' + repr(msg['command']))
@@ -127,14 +130,10 @@ class funk_editor():
             self.log('opening ' + self.filename)
             self.filename = msg['name']
             self.midi_file = msg['obj']
-            self.midi_file_changed_since_load = True
-            self.log('loading ' + self.filename)
-            obj = {'command': 'load',
-                   'what': 'file',
-                   'obj': self.midi_file
-                   }
-            self.send_ctrl_msg('player', obj)
-            self.midi_file_changed_since_load = False
+            self.event_file = self.midievent.file2events(self.midi_file, self.filename)
+            # event file and midi file is the same:
+            self.event_file_changed_since_load = False
+            self.load_file_to_player()
             self.client_file_loaded()
         else:
             self.log('Unknown open type ' + repr(msg['type']))
@@ -142,6 +141,7 @@ class funk_editor():
     def handle_save(self, msg):
         if msg['type'] ==  'file':
             self.log('saving ' + self.filename)
+            self.midi_file = self.midievent.events2file(self.event_file)
             obj = {'command': 'download',
                    'what': 'file',
                    'name': self.filename,
@@ -153,14 +153,8 @@ class funk_editor():
 
     def handle_play(self, msg):
         if msg['what'] ==  'file':
-            if self.midi_file_changed_since_load:
-                self.log('playing ' + self.filename)
-                obj = {'command': 'load',
-                       'what': 'file',
-                       'obj': self.midi_file
-                       }
-                self.send_ctrl_msg('player', obj)
-                self.midi_file_changed_since_load = False
+            if self.event_file_changed_since_load:
+                self.load_file_to_player()
             obj = {'command': 'play',
                    'start' : msg['start']
                    }
@@ -168,15 +162,45 @@ class funk_editor():
         else:
             self.log('Unknown play what ' + repr(msg['what']))
                     
+    def handle_cut_area(self, msg):
+        print('editor got ' + repr(msg))
+        area = msg['area']
+        remove_space = msg['remove_space']
+        self.event_file = self.midievent.cut_area(self.event_file, area, remove_space)
+        tracks = []
+        for i in range(area['track_start'], area['track_stop']):
+            tracks.append(self.event_file.tracks[i])
+        self.client_tracks_changed(tracks)
+        self.load_file_to_player()
+
+    def load_file_to_player(self):
+        if self.event_file_changed_since_load:
+            self.midi_file = self.midievent.events2file(self.event_file)
+        obj = {'command': 'load',
+               'what': 'file',
+               'obj': self.midi_file
+               }
+        self.send_ctrl_msg('player', obj)
+        self.event_file_changed_since_load = False
+
     def client_file_loaded(self):
         obj = {'command' : 'file_loaded',
                'filename' : self.filename,
-               'file' : self.encode_file_for_client(self.midi_file)
+               'file' : self.encode_file_for_client()
                }
         self.send_ctrl_msg('controller', obj)
 
-    def encode_file_for_client(self, obj):
-        return self.midievent.midi2events(obj)
+    def client_tracks_changed(self, tracks):
+        obj = {'command' : 'tracks_changed',
+               'tracks' : self.encode_tracks_for_client(tracks)
+               }
+        self.send_ctrl_msg('controller', obj)
+
+    def encode_file_for_client(self):
+        return self.event_file
+
+    def encode_tracks_for_client(self, obj):
+        return obj
 
 def main():
 

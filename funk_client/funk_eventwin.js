@@ -117,7 +117,11 @@ class eventwin
             {
                 if (key == key_x)
                 {
-                    this.handle_cut(this._mouse_at_tick);
+                    this.handle_cut(this._mouse_at_tick, false);
+                }
+                else if (key == key_w)
+                {
+                    this.handle_cut(this._mouse_at_tick, true);
                 }
                 else if (key == key_k)
                 {

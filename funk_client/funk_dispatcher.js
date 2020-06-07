@@ -24,6 +24,7 @@ const key_end = 35;
 const key_space = 32;
 const key_p = 80;
 const key_x = 88;
+const key_w = 87;
 const key_c = 67;
 const key_v = 86;
 const key_z = 90;
@@ -71,6 +72,7 @@ function keydownhandler(event)
     else if (
              (event.keyCode == key_p) ||
              (event.keyCode == key_x) ||
+             (event.keyCode == key_w) ||
              (event.keyCode == key_c) ||
              (event.keyCode == key_v) ||
              (event.keyCode == key_z) ||
@@ -562,12 +564,12 @@ function first_letter_uppercase(str)
 }
 
 
-function cut_area(area)
+function cut_area(area, remove_space)
 {
     var cmd;
     var msg;    
 
-    cmd = { "command" : "cut_area", "area" : area };
+    cmd = { "command" : "cut_area", "area" : area, "remove_space" : remove_space };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);

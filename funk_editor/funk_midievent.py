@@ -30,7 +30,32 @@ class funk_midievent():
     def __init__(self):
         pass
 
-    def midi2events(self, midi_obj):
+    def tracks2events(self, tracks):
+        message = {'tracks' : []
+                   }
+        for i, midi_track in enumerate(tracks):
+            message['tracks'].append(self.track2events(i, midi_track))
+        return message
+
+    def track2events(self, track_index, midi_track):
+        event_track = {'index' : track_index,
+                       'name' : midi_track.name.strip(),
+                       'events' : []
+                       }
+        msgs = []
+        for midi_msg in midi_track:
+            msgs.append(midi_msg.dict())
+
+        last_track_tick, events = self.msgs2events(msgs)
+        if track_index == 0:
+            for e in events:
+                print('event ' + repr(e))
+        event_track['events'] = events
+
+        return event_track, last_track_tick
+    
+
+    def file2events(self, midi_obj, filename):
         if isinstance(midi_obj, MidiFile):
             midi_file = midi_obj
         else:
@@ -38,32 +63,43 @@ class funk_midievent():
 
         last_tick = 0
         
-        message = {'length_seconds': midi_file.length,
+        message = {'filename' : filename,
+                   'length_seconds': midi_file.length,
                    'ticks_per_beat': midi_file.ticks_per_beat,
                    'tracks' : []
                    }
         for i, midi_track in enumerate(midi_file.tracks):
-            track = {'index' : i,
-                     'name' : midi_track.name.strip(),
-                     'events' : []
-                     }
-            msgs = []
-            for midi_msg in midi_track:
-                msgs.append(midi_msg.dict())
-
-            last_track_tick, events = self.msgs2events(msgs)
-            if i == 0:
-                for e in events:
-                    print('event ' + repr(e))
-            track['events'] = events
-
+            event_track, last_track_tick = self.track2events(i, midi_track)
+            message['tracks'].append(event_track)
             if last_track_tick > last_tick:
                 last_tick = last_track_tick
-            
-            message['tracks'].append(track)
 
         message['length_ticks'] = last_tick
         return message
+
+    def events2file(self, event_file):
+        # Do the inverse of file2events()...
+        midi_file = mido.MidiFile(filename=event_file['filename'],
+                                  ticks_per_beat=event_file['ticks_per_beat']
+                                  )
+        for event_track in event_file['tracks']:
+            track = self.events2track(event_track)
+            midi_file.tracks.append(track)
+        return midi_file
+
+    def events2track(self, event_track):
+        track = MidiTrack(name=event_track['name'])
+        for event in event_track['events']:
+            event_msgs = self.event2msgs(event)
+            for msg in event_msgs:
+                track.append(Message.from_dict(msg))
+        return track
+
+    def event2msgs(self, event):
+        # generate messages from event (e.g. note_on + note_off)
+        msgs = []
+        # split event into converted messages (still dicts)
+        return msgs
 
     def msgs2events(self, msgs):
         events = []
@@ -131,5 +167,11 @@ class funk_midievent():
 
         return abstime, sorted(events, key = lambda i: i['start']) 
 
-        
+    def cut_area(event_file, area, remove_space):
+        # todo:
+        # loop through affected tracks
+        ## loop through events in event-track:
+        ### remove events with starttime >= tick_start and < tick_stop
+        ### if remove_space, subtrack (stop - start) from all events >= tick_stop
+        return midi_file
         
