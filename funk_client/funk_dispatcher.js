@@ -136,6 +136,10 @@ function ctrl_onmessage(e)
       {
           handle_editor(data['msg']);
       }
+      else if (data['topic'] == 'error')
+      {
+          output(data['msg']);
+      }
 };
 
 function ctrl_onclose()
@@ -569,7 +573,7 @@ function cut_area(area, remove_space)
     var cmd;
     var msg;    
 
-    cmd = { "command" : "cut_area", "area" : area, "remove_space" : remove_space };
+    cmd = { "command" : "cut_area", "area" : area, "remove_space" : (remove_space ? 1 : 0) };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
@@ -582,7 +586,7 @@ function clear_area(area, remove_space)
     var cmd;
     var msg;    
 
-    cmd = { "command" : "clear_area", "area" : area, "remove_space" : remove_space };
+    cmd = { "command" : "clear_area", "area" : area, "remove_space" : (remove_space ? 1 : 0) };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
@@ -600,7 +604,7 @@ function paste_area(from, to, overwrite_destination, insert_space)
         "from" : from, 
         "to" : to, 
         "overwrite_destination" : overwrite_destination,
-        "insert_space" : insert_space
+        "insert_space" : (insert_space ? 1 : 0)
     };
     msg = { "topic" : "controller", "msg" : cmd };
     

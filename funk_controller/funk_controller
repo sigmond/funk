@@ -322,7 +322,8 @@ class funk_controller():
     def handle_cut_area(self, msg):
         print('handle_cut_area')
         obj = {'command': 'cut_area',
-               'area' : msg['area']
+               'area' : msg['area'],
+               'remove_space' : (msg['remove_space'] == 1)
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)

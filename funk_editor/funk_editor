@@ -169,8 +169,9 @@ class funk_editor():
         self.event_file = self.midievent.cut_area(self.event_file, area, remove_space)
         tracks = []
         for i in range(area['track_start'], area['track_stop']):
-            tracks.append(self.event_file.tracks[i])
+            tracks.append(self.event_file['tracks'][i])
         self.client_tracks_changed(tracks)
+        self.event_file_changed_since_load = True
         self.load_file_to_player()
 
     def load_file_to_player(self):

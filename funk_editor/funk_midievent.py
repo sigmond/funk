@@ -78,28 +78,66 @@ class funk_midievent():
         return message
 
     def events2file(self, event_file):
+        print('events2file')
         # Do the inverse of file2events()...
-        midi_file = mido.MidiFile(filename=event_file['filename'],
+        midi_file = mido.MidiFile(
                                   ticks_per_beat=event_file['ticks_per_beat']
                                   )
         for event_track in event_file['tracks']:
             track = self.events2track(event_track)
+            
             midi_file.tracks.append(track)
         return midi_file
 
-    def events2track(self, event_track):
-        track = MidiTrack(name=event_track['name'])
-        for event in event_track['events']:
-            event_msgs = self.event2msgs(event)
-            for msg in event_msgs:
-                track.append(Message.from_dict(msg))
-        return track
-
-    def event2msgs(self, event):
-        # generate messages from event (e.g. note_on + note_off)
+    def events2track(self, event_track): 
+        print('events2track')
         msgs = []
+        print('event_track ' + repr(event_track))
+        for event in event_track['events']:
+            print('event ' + repr(event))
+            event_msgs = self.event2msgs(event)
+            print('event_msgs ' + repr(event_msgs))
+            for msg in event_msgs:
+                print('msg ' + repr(msg))
+                try:
+                    midi_msg = mido.Message.from_dict(msg)
+                except:
+                    midi_msg = mido.MetaMessage.from_dict(msg)
+                print('midi_msg ' + repr(midi_msg))
+                msgs.append(midi_msg)
+        print('msgs ' + repr(msgs))
+        msgs.sort(key=lambda msg: msg.time)
+        print('sorted msgs ' + repr(msgs))
+        track = mido.MidiTrack()
+        track.name = event_track['name']
+        now = 0
+        for msg in msgs:
+            delta = msg.time - now
+            track.append(msg.copy(time=delta))
+            now = msg.time
+        return track
+    
+    def event2msgs(self, event):
+        print('events2msgs event ' + repr(event))
+        # generate messages from event (e.g. note_on + note_off)
         # split event into converted messages (still dicts)
-        return msgs
+        msg = event.copy()
+        if event['type'] == 'note':
+            msg['type'] = 'note_on'
+            msg['time'] = event['start']
+            del msg['start']
+            del msg['length']
+            del msg['end']
+            msg_off = msg.copy()
+            msg_off['time'] = event['end']
+            msg_off['velocity'] = 0
+            return [msg, msg_off]
+        else:
+            msg['time'] = event['start']
+            del msg['start']
+            del msg['end']
+            del msg['length']
+            return [msg]
 
     def msgs2events(self, msgs):
         events = []
@@ -167,11 +205,21 @@ class funk_midievent():
 
         return abstime, sorted(events, key = lambda i: i['start']) 
 
-    def cut_area(event_file, area, remove_space):
-        # todo:
+    def cut_area(self, event_file, area, remove_space):
+        length_ticks = area['tick_stop'] - area['tick_start']
         # loop through affected tracks
-        ## loop through events in event-track:
-        ### remove events with starttime >= tick_start and < tick_stop
-        ### if remove_space, subtrack (stop - start) from all events >= tick_stop
-        return midi_file
+        for track_index in range(area['track_start'], area['track_stop']):
+            print('cutting area from track ' + repr(track_index))
+            event_track = event_file['tracks'][track_index]
+            changed_events = []
+            # loop through events in event-track, remove events with starttime >= tick_start and < tick_stop
+            for event in event_track['events']:
+                if ((event['start'] < area['tick_start']) or (event['start'] >= area['tick_stop'])):
+                    # if remove_space, subtrack (stop - start) from all events >= tick_stop
+                    if remove_space and (event['start'] >= area['tick_stop']):
+                        event['start'] -= length_ticks
+                        event['end'] -= length_ticks
+                    changed_events.append(event)
+            event_file['tracks'][track_index]['events'] = changed_events
+        return event_file
         
