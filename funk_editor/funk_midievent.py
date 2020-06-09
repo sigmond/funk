@@ -78,7 +78,7 @@ class funk_midievent():
         return message
 
     def events2file(self, event_file):
-        print('events2file')
+        #print('events2file')
         # Do the inverse of file2events()...
         midi_file = mido.MidiFile(
                                   ticks_per_beat=event_file['ticks_per_beat']
@@ -90,24 +90,24 @@ class funk_midievent():
         return midi_file
 
     def events2track(self, event_track): 
-        print('events2track')
+        #print('events2track')
         msgs = []
-        print('event_track ' + repr(event_track))
+        #print('event_track ' + repr(event_track))
         for event in event_track['events']:
-            print('event ' + repr(event))
+            #print('event ' + repr(event))
             event_msgs = self.event2msgs(event)
-            print('event_msgs ' + repr(event_msgs))
+            #print('event_msgs ' + repr(event_msgs))
             for msg in event_msgs:
-                print('msg ' + repr(msg))
+                #print('msg ' + repr(msg))
                 try:
                     midi_msg = mido.Message.from_dict(msg)
                 except:
                     midi_msg = mido.MetaMessage.from_dict(msg)
-                print('midi_msg ' + repr(midi_msg))
+                #print('midi_msg ' + repr(midi_msg))
                 msgs.append(midi_msg)
-        print('msgs ' + repr(msgs))
+        #print('msgs ' + repr(msgs))
         msgs.sort(key=lambda msg: msg.time)
-        print('sorted msgs ' + repr(msgs))
+        #print('sorted msgs ' + repr(msgs))
         track = mido.MidiTrack()
         track.name = event_track['name']
         now = 0
@@ -118,7 +118,7 @@ class funk_midievent():
         return track
     
     def event2msgs(self, event):
-        print('events2msgs event ' + repr(event))
+        #print('events2msgs event ' + repr(event))
         # generate messages from event (e.g. note_on + note_off)
         # split event into converted messages (still dicts)
         msg = event.copy()

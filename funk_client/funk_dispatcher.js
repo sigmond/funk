@@ -24,13 +24,11 @@ const key_end = 35;
 const key_space = 32;
 const key_p = 80;
 const key_x = 88;
-const key_w = 87;
 const key_c = 67;
 const key_v = 86;
+const key_m = 77;
 const key_z = 90;
 const key_r = 82;
-const key_i = 73;
-const key_d = 68;
 const key_k = 75;
 const key_plus = 187;
 const key_minus = 189;
@@ -70,20 +68,18 @@ function keydownhandler(event)
         trackwin_object.play_at_playhead();
     }
     else if (
-             (event.keyCode == key_p) ||
-             (event.keyCode == key_x) ||
-             (event.keyCode == key_w) ||
-             (event.keyCode == key_c) ||
-             (event.keyCode == key_v) ||
-             (event.keyCode == key_z) ||
-             (event.keyCode == key_r) ||
-             (event.keyCode == key_i) ||
-             (event.keyCode == key_d) ||
-             (event.keyCode == key_k) ||
-             (event.keyCode == key_plus) ||
-             (event.keyCode == key_minus) ||
-             (event.keyCode == key_up) ||
-             (event.keyCode == key_down)
+             (event.keyCode == key_p) || // position playhead
+             (event.keyCode == key_x) || // ctrl-x = cut leave space, ctrl-shift-x = cut remove space
+             (event.keyCode == key_c) || // ctrl-c = copy
+             (event.keyCode == key_v) || // ctrl-v = paste overwrite, ctrl-shift-v = paste insert
+             (event.keyCode == key_m) || // ctrl-m = paste merge
+             (event.keyCode == key_z) || // ctrl-z = undo
+             (event.keyCode == key_r) || // ctrl-r = redo
+             (event.keyCode == key_k) || // ctrl-k = clear events, ctrl-shift-k = clear events, remove space
+             (event.keyCode == key_plus) || // ctrl-plus = zoom in
+             (event.keyCode == key_minus) || // ctrl-minus = zoom out
+             (event.keyCode == key_up) || // ctrl-up = next track up (pianowin)
+             (event.keyCode == key_down) // ctrl-down = next track down (pianowin)
             )
     {
         event.preventDefault();
@@ -502,6 +498,10 @@ function handle_editor(msg)
     {
         handle_editor_download(msg);
     }
+    else if (msg['command'] == 'tracks_changed')
+    {
+        handle_editor_tracks_changed(msg);
+    }
     else
     {
         output("Unknown editor command '" + msg['command'] + "'");
@@ -517,7 +517,7 @@ function handle_editor_file_loaded(msg)
     output("File length (ticks): " + msg['file']['length_ticks']);
     output("Tracks: " + msg['file']['tracks'].length);
 
-    var song = new funk_song(msg['filename'], msg['file']['length_seconds'], msg['file']['length_ticks'], msg['file']['ticks_per_beat'], msg['file']['tracks']);
+    var song = new funk_song(msg['filename'], msg['file']['ticks_per_beat'], msg['file']['tracks']);
 
     var trackwin_tracks_frame = document.getElementById("trackwin_tracks_container");
     var trackwin_info_frame = document.getElementById("trackwin_info_container");
@@ -530,6 +530,20 @@ function handle_editor_file_loaded(msg)
     var pianowin_menu_frame = document.getElementById("pianowin_rulers_menu_container");
     var pianowin_rulers_frame = document.getElementById("pianowin_rulers_rulers_container");
     pianowin_object = new pianowin("pianowin", pianowin_menu_frame, pianowin_rulers_frame, pianowin_info_frame, pianowin_tracks_frame, song);
+}
+
+function handle_editor_tracks_changed(msg)
+{
+    output("Tracks changed: " + msg['tracks'].length);
+
+    trackwin_object._song.update_tracks(msg['tracks']);
+    var track_indexes = [];
+    for (const track of msg['tracks'])
+    {
+        track_indexes.push(track.index);
+    }
+    trackwin_object.update_tracks(track_indexes);
+    pianowin_object.update_tracks(track_indexes);
 }
 
 function base64_decode(b64) {
@@ -594,7 +608,7 @@ function clear_area(area, remove_space)
     ws_ctrl.send(json_message);
 }
 
-function paste_area(from, to, overwrite_destination, insert_space)
+function paste_area(from, to, overwrite_destination, insert_space, merge)
 {
     var cmd;
     var msg;    
@@ -603,8 +617,9 @@ function paste_area(from, to, overwrite_destination, insert_space)
         "command" : "paste_area",
         "from" : from, 
         "to" : to, 
-        "overwrite_destination" : overwrite_destination,
-        "insert_space" : (insert_space ? 1 : 0)
+        "overwrite_destination" : (overwrite_destination ? 1 : 0),
+        "insert_space" : (insert_space ? 1 : 0),
+        "merge" : (merge ? 1 : 0)
     };
     msg = { "topic" : "controller", "msg" : cmd };
     

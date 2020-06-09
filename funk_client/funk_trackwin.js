@@ -117,6 +117,8 @@ class trackwin extends eventwin
         this._track_highlight_element = null;
         this._track_select_element = null;
 
+        this._track_event_elements = []
+
         this.create_tracks();
         this.create_rulers();
         this.create_menu();
@@ -135,6 +137,13 @@ class trackwin extends eventwin
         this._info_canvas.setAttribute("viewBox", "0 0 " + this._info_width.toString() + ' ' + this._height.toString());
     }
     
+    update_track(track_index)
+    {
+        var track = this._song.tracks[track_index];
+        this.fill_track_events(track_index, track);
+        this.create_track_info(track_index, track, this._song.tracknames[track_index], false);
+    }
+
     go_to_start()
     {
         if (!this._playing)
@@ -909,7 +918,7 @@ class trackwin extends eventwin
 
         for (const track of this._song.tracks)
         {
-            info_width_tmp = this.create_track_info(track_index, track, this._song.tracknames[track_index]);
+            info_width_tmp = this.create_track_info(track_index, track, this._song.tracknames[track_index], true);
             if (info_width_tmp > info_width)
             {
                 info_width = info_width_tmp;
@@ -1162,9 +1171,15 @@ class trackwin extends eventwin
     }
 
 
-    create_track_info(track_index, track, trackname)
+    create_track_info(track_index, track, trackname, create_solo_mute)
     {
-        var info_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        var info_rect = document.getElementById('track_info_' + track_index.toString());
+        if (info_rect != undefined)
+        {
+            info_rect.remove();
+        }
+
+        info_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         var width = this._info_width;
         
         info_rect.id = 'track_info_' + track_index.toString();
@@ -1177,13 +1192,22 @@ class trackwin extends eventwin
         info_rect.addEventListener('mouseout', this.track_info_mouseouthandler);
         this._info_canvas.appendChild(info_rect);
 
-        this._info_canvas.appendChild(this.create_solo_button(track_index, false));
-        if (track_index > 0)
+        if (create_solo_mute)
         {
-            this._info_canvas.appendChild(this.create_mute_button(track_index, false));
+            this._info_canvas.appendChild(this.create_solo_button(track_index, false));
+            if (track_index > 0)
+            {
+                this._info_canvas.appendChild(this.create_mute_button(track_index, false));
+            }
         }
 
-        var info_name_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        var info_name_text = document.getElementById('track_name_' + track_index.toString());
+        if (info_name_text != undefined)
+        {
+            info_name_text.remove();
+        }
+        
+        info_name_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         info_name_text.id = 'track_name_' + track_index.toString();
         info_name_text.setAttribute("x", 2);
         info_name_text.setAttribute("y", this._track_y + (track_index * this._track_height) + 12);
@@ -1211,6 +1235,18 @@ class trackwin extends eventwin
         var y = this._track_y + (track_index * this._track_height) + 4;
         var height = this._track_height - 8;
 
+        if (this._track_event_elements.length <= track_index)
+        {
+            this._track_event_elements.push([]);
+        }
+        
+        var event_element;
+        
+        while ((event_element = this._track_event_elements[track_index].pop()))
+        {
+            event_element.remove();
+        }
+
         for (const event of track.events)
         {
             if (event.start > last_painted_tick)
@@ -1230,6 +1266,7 @@ class trackwin extends eventwin
                 event_rect.setAttribute("style", "fill:black;stroke:black;stroke-width:0;fill-opacity:0.8;stroke-opacity:1.0");
                 this._tracks_canvas.appendChild(event_rect);
                 last_painted_tick = event.start;
+                this._track_event_elements[track_index].push(event_rect);
             }
         }
         
@@ -1301,7 +1338,7 @@ class trackwin extends eventwin
         this._area_copy_buffer = this.select_tick_track_area();
     }
     
-    handle_paste_insert(tick, do_insert)
+    handle_paste_insert_merge(tick, do_insert, do_merge)
     {
         if (!this._area_copy_buffer)
         {
@@ -1318,13 +1355,13 @@ class trackwin extends eventwin
                  'track_end' : this._area_copy_buffer['track_end']
                 };
             
-            paste_area(this._area_copy_buffer, paste_to, true, do_insert); // overwrite destination, maybe insert space
+            paste_area(this._area_copy_buffer, paste_to, true, do_insert, do_merge); // overwrite destination, maybe insert space, maybe merge
         }
         else
         {
-            paste_area(this._area_copy_buffer, this.select_tick_track_area(), true, do_insert); // overwrite destination, maybe insert space
+            paste_area(this._area_copy_buffer, this.select_tick_track_area(), true, do_insert, do_merge); // overwrite destination, maybe insert space, maybe merge
         }
-    }
+    }    
     
     handle_undo(tick)
     {

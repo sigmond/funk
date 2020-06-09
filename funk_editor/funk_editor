@@ -61,7 +61,7 @@ class funk_editor():
     subpoller = None
     midi_file = None
     event_file = None
-    event_file_changed_since_load = False
+    event_tracks_changed_since_load = False
     filename = ""
     midievent = None
     
@@ -132,7 +132,7 @@ class funk_editor():
             self.midi_file = msg['obj']
             self.event_file = self.midievent.file2events(self.midi_file, self.filename)
             # event file and midi file is the same:
-            self.event_file_changed_since_load = False
+            self.event_tracks_changed_since_load = False
             self.load_file_to_player()
             self.client_file_loaded()
         else:
@@ -153,7 +153,7 @@ class funk_editor():
 
     def handle_play(self, msg):
         if msg['what'] ==  'file':
-            if self.event_file_changed_since_load:
+            if self.event_tracks_changed_since_load:
                 self.load_file_to_player()
             obj = {'command': 'play',
                    'start' : msg['start']
@@ -171,18 +171,19 @@ class funk_editor():
         for i in range(area['track_start'], area['track_stop']):
             tracks.append(self.event_file['tracks'][i])
         self.client_tracks_changed(tracks)
-        self.event_file_changed_since_load = True
+        self.event_tracks_changed_since_load = tracks
         self.load_file_to_player()
 
     def load_file_to_player(self):
-        if self.event_file_changed_since_load:
-            self.midi_file = self.midievent.events2file(self.event_file)
+        if self.event_tracks_changed_since_load:
+            for track in self.event_tracks_changed_since_load:
+                self.midi_file.tracks[track['index']] = self.midievent.events2track(track)
         obj = {'command': 'load',
                'what': 'file',
                'obj': self.midi_file
                }
         self.send_ctrl_msg('player', obj)
-        self.event_file_changed_since_load = False
+        self.event_tracks_changed_since_load = False
 
     def client_file_loaded(self):
         obj = {'command' : 'file_loaded',

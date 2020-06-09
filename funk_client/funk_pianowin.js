@@ -105,7 +105,7 @@ class pianowin extends eventwin
         this._rulers_canvas.addEventListener('mousemove', this.rulers_mousemovehandler);
 
 
-        this._track_events = [];
+        this._track_event_elements = [];
         
         this._xgrid_highlight_element = null;
         this._key_highlight_element = null;
@@ -134,7 +134,6 @@ class pianowin extends eventwin
     update_track(track_index)
     {
         this._track_index = track_index;
-        this.remove_track_events();
         this.fill_note_events();
         this.fill_track_info();
         this.fill_channel_info();
@@ -897,7 +896,7 @@ class pianowin extends eventwin
     {
         var event;
         
-        while ((event = this._track_events.pop()))
+        while ((event = this._track_event_elements.pop()))
         {
             event.remove();
         }
@@ -1000,6 +999,8 @@ class pianowin extends eventwin
         var track;
         var track_index = this._track_index;
 
+        this.remove_track_events();
+
         track = this._song.tracks[track_index];
 
         for (const event of track.events)
@@ -1027,7 +1028,7 @@ class pianowin extends eventwin
             event_rect.setAttribute("height", height);
             event_rect.setAttribute("style", "fill:" + this._note_color + ";stroke:black;stroke-width:1;fill-opacity:" + opacity + ";stroke-opacity:1.0");
             this._tracks_canvas.appendChild(event_rect);
-            this._track_events.push(event_rect);
+            this._track_event_elements.push(event_rect);
         }
         
         return parseInt((highest_note + lowest_note) / 2);

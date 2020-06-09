@@ -16,25 +16,49 @@
 
 class funk_song 
 {
-    constructor(filename, length_seconds, length_ticks, ticks_per_beat, tracks)
+    constructor(filename, ticks_per_beat, tracks)
     {
         this._filename = filename;
-        this._length_seconds = length_seconds;
-        this._length_ticks = length_ticks;
-        this._ticks = this._length_ticks * 2;
         this._ticks_per_beat = ticks_per_beat;
-        this._tracks = tracks;
         this._beats_per_bar = 4;
+        this._tracks = [];
 
+        this.update_tracks(tracks);
+    }
+
+    update_tracks(tracks)
+    {
+        for (const track of tracks)
+        {
+            this._tracks[track.index] = track;
+        }
+        
         this._tracknames = [];
         this.get_tracknames();
         this._channels = [];
         this.get_channels();
         this._tempos = [];
         this.get_tempos();
+        this.get_song_length_ticks();
+        this._ticks = this._length_ticks * 2;
 
         this._bars = [];
         this.generate_bars();
+    }
+
+    get_track_length_ticks(track)
+    {
+        return track.events[track.events.length - 1].end;
+    }
+
+    get_song_length_ticks()
+    {
+        var length_ticks = 0;
+        for (const track of this._tracks)
+        {
+            length_ticks = Math.max(length_ticks, this.get_track_length_ticks(track));
+        }
+        this._length_ticks = length_ticks;
     }
 
     get filename()

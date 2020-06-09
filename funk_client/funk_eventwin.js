@@ -58,6 +58,14 @@ class eventwin
         menu_frame.appendChild(this._menu_canvas);        
     }
 
+    update_tracks(track_indexes)
+    {
+        for (const track_index of track_indexes)
+        {
+            this.update_track(track_index);
+        }
+    }
+    
     x2tick(x)
     {
         return parseInt(x / this._pixels_per_tick);
@@ -117,19 +125,11 @@ class eventwin
             {
                 if (key == key_x)
                 {
-                    this.handle_cut(this._mouse_at_tick, false);
-                }
-                else if (key == key_w)
-                {
-                    this.handle_cut(this._mouse_at_tick, true);
+                    this.handle_cut(this._mouse_at_tick, global_shift_down);
                 }
                 else if (key == key_k)
                 {
-                    this.handle_clear(this._mouse_at_tick, false);
-                }
-                else if (key == key_d)
-                {
-                    this.handle_clear(this._mouse_at_tick, true);
+                    this.handle_clear(this._mouse_at_tick, global_shift_down);
                 }
                 else if (key == key_c)
                 {
@@ -137,11 +137,11 @@ class eventwin
                 }
                 else if (key == key_v)
                 {
-                    this.handle_paste_insert(this._mouse_at_tick, false);
+                    this.handle_paste_insert_merge(this._mouse_at_tick, global_shift_down, false);
                 }
-                else if (key == key_i)
+                else if (key == key_m)
                 {
-                    this.handle_paste_insert(this._mouse_at_tick, true);
+                    this.handle_paste_insert_merge(this._mouse_at_tick, false, true);
                 }
                 else if (key == key_z)
                 {
