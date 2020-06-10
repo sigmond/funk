@@ -168,6 +168,9 @@ class funk_controller():
             elif msg['command'] == 'cut_area':
                 # someone (e.g. the client) wants to cut an area in a midi file
                 self.handle_cut_area(msg)
+            elif msg['command'] == 'paste_area':
+                # someone (e.g. the client) wants to paste an area into a midi file
+                self.handle_paste_area(msg)
             else:
                 self.log('Unknown controller command ' + repr(msg['command']))
                 print('Unknown controller command ' + repr(msg['command']))
@@ -324,6 +327,17 @@ class funk_controller():
         obj = {'command': 'cut_area',
                'area' : msg['area'],
                'remove_space' : (msg['remove_space'] == 1)
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_paste_area(self, msg):
+        print('handle_paste_area')
+        obj = {'command': 'paste_area',
+               'from' : msg['from'],
+               'to' : msg['to'],
+               'insert_space' : (msg['insert_space'] == 1),
+               'merge' : (msg['merge'] == 1)
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)

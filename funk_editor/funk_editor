@@ -117,6 +117,8 @@ class funk_editor():
                 self.handle_play(msg)
             elif msg['command'] == 'cut_area':
                 self.handle_cut_area(msg)
+            elif msg['command'] == 'paste_area':
+                self.handle_paste_area(msg)
             else:
                 print('Unknown editor command ' + repr(msg['command']))
                 self.log('Unknown editor command ' + repr(msg['command']))
@@ -169,6 +171,20 @@ class funk_editor():
         self.event_file = self.midievent.cut_area(self.event_file, area, remove_space)
         tracks = []
         for i in range(area['track_start'], area['track_stop']):
+            tracks.append(self.event_file['tracks'][i])
+        self.client_tracks_changed(tracks)
+        self.event_tracks_changed_since_load = tracks
+        self.load_file_to_player()
+
+    def handle_paste_area(self, msg):
+        print('editor got ' + repr(msg))
+        from_area = msg['from']
+        to_area = msg['to']
+        insert_space = msg['insert_space']
+        merge = msg['merge']
+        self.event_file = self.midievent.paste_area(self.event_file, from_area, to_area, insert_space, merge)
+        tracks = []
+        for i in range(to_area['track_start'], to_area['track_stop']):
             tracks.append(self.event_file['tracks'][i])
         self.client_tracks_changed(tracks)
         self.event_tracks_changed_since_load = tracks

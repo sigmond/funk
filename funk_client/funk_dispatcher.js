@@ -29,7 +29,6 @@ const key_v = 86;
 const key_m = 77;
 const key_z = 90;
 const key_r = 82;
-const key_k = 75;
 const key_plus = 187;
 const key_minus = 189;
 const key_up = 38;
@@ -75,7 +74,6 @@ function keydownhandler(event)
              (event.keyCode == key_m) || // ctrl-m = paste merge
              (event.keyCode == key_z) || // ctrl-z = undo
              (event.keyCode == key_r) || // ctrl-r = redo
-             (event.keyCode == key_k) || // ctrl-k = clear events, ctrl-shift-k = clear events, remove space
              (event.keyCode == key_plus) || // ctrl-plus = zoom in
              (event.keyCode == key_minus) || // ctrl-minus = zoom out
              (event.keyCode == key_up) || // ctrl-up = next track up (pianowin)
@@ -588,19 +586,6 @@ function cut_area(area, remove_space)
     var msg;    
 
     cmd = { "command" : "cut_area", "area" : area, "remove_space" : (remove_space ? 1 : 0) };
-    msg = { "topic" : "controller", "msg" : cmd };
-    
-    json_message = JSON.stringify(msg);
-
-    ws_ctrl.send(json_message);
-}
-
-function clear_area(area, remove_space)
-{
-    var cmd;
-    var msg;    
-
-    cmd = { "command" : "clear_area", "area" : area, "remove_space" : (remove_space ? 1 : 0) };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);

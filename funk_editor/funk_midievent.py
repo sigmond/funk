@@ -208,18 +208,126 @@ class funk_midievent():
     def cut_area(self, event_file, area, remove_space):
         length_ticks = area['tick_stop'] - area['tick_start']
         # loop through affected tracks
+        # TODO: for undo:
+        # original_tracks = []
         for track_index in range(area['track_start'], area['track_stop']):
             print('cutting area from track ' + repr(track_index))
             event_track = event_file['tracks'][track_index]
+            # TODO: for undo:
+            #original_tracks.append(event_track.copy())
+            
             changed_events = []
             # loop through events in event-track, remove events with starttime >= tick_start and < tick_stop
             for event in event_track['events']:
                 if ((event['start'] < area['tick_start']) or (event['start'] >= area['tick_stop'])):
-                    # if remove_space, subtrack (stop - start) from all events >= tick_stop
+                    # if remove_space, subtract (stop - start) from all events >= tick_stop
                     if remove_space and (event['start'] >= area['tick_stop']):
                         event['start'] -= length_ticks
                         event['end'] -= length_ticks
                     changed_events.append(event)
             event_file['tracks'][track_index]['events'] = changed_events
+        return event_file
+        
+    def paste_area(self, event_file, from_area, to_area, insert_space, merge):
+        # - in general, if from-area > to-area, paste into to-area only
+        # - if from-ticks-length < to-tick-length, do a repetitive paste
+        # - if from-tracks-length < to-track-length, only paste from-track-length (no repetition)
+        from_ticks_length = from_area['tick_stop'] - from_area['tick_start']
+        to_ticks_length = to_area['tick_stop'] - to_area['tick_start']
+        from_tracks_length = from_area['track_stop'] - from_area['track_start']
+        to_tracks_length = to_area['track_stop'] - to_area['track_start']
+        
+        if from_tracks_length < to_tracks_length:
+            to_area['track_stop'] -= (to_tracks_length - from_tracks_length)
+            to_tracks_length -= (to_tracks_length - from_tracks_length)
+        elif to_tracks_length < from_tracks_length:
+            from_area['track_stop'] -= (from_tracks_length - to_tracks_length)
+            from_tracks_length -= (from_tracks_length - to_tracks_length)
+
+        if to_ticks_length < from_ticks_length:
+            from_area['ticks_stop'] -= (from_ticks_length - to_ticks_length)
+            from_ticks_length -= (from_ticks_length - to_ticks_length)
+            
+        # TODO: for undo:
+        # original_tracks = []
+
+        paste_tracks = []
+        # loop through from-area and copy all from-events first
+        for from_track_index in range(from_area['track_start'], from_area['track_stop']):
+            from_track = event_file['tracks'][from_track_index]
+            events_copied = []
+            for event in from_track['events']:
+                if (event['start'] >= from_area['tick_start']) and (event['start'] < from_area['tick_stop']):
+                    events_copied.append(event)
+                if event['start'] >= from_area['tick_stop']:
+                    break
+            paste_tracks.append(events_copied)
+
+        # repetitive copy needed?
+        if from_ticks_length < to_ticks_length:
+            # yes
+            source_tracks = paste_tracks[:]
+            for index in range(0, from_tracks_length):
+                copy_num = 1
+                forward_ticks = from_ticks_length * copy_num
+                while forward_ticks < to_ticks_length:
+                    for event in source_tracks[index]:
+                        dest_start = event['start'] + forward_ticks
+                        if dest_start < (from_area['tick_start'] + to_ticks_length):
+                            event['start'] = dest_start
+                            event['end'] += forward_ticks
+                            paste_tracks[index].append(event)
+                    copy_num += 1
+                    forward_ticks = from_ticks_length * copy_num
+
+        # move copied events to right time in the to-track
+        for index in range(0, from_tracks_length):
+            ticks_diff_from_to = to_area['tick_start'] - from_area['tick_start']
+            for event in paste_tracks[index]:
+                event['start'] += ticks_diff_from_to
+                event['end'] += ticks_diff_from_to
+            
+        # paste_tracks are prepared and now exactly fills to-area
+        
+        # loop through to area
+        paste_tracks_index = 0
+        to_track_index = to_area['track_start']
+        while to_track_index < to_area['track_stop']:
+            print('pasting from track ' + repr(from_track_index) + ' into track ' + repr(to_track_index))
+            from_event_track = event_file['tracks'][from_track_index]
+            to_event_track = event_file['tracks'][to_track_index]
+
+            # TODO: for undo:
+            #original_tracks.append(to_event_track[:])
+
+            # insert?
+            to_events_after_insert = []
+            if insert_space:
+                # add (stop - start) to all to-events >= tick_start
+                for event in to_event_track['events']:
+                    if event['start'] > to_area['tick_start']:
+                        event['start'] += to_length_ticks
+                        event['end'] += to_length_ticks
+                    to_events_after_insert.append(event)
+            else:
+                to_events_after_insert = to_event_track['events'][:]
+
+            # remove?
+            to_events_after_remove = []
+            if not merge:
+                # remove all to-events >= tick_start and < tick_stop
+                for event in to_events_after_insert:
+                    if ((event['start'] < to_area['tick_start']) or (event['start'] >= to_area['tick_stop'])):
+                        to_events_after_remove.append(event)
+            else:
+                to_events_after_remove = to_events_after_insert[:]
+
+            # to_events_after_remove is now prepared for pasting
+            event_file['tracks'][to_track_index]['events'] = to_events_after_remove
+            event_file['tracks'][to_track_index]['events'].extend(paste_tracks[paste_tracks_index])
+
+            paste_tracks_index += 1
+            to_track_index += 1
+            
         return event_file
         

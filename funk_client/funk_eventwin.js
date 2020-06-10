@@ -127,10 +127,6 @@ class eventwin
                 {
                     this.handle_cut(this._mouse_at_tick, global_shift_down);
                 }
-                else if (key == key_k)
-                {
-                    this.handle_clear(this._mouse_at_tick, global_shift_down);
-                }
                 else if (key == key_c)
                 {
                     this.handle_copy(this._mouse_at_tick);

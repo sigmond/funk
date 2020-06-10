@@ -1318,16 +1318,6 @@ class trackwin extends eventwin
         cut_area(this._area_copy_buffer, do_remove_space);
     }
     
-    handle_clear(tick, do_remove_space)
-    {
-        if (!this._track_select_element)
-        {
-            return;
-        }
-
-        clear_area(this.select_tick_track_area(), do_remove_space);
-    }
-    
     handle_copy(tick)
     {
         if (!this._track_select_element)
@@ -1350,16 +1340,16 @@ class trackwin extends eventwin
             // paste at playhead, same tracks as copy buffer
             const paste_to =
                 {'tick_start' : this._playhead_ticks,
-                 'tick_end' : this._playhead_ticks + (this._area_copy_buffer['tick_end'] - this._area_copy_buffer['tick_start']),
+                 'tick_stop' : this._playhead_ticks + (this._area_copy_buffer['tick_stop'] - this._area_copy_buffer['tick_start']),
                  'track_start' : this._area_copy_buffer['track_start'],
-                 'track_end' : this._area_copy_buffer['track_end']
+                 'track_stop' : this._area_copy_buffer['track_stop']
                 };
             
-            paste_area(this._area_copy_buffer, paste_to, true, do_insert, do_merge); // overwrite destination, maybe insert space, maybe merge
+            paste_area(this._area_copy_buffer, paste_to, true, do_insert, do_merge); // paste copy buffer at playhead (same tracks), maybe insert space, maybe merge
         }
         else
         {
-            paste_area(this._area_copy_buffer, this.select_tick_track_area(), true, do_insert, do_merge); // overwrite destination, maybe insert space, maybe merge
+            paste_area(this._area_copy_buffer, this.select_tick_track_area(), true, do_insert, do_merge); // paste copy buffer to selected area, maybe insert space, maybe merge
         }
     }    
     
