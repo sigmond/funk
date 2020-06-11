@@ -141,7 +141,7 @@ class trackwin extends eventwin
     {
         var track = this._song.tracks[track_index];
         this.fill_track_events(track_index, track);
-        this.create_track_info(track_index, track, this._song.tracknames[track_index], false);
+        this.create_track_info(track_index, track, this._song.tracknames[track_index]);
     }
 
     go_to_start()
@@ -918,7 +918,7 @@ class trackwin extends eventwin
 
         for (const track of this._song.tracks)
         {
-            info_width_tmp = this.create_track_info(track_index, track, this._song.tracknames[track_index], true);
+            info_width_tmp = this.create_track_info(track_index, track, this._song.tracknames[track_index]);
             if (info_width_tmp > info_width)
             {
                 info_width = info_width_tmp;
@@ -1121,14 +1121,20 @@ class trackwin extends eventwin
     }
 
 
-    create_solo_button(track_index, highlight)
+    create_solo_button(track_index)
     {
-        var solo_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        var solo_rect = document.getElementById("track_solo_" + track_index.toString());
+        if (solo_rect != undefined)
+        {
+            solo_rect.remove();
+        }
+        
+        solo_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         var x1 = this._solo_button_left;
         var y1 = this._track_y + (track_index * this._track_height) + this._button_padding;
         var x2 = x1 + this._button_width;
         var y2 = y1 + this._button_height;
-        var id = highlight ? "track_solo_highlight_" + track_index.toString() : "track_solo_" + track_index.toString()
+        var id = "track_solo_" + track_index.toString()
         solo_rect.id = id;
         solo_rect.setAttribute("height", this._button_height);
         solo_rect.setAttribute("width", this._button_width);
@@ -1144,16 +1150,22 @@ class trackwin extends eventwin
         return solo_rect;
     }
 
-    create_mute_button(track_index, highlight)
+    create_mute_button(track_index)
     {
-        var mute_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        var mute_rect = document.getElementById("track_mute_" + track_index.toString());
+        if (mute_rect != undefined)
+        {
+            mute_rect.remove();
+        }
+
+        mute_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         
         var x1 = this._mute_button_left;
         var y1 = this._track_y + (track_index * this._track_height) + this._button_padding;
         var x2 = x1 + this._button_width;
         var y2 = y1 + this._button_height;
         
-        var id = highlight ? "track_mute_highlight_" + track_index.toString() : "track_mute_" + track_index.toString()
+        var id = "track_mute_" + track_index.toString()
 
         mute_rect.id = id;
         mute_rect.setAttribute("height", this._button_height);
@@ -1171,7 +1183,7 @@ class trackwin extends eventwin
     }
 
 
-    create_track_info(track_index, track, trackname, create_solo_mute)
+    create_track_info(track_index, track, trackname)
     {
         var info_rect = document.getElementById('track_info_' + track_index.toString());
         if (info_rect != undefined)
@@ -1192,13 +1204,10 @@ class trackwin extends eventwin
         info_rect.addEventListener('mouseout', this.track_info_mouseouthandler);
         this._info_canvas.appendChild(info_rect);
 
-        if (create_solo_mute)
+        this._info_canvas.appendChild(this.create_solo_button(track_index));
+        if (track_index > 0)
         {
-            this._info_canvas.appendChild(this.create_solo_button(track_index, false));
-            if (track_index > 0)
-            {
-                this._info_canvas.appendChild(this.create_mute_button(track_index, false));
-            }
+            this._info_canvas.appendChild(this.create_mute_button(track_index));
         }
 
         var info_name_text = document.getElementById('track_name_' + track_index.toString());
@@ -1315,7 +1324,11 @@ class trackwin extends eventwin
         }
 
         this._area_copy_buffer = this.select_tick_track_area();
+        this._area_copy_buffer_type = 'cut'
         cut_area(this._area_copy_buffer, do_remove_space);
+
+        this._track_select_element.remove();
+        this._track_select_element = null;
     }
     
     handle_copy(tick)
@@ -1326,6 +1339,10 @@ class trackwin extends eventwin
         }
 
         this._area_copy_buffer = this.select_tick_track_area();
+        this._area_copy_buffer_type = 'copy'
+
+        this._track_select_element.remove();
+        this._track_select_element = null;
     }
     
     handle_paste_insert_merge(tick, do_insert, do_merge)
@@ -1338,19 +1355,25 @@ class trackwin extends eventwin
         if (!this._track_select_element)
         {
             // paste at playhead, same tracks as copy buffer
-            const paste_to =
-                {'tick_start' : this._playhead_ticks,
-                 'tick_stop' : this._playhead_ticks + (this._area_copy_buffer['tick_stop'] - this._area_copy_buffer['tick_start']),
-                 'track_start' : this._area_copy_buffer['track_start'],
-                 'track_stop' : this._area_copy_buffer['track_stop']
-                };
-            
-            paste_area(this._area_copy_buffer, paste_to, true, do_insert, do_merge); // paste copy buffer at playhead (same tracks), maybe insert space, maybe merge
+            paste_area(
+                       this._area_copy_buffer, 
+                       {'tick_start' : this._playhead_ticks,
+                               'tick_stop' : this._playhead_ticks + (this._area_copy_buffer['tick_stop'] - this._area_copy_buffer['tick_start']),
+                               'track_start' : this._area_copy_buffer['track_start'],
+                               'track_stop' : this._area_copy_buffer['track_stop']
+                               }, 
+                       do_insert, 
+                       do_merge,
+                       this._area_copy_buffer_type
+                      ); // paste copy buffer at playhead (same tracks), maybe insert space, maybe merge
         }
         else
         {
-            paste_area(this._area_copy_buffer, this.select_tick_track_area(), true, do_insert, do_merge); // paste copy buffer to selected area, maybe insert space, maybe merge
+            paste_area(this._area_copy_buffer, this.select_tick_track_area(), do_insert, do_merge, this._area_copy_buffer_type); // paste copy buffer to selected area, maybe insert space, maybe merge
         }
+
+        this._track_select_element.remove();
+        this._track_select_element = null;
     }    
     
     handle_undo(tick)

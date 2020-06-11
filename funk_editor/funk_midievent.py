@@ -203,13 +203,16 @@ class funk_midievent():
             if event != None:
                 events.append(event)
 
-        return abstime, sorted(events, key = lambda i: i['start']) 
+        return abstime, sorted(events, key = lambda i: i['start'])
 
     def cut_area(self, event_file, area, remove_space):
         length_ticks = area['tick_stop'] - area['tick_start']
         # loop through affected tracks
         # TODO: for undo:
         # original_tracks = []
+
+        # remember cut area for any later paste (move)
+        self.cut_area = []
         for track_index in range(area['track_start'], area['track_stop']):
             print('cutting area from track ' + repr(track_index))
             event_track = event_file['tracks'][track_index]
@@ -217,6 +220,7 @@ class funk_midievent():
             #original_tracks.append(event_track.copy())
             
             changed_events = []
+            cut_events = []
             # loop through events in event-track, remove events with starttime >= tick_start and < tick_stop
             for event in event_track['events']:
                 if ((event['start'] < area['tick_start']) or (event['start'] >= area['tick_stop'])):
@@ -225,10 +229,13 @@ class funk_midievent():
                         event['start'] -= length_ticks
                         event['end'] -= length_ticks
                     changed_events.append(event)
+                else:
+                    cut_events.append(event)
             event_file['tracks'][track_index]['events'] = changed_events
+            self.cut_area.append(cut_events)
         return event_file
         
-    def paste_area(self, event_file, from_area, to_area, insert_space, merge):
+    def paste_area(self, event_file, from_area, to_area, insert_space, merge, cut_or_copy):
         # - in general, if from-area > to-area, paste into to-area only
         # - if from-ticks-length < to-tick-length, do a repetitive paste
         # - if from-tracks-length < to-track-length, only paste from-track-length (no repetition)
@@ -239,29 +246,36 @@ class funk_midievent():
         
         if from_tracks_length < to_tracks_length:
             to_area['track_stop'] -= (to_tracks_length - from_tracks_length)
-            to_tracks_length -= (to_tracks_length - from_tracks_length)
+            to_tracks_length = to_area['track_stop'] - to_area['track_start']
         elif to_tracks_length < from_tracks_length:
             from_area['track_stop'] -= (from_tracks_length - to_tracks_length)
-            from_tracks_length -= (from_tracks_length - to_tracks_length)
+            from_tracks_length = from_area['track_stop'] - from_area['track_start']
 
         if to_ticks_length < from_ticks_length:
-            from_area['ticks_stop'] -= (from_ticks_length - to_ticks_length)
-            from_ticks_length -= (from_ticks_length - to_ticks_length)
+            from_area['tick_stop'] -= (from_ticks_length - to_ticks_length)
+            from_ticks_length = from_area['tick_stop'] - from_area['tick_start']
             
         # TODO: for undo:
         # original_tracks = []
 
-        paste_tracks = []
         # loop through from-area and copy all from-events first
-        for from_track_index in range(from_area['track_start'], from_area['track_stop']):
-            from_track = event_file['tracks'][from_track_index]
-            events_copied = []
-            for event in from_track['events']:
-                if (event['start'] >= from_area['tick_start']) and (event['start'] < from_area['tick_stop']):
-                    events_copied.append(event)
-                if event['start'] >= from_area['tick_stop']:
-                    break
-            paste_tracks.append(events_copied)
+        paste_tracks = []
+        if cut_or_copy == 'cut':
+            for cut_events in self.cut_area:
+                events_copied = []
+                for event in cut_events:
+                    events_copied.append(event.copy())
+                paste_tracks.append(events_copied)
+        else:
+            for from_track_index in range(from_area['track_start'], from_area['track_stop']):
+                from_track = event_file['tracks'][from_track_index]
+                events_copied = []
+                for event in from_track['events']:
+                    if (event['start'] >= from_area['tick_start']) and (event['start'] < from_area['tick_stop']):
+                        events_copied.append(event.copy())
+                    if event['start'] >= from_area['tick_stop']:
+                        break
+                paste_tracks.append(events_copied)
 
         # repetitive copy needed?
         if from_ticks_length < to_ticks_length:
@@ -274,9 +288,10 @@ class funk_midievent():
                     for event in source_tracks[index]:
                         dest_start = event['start'] + forward_ticks
                         if dest_start < (from_area['tick_start'] + to_ticks_length):
-                            event['start'] = dest_start
-                            event['end'] += forward_ticks
-                            paste_tracks[index].append(event)
+                            rep_event = event.copy()
+                            rep_event['start'] = dest_start
+                            rep_event['end'] += forward_ticks
+                            paste_tracks[index].append(rep_event)
                     copy_num += 1
                     forward_ticks = from_ticks_length * copy_num
 
@@ -293,38 +308,36 @@ class funk_midievent():
         paste_tracks_index = 0
         to_track_index = to_area['track_start']
         while to_track_index < to_area['track_stop']:
-            print('pasting from track ' + repr(from_track_index) + ' into track ' + repr(to_track_index))
-            from_event_track = event_file['tracks'][from_track_index]
             to_event_track = event_file['tracks'][to_track_index]
 
             # TODO: for undo:
             #original_tracks.append(to_event_track[:])
 
             # insert?
-            to_events_after_insert = []
             if insert_space:
                 # add (stop - start) to all to-events >= tick_start
+                to_events_after_insert = []
                 for event in to_event_track['events']:
-                    if event['start'] > to_area['tick_start']:
-                        event['start'] += to_length_ticks
-                        event['end'] += to_length_ticks
+                    if event['start'] >= to_area['tick_start']:
+                        event['start'] += to_ticks_length
+                        event['end'] += to_ticks_length
                     to_events_after_insert.append(event)
             else:
-                to_events_after_insert = to_event_track['events'][:]
+                to_events_after_insert = to_event_track['events']
 
             # remove?
-            to_events_after_remove = []
             if not merge:
                 # remove all to-events >= tick_start and < tick_stop
+                to_events_after_remove = []
                 for event in to_events_after_insert:
                     if ((event['start'] < to_area['tick_start']) or (event['start'] >= to_area['tick_stop'])):
                         to_events_after_remove.append(event)
             else:
-                to_events_after_remove = to_events_after_insert[:]
+                to_events_after_remove = to_events_after_insert
 
             # to_events_after_remove is now prepared for pasting
-            event_file['tracks'][to_track_index]['events'] = to_events_after_remove
-            event_file['tracks'][to_track_index]['events'].extend(paste_tracks[paste_tracks_index])
+            to_events_after_remove.extend(paste_tracks[paste_tracks_index])
+            event_file['tracks'][to_track_index]['events'] = sorted(to_events_after_remove, key = lambda i: i['start'])
 
             paste_tracks_index += 1
             to_track_index += 1

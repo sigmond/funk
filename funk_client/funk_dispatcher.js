@@ -593,7 +593,7 @@ function cut_area(area, remove_space)
     ws_ctrl.send(json_message);
 }
 
-function paste_area(from, to, overwrite_destination, insert_space, merge)
+function paste_area(from, to, insert_space, merge, cut_or_copy)
 {
     var cmd;
     var msg;    
@@ -601,10 +601,10 @@ function paste_area(from, to, overwrite_destination, insert_space, merge)
     cmd = { 
         "command" : "paste_area",
         "from" : from, 
-        "to" : to, 
-        "overwrite_destination" : (overwrite_destination ? 1 : 0),
+        "to" : to,
         "insert_space" : (insert_space ? 1 : 0),
-        "merge" : (merge ? 1 : 0)
+        "merge" : (merge ? 1 : 0),
+        "cut_or_copy" : cut_or_copy
     };
     msg = { "topic" : "controller", "msg" : cmd };
     

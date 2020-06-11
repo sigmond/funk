@@ -337,7 +337,8 @@ class funk_controller():
                'from' : msg['from'],
                'to' : msg['to'],
                'insert_space' : (msg['insert_space'] == 1),
-               'merge' : (msg['merge'] == 1)
+               'merge' : (msg['merge'] == 1),
+               'cut_or_copy' : msg['cut_or_copy']
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)

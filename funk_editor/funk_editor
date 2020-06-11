@@ -182,7 +182,8 @@ class funk_editor():
         to_area = msg['to']
         insert_space = msg['insert_space']
         merge = msg['merge']
-        self.event_file = self.midievent.paste_area(self.event_file, from_area, to_area, insert_space, merge)
+        cut_or_copy = msg['cut_or_copy']
+        self.event_file = self.midievent.paste_area(self.event_file, from_area, to_area, insert_space, merge, cut_or_copy)
         tracks = []
         for i in range(to_area['track_start'], to_area['track_stop']):
             tracks.append(self.event_file['tracks'][i])
