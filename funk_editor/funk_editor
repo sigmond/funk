@@ -168,44 +168,84 @@ class funk_editor():
         else:
             self.log('Unknown play what ' + repr(msg['what']))
                     
-    def handle_cut_area(self, msg):
+    def handle_cut_tracks_area(self, msg):
         print('editor got ' + repr(msg))
         area = msg['area']
         remove_space = msg['remove_space']
-        affected_tracks = self.midievent.cut_area(self.event_file, area, remove_space)
+        affected_tracks = self.midievent.cut_tracks_area(self.event_file, area, remove_space)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks
             self.load_file_to_player()
 
-    def handle_paste_area(self, msg):
+    def handle_paste_tracks_area(self, msg):
         print('editor got ' + repr(msg))
         from_area = msg['from']
         to_area = msg['to']
         insert_space = msg['insert_space']
         merge = msg['merge']
         cut_or_copy = msg['cut_or_copy']
-        affected_tracks = self.midievent.paste_area(self.event_file, from_area, to_area, insert_space, merge, cut_or_copy)
+        affected_tracks = self.midievent.paste_tracks_area(self.event_file, from_area, to_area, insert_space, merge, cut_or_copy)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks
             self.load_file_to_player()
 
-    def handle_undo_last_edit(self, msg):
+    def handle_undo_last_tracks_edit(self, msg):
         print('editor got ' + repr(msg))
-        affected_tracks = self.midievent.undo_edit(self.event_file)
+        affected_tracks = self.midievent.undo_tracks_edit(self.event_file)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks
             self.load_file_to_player()
 
-    def handle_redo_last_edit(self, msg):
+    def handle_redo_last_tracks_edit(self, msg):
         print('editor got ' + repr(msg))
-        affected_tracks = self.midievent.redo_edit(self.event_file)
+        affected_tracks = self.midievent.redo_tracks_edit(self.event_file)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks
             self.load_file_to_player()
+
+
+    def handle_cut_notes_area(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        area = msg['area']
+        affected_tracks = self.midievent.cut_notes_area(self.event_file, track_index, area)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
+    def handle_paste_notes_area(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        from_area = msg['from']
+        to_area = msg['to']
+        cut_or_copy = msg['cut_or_copy']
+        affected_tracks = self.midievent.paste_notes_area(self.event_file, track_index, from_area, to_area, cut_or_copy)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
+    def handle_undo_last_tracks_edit(self, msg):
+        print('editor got ' + repr(msg))
+        affected_tracks = self.midievent.undo_tracks_edit(self.event_file)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
+    def handle_redo_last_tracks_edit(self, msg):
+        print('editor got ' + repr(msg))
+        affected_tracks = self.midievent.redo_tracks_edit(self.event_file)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
 
     def load_file_to_player(self):
         if self.event_tracks_changed_since_load:

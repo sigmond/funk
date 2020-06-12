@@ -580,12 +580,12 @@ function first_letter_uppercase(str)
 }
 
 
-function cut_area(area, remove_space)
+function cut_tracks_area(area, remove_space)
 {
     var cmd;
     var msg;    
 
-    cmd = { "command" : "cut_area", "area" : area, "remove_space" : (remove_space ? 1 : 0) };
+    cmd = { "command" : "cut_tracks_area", "area" : area, "remove_space" : (remove_space ? 1 : 0) };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
@@ -593,13 +593,13 @@ function cut_area(area, remove_space)
     ws_ctrl.send(json_message);
 }
 
-function paste_area(from, to, insert_space, merge, cut_or_copy)
+function paste_tracks_area(from, to, insert_space, merge, cut_or_copy)
 {
     var cmd;
     var msg;    
 
     cmd = { 
-        "command" : "paste_area",
+        "command" : "paste_tracks_area",
         "from" : from, 
         "to" : to,
         "insert_space" : (insert_space ? 1 : 0),
@@ -613,12 +613,12 @@ function paste_area(from, to, insert_space, merge, cut_or_copy)
     ws_ctrl.send(json_message);
 }
 
-function undo_last_edit()
+function undo_last_tracks_edit()
 {
     var cmd;
     var msg;    
 
-    cmd = { "command" : "undo_last_edit" };
+    cmd = { "command" : "undo_last_tracks_edit" };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
@@ -626,12 +626,72 @@ function undo_last_edit()
     ws_ctrl.send(json_message);
 }
 
-function redo_last_edit()
+function redo_last_tracks_edit()
 {
     var cmd;
     var msg;    
 
-    cmd = { "command" : "redo_last_edit" };
+    cmd = { "command" : "redo_last_tracks_edit" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+
+
+function cut_notes_area(area, track_index)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { "command" : "cut_notes_area", "track_index" : track_index, "area" : area };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function paste_notes_area(from, to, cut_or_copy, track_index)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { 
+        "command" : "paste_notes_area",
+        "track_index" : track_index, 
+        "from" : from, 
+        "to" : to,
+        "cut_or_copy" : cut_or_copy
+    };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function undo_last_notes_edit()
+{
+    var cmd;
+    var msg;    
+
+    cmd = { "command" : "undo_last_notes_edit" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function redo_last_notes_edit()
+{
+    var cmd;
+    var msg;    
+
+    cmd = { "command" : "redo_last_notes_edit" };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);

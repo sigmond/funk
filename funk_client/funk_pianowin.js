@@ -298,6 +298,11 @@ class pianowin extends eventwin
         return parseInt((y - this._track_y) / this._note_height);
     }
     
+    y2note(y)
+    {
+        return this._num_notes - this.y2line(y);
+    }
+    
     y2line_zoomed(y)
     {
         return parseInt((y - this._track_y) / (this._note_height * this._tracks_zoom_y));
@@ -440,6 +445,11 @@ class pianowin extends eventwin
             this._notes_select_y1 = ypos;
             this._notes_select_width = width;
             this._notes_select_height = height;
+
+            this._notes_select_tick_start = tick;
+            this._notes_select_tick_stop = tick + this._tick_snap_width;
+            this._notes_select_note_start = note;
+            this._notes_select_note_stop = note - 1;
         }
         else
         {
@@ -447,6 +457,7 @@ class pianowin extends eventwin
             {
                 this._notes_select_height = ypos - this._notes_select_y1 + this._note_height;
                 this._notes_select_element.setAttribute("height", this._notes_select_height);
+                this._notes_select_note_stop = this.y2note(this._notes_select_y1 + this._notes_select_height);
             }
             else
             {
@@ -456,18 +467,21 @@ class pianowin extends eventwin
                     this._notes_select_height += this._notes_select_y1 - ypos;
                     this._notes_select_y1 = ypos;
                     this._notes_select_element.setAttribute("height", this._notes_select_height);
+                    this._notes_select_note_start = this.y2note(ypos);
                 }
                 else
                 {
                     this._notes_select_height = this._notes_select_y1 - ypos + this._note_height;
                     this._notes_select_element.setAttribute("y", ypos);
                     this._notes_select_element.setAttribute("height", this._notes_select_height);
+                    this._notes_select_note_stop = this.y2note(this._notes_select_y1 + this._notes_select_height);
                 }
             }
             
             if (xpos > this._notes_select_x1)
             {
                 this._notes_select_width = xpos - this._notes_select_x1 + parseInt(grid_width);
+                this._notes_select_tick_stop = this.x2tick(xpos + this._notes_select_width);
                 this._notes_select_element.setAttribute("width", this._notes_select_width); 
             }
             else
@@ -477,12 +491,14 @@ class pianowin extends eventwin
                     this._notes_select_element.setAttribute("x", xpos);
                     this._notes_select_width += this._notes_select_x1 - xpos;
                     this._notes_select_x1 = xpos;
+                    this._notes_select_tick_start = this.x2tick(xpos);
                     this._notes_select_element.setAttribute("width", this._notes_select_width); 
                 }
                 else
                 {
                     this._notes_select_width = this._notes_select_x1 - xpos + parseInt(grid_width);
                     this._notes_select_element.setAttribute("x", xpos);
+                    this._notes_select_tick_start = this.x2tick(xpos);
                     this._notes_select_element.setAttribute("width", this._notes_select_width); 
                 }
             }
@@ -1226,24 +1242,78 @@ class pianowin extends eventwin
         this._tracks_canvas.appendChild(playhead_line);
     }
     
-    handle_cut(tick)
+
+    select_tick_notes_area()
     {
+        return {'tick_start' : this._notes_select_tick_start,
+                'tick_stop' : this._notes_select_tick_stop,
+                'note_start' : this._notes_select_note_start,
+                'note_stop' : this._notes_select_note_stop
+                };
+    }
+
+
+    handle_cut(tick, do_remove_space)
+    {
+        if (!this._notes_select_element)
+        {
+            return;
+        }
+
+        this._notes_copy_buffer = this.select_tick_notes_area();
+        this._notes_copy_buffer_type = 'cut';
+        cut_notes_area(this._notes_copy_buffer, this._track_index);
+
+        this._notes_select_element.remove();
+        this._notes_select_element = null;
     }
     
     handle_copy(tick)
     {
+        if (!this._notes_select_element)
+        {
+            return;
+        }
+
+        this._notes_copy_buffer = this.select_tick_notes_area();
+        this._notes_copy_buffer_type = 'copy'
+
+        this._notes_select_element.remove();
+        this._notes_select_element = null;
     }
     
-    handle_paste(tick)
+    handle_paste_insert_merge(tick, do_insert, do_merge)
     {
-    }
+        if (!this._notes_copy_buffer)
+        {
+            return;
+        }
+
+        // paste at playhead
+        paste_notes_area(
+                         this._notes_copy_buffer, 
+                         {'tick_start' : this._playhead_ticks,
+                                 'tick_stop' : this._playhead_ticks + (this._notes_copy_buffer['tick_stop'] - this._notes_copy_buffer['tick_start']),
+                                 'note_start' : this._notes_copy_buffer['note_start'],
+                                 'note_stop' : this._notes_copy_buffer['note_stop']
+                                 },
+                         this._area_copy_buffer_type,
+                         this._track_index
+                        ); // paste copy buffer at playhead
+        
+        this._notes_select_element.remove();
+        this._notes_select_element = null;
+    }    
     
     handle_undo(tick)
     {
+        undo_last_notes_edit();
     }
     
     handle_redo(tick)
     {
+        redo_last_notes_edit();
     }
+    
 }
     

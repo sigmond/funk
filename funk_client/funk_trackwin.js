@@ -1296,15 +1296,7 @@ class trackwin extends eventwin
     }
 
 
-    select_track_start()
-    {
-        return this.y2track(this._track_select_y1);
-    }
-    
-    select_track_end()
-    {
-        return this.y2track(this._track_select_y1) + parseInt(this._track_select_height / this._track_height);
-    }    
+
 
     select_tick_track_area()
     {
@@ -1325,7 +1317,7 @@ class trackwin extends eventwin
 
         this._area_copy_buffer = this.select_tick_track_area();
         this._area_copy_buffer_type = 'cut'
-        cut_area(this._area_copy_buffer, do_remove_space);
+        cut_tracks_area(this._area_copy_buffer, do_remove_space);
 
         this._track_select_element.remove();
         this._track_select_element = null;
@@ -1355,21 +1347,21 @@ class trackwin extends eventwin
         if (!this._track_select_element)
         {
             // paste at playhead, same tracks as copy buffer
-            paste_area(
-                       this._area_copy_buffer, 
-                       {'tick_start' : this._playhead_ticks,
-                               'tick_stop' : this._playhead_ticks + (this._area_copy_buffer['tick_stop'] - this._area_copy_buffer['tick_start']),
-                               'track_start' : this._area_copy_buffer['track_start'],
-                               'track_stop' : this._area_copy_buffer['track_stop']
-                               }, 
-                       do_insert, 
-                       do_merge,
-                       this._area_copy_buffer_type
-                      ); // paste copy buffer at playhead (same tracks), maybe insert space, maybe merge
+            paste_tracks_area(
+                              this._area_copy_buffer, 
+                              {'tick_start' : this._playhead_ticks,
+                                      'tick_stop' : this._playhead_ticks + (this._area_copy_buffer['tick_stop'] - this._area_copy_buffer['tick_start']),
+                                      'track_start' : this._area_copy_buffer['track_start'],
+                                      'track_stop' : this._area_copy_buffer['track_stop']
+                                      }, 
+                              do_insert, 
+                              do_merge,
+                              this._area_copy_buffer_type
+                             ); // paste copy buffer at playhead (same tracks), maybe insert space, maybe merge
         }
         else
         {
-            paste_area(this._area_copy_buffer, this.select_tick_track_area(), do_insert, do_merge, this._area_copy_buffer_type); // paste copy buffer to selected area, maybe insert space, maybe merge
+            paste_tracks_area(this._area_copy_buffer, this.select_tick_track_area(), do_insert, do_merge, this._area_copy_buffer_type); // paste copy buffer to selected area, maybe insert space, maybe merge
         }
 
         this._track_select_element.remove();
@@ -1378,12 +1370,12 @@ class trackwin extends eventwin
     
     handle_undo(tick)
     {
-        undo_last_edit();
+        undo_last_tracks_edit();
     }
     
     handle_redo(tick)
     {
-        redo_last_edit();
+        redo_last_tracks_edit();
     }
     
 }

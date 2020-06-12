@@ -28,9 +28,12 @@ from mido import MidiFile
 
 class funk_midievent():
     def __init__(self):
-        self.undo_stack = []
-        self.redo_stack = []
-        self.cut_buffer = []
+        self.undo_tracks_edit_stack = []
+        self.redo_tracks_edit_stack = []
+        self.cut_tracks_buffer = []
+        self.undo_notes_edit_stack = []
+        self.redo_notes_edit_stack = []
+        self.cut_notes_buffer = []
         pass
 
     def tracks2events(self, tracks):
@@ -212,15 +215,15 @@ class funk_midievent():
 
         return abstime, sorted(events, key = lambda i: i['start'])
 
-    def cut_area(self, event_file, area, remove_space):
-        print('cut_area')
+    def cut_tracks_area(self, event_file, area, remove_space):
+        print('cut_tracks_area')
         affected_tracks = []
         length_ticks = area['tick_stop'] - area['tick_start']
         # loop through affected tracks
         original_tracks = []
 
         # remember cut area for any later paste (move)
-        del self.cut_buffer[:]
+        del self.cut_tracks_buffer[:]
         for track_index in range(area['track_start'], area['track_stop']):
             print('cutting area from track ' + repr(track_index))
             event_track = event_file['tracks'][track_index]
@@ -240,11 +243,11 @@ class funk_midievent():
                     cut_events.append(event)
             event_file['tracks'][track_index]['events'] = changed_events
             affected_tracks.append(event_file['tracks'][track_index])
-            self.cut_buffer.append(cut_events)
-        self.undo_stack.insert(0, original_tracks)
+            self.cut_tracks_buffer.append(cut_events)
+        self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
         
-    def paste_area(self, event_file, from_area, to_area, insert_space, merge, cut_or_copy):
+    def paste_tracks_area(self, event_file, from_area, to_area, insert_space, merge, cut_or_copy):
         affected_tracks = []
         # - in general, if from-area > to-area, paste into to-area only
         # - if from-ticks-length < to-tick-length, do a repetitive paste
@@ -270,7 +273,7 @@ class funk_midievent():
         # loop through from-area and copy all from-events first
         paste_tracks = []
         if cut_or_copy == 'cut':
-            for cut_events in self.cut_buffer:
+            for cut_events in self.cut_tracks_buffer:
                 events_copied = []
                 for event in cut_events:
                     events_copied.append(event.copy())
@@ -352,29 +355,44 @@ class funk_midievent():
             paste_tracks_index += 1
             to_track_index += 1
             
-        self.undo_stack.insert(0, original_tracks)
+        self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
         
-    def undo_edit(self, event_file):
-        if not self.undo_stack:
+    def undo_tracks_edit(self, event_file):
+        if not self.undo_tracks_edit_stack:
             return []
-        undo_tracks = self.undo_stack.pop(0)
+        undo_tracks = self.undo_tracks_edit_stack.pop(0)
         redo_tracks = []
         for track in undo_tracks:
             redo_tracks.append(event_file['tracks'][track['index']])
             event_file['tracks'][track['index']] = track
-        self.redo_stack.insert(0, redo_tracks)
+        self.redo_tracks_edit_stack.insert(0, redo_tracks)
         return undo_tracks
 
-    def redo_edit(self, event_file):
-        if not self.redo_stack:
+    def redo_tracks_edit(self, event_file):
+        if not self.redo_tracks_edit_stack:
             return []
-        redo_tracks = self.redo_stack.pop(0)
+        redo_tracks = self.redo_tracks_edit_stack.pop(0)
         undo_tracks = []
         for track in redo_tracks:
             undo_tracks.append(event_file['tracks'][track['index']])
             event_file['tracks'][track['index']] = track
-        self.undo_stack.insert(0, undo_tracks)
+        self.undo_tracks_edit_stack.insert(0, undo_tracks)
         return redo_tracks
 
     
+    def cut_notes_area(self, track_index, event_file, area):
+        print('cut_notes_area')
+        return []
+
+    def paste_notes_area(self, track_index, event_file, from_area, to_area, cut_or_copy):
+        print('paste_notes_area')
+        return []
+
+    def undo_notes_edit(self, event_file):
+        print('undo_notes_edit')
+        return []
+
+    def redo_notes_edit(self, event_file):
+        print('redo_notes_edit')
+        return []

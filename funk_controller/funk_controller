@@ -165,18 +165,30 @@ class funk_controller():
             elif msg['command'] == 'tracks_changed':
                 # someone (e.g. the editor) wants to show changed tracks
                 self.handle_tracks_changed(msg)
-            elif msg['command'] == 'cut_area':
+            elif msg['command'] == 'cut_tracks_area':
                 # someone (e.g. the client) wants to cut an area in a midi file
-                self.handle_cut_area(msg)
-            elif msg['command'] == 'paste_area':
+                self.handle_cut_tracks_area(msg)
+            elif msg['command'] == 'paste_tracks_area':
                 # someone (e.g. the client) wants to paste an area into a midi file
-                self.handle_paste_area(msg)
-            elif msg['command'] == 'undo_last_edit':
+                self.handle_paste_tracks_area(msg)
+            elif msg['command'] == 'undo_last_tracks_edit':
                 # someone (e.g. the client) wants to undo last edit
-                self.handle_undo_last_edit(msg)
-            elif msg['command'] == 'redo_last_edit':
+                self.handle_undo_last_tracks_edit(msg)
+            elif msg['command'] == 'redo_last_tracks_edit':
                 # someone (e.g. the client) wants to redo last undone edit
-                self.handle_redo_last_edit(msg)
+                self.handle_redo_last_tracks_edit(msg)
+            elif msg['command'] == 'cut_notes_area':
+                # someone (e.g. the client) wants to cut an area in a midi track
+                self.handle_cut_notes_area(msg)
+            elif msg['command'] == 'paste_notes_area':
+                # someone (e.g. the client) wants to paste an area into a midi track
+                self.handle_paste_notes_area(msg)
+            elif msg['command'] == 'undo_last_notes_edit':
+                # someone (e.g. the client) wants to undo last notes edit
+                self.handle_undo_last_notes_edit(msg)
+            elif msg['command'] == 'redo_last_notes_edit':
+                # someone (e.g. the client) wants to redo last undone notes edit
+                self.handle_redo_last_notes_edit(msg)
             else:
                 self.log('Unknown controller command ' + repr(msg['command']))
                 print('Unknown controller command ' + repr(msg['command']))
@@ -328,18 +340,18 @@ class funk_controller():
         self.com.send_client_time_msg('time', msg)
 
 
-    def handle_cut_area(self, msg):
-        print('handle_cut_area')
-        obj = {'command': 'cut_area',
+    def handle_cut_tracks_area(self, msg):
+        print('handle_cut_tracks_area')
+        obj = {'command': 'cut_tracks_area',
                'area' : msg['area'],
                'remove_space' : (msg['remove_space'] == 1)
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
         
-    def handle_paste_area(self, msg):
-        print('handle_paste_area')
-        obj = {'command': 'paste_area',
+    def handle_paste_tracks_area(self, msg):
+        print('handle_paste_tracks_area')
+        obj = {'command': 'paste_tracks_area',
                'from' : msg['from'],
                'to' : msg['to'],
                'insert_space' : (msg['insert_space'] == 1),
@@ -349,16 +361,51 @@ class funk_controller():
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
         
-    def handle_undo_last_edit(self, msg):
-        print('handle_undo_last_edit')
-        obj = {'command': 'undo_last_edit'
+    def handle_undo_last_tracks_edit(self, msg):
+        print('handle_undo_last_tracks_edit')
+        obj = {'command': 'undo_last_tracks_edit'
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
         
-    def handle_redo_last_edit(self, msg):
-        print('handle_redo_last_edit')
-        obj = {'command': 'redo_last_edit'
+    def handle_redo_last_tracks_edit(self, msg):
+        print('handle_redo_last_tracks_edit')
+        obj = {'command': 'redo_last_tracks_edit'
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    
+    def handle_cut_notes_area(self, msg):
+        print('handle_cut_notes_area')
+        obj = {'command': 'cut_notes_area',
+               'track_index' : msg['track_index'],
+               'area' : msg['area']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_paste_notes_area(self, msg):
+        print('handle_paste_notes_area')
+        obj = {'command': 'paste_notes_area',
+               'track_index' : msg['track_index'],
+               'from' : msg['from'],
+               'to' : msg['to'],
+               'cut_or_copy' : msg['cut_or_copy']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_undo_last_notes_edit(self, msg):
+        print('handle_undo_last_notes_edit')
+        obj = {'command': 'undo_last_notes_edit'
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_redo_last_notes_edit(self, msg):
+        print('handle_redo_last_notes_edit')
+        obj = {'command': 'redo_last_notes_edit'
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
