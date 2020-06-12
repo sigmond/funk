@@ -119,6 +119,10 @@ class funk_editor():
                 self.handle_cut_area(msg)
             elif msg['command'] == 'paste_area':
                 self.handle_paste_area(msg)
+            elif msg['command'] == 'undo_last_edit':
+                self.handle_undo_last_edit(msg)
+            elif msg['command'] == 'redo_last_edit':
+                self.handle_redo_last_edit(msg)
             else:
                 print('Unknown editor command ' + repr(msg['command']))
                 self.log('Unknown editor command ' + repr(msg['command']))
@@ -168,13 +172,11 @@ class funk_editor():
         print('editor got ' + repr(msg))
         area = msg['area']
         remove_space = msg['remove_space']
-        self.event_file = self.midievent.cut_area(self.event_file, area, remove_space)
-        tracks = []
-        for i in range(area['track_start'], area['track_stop']):
-            tracks.append(self.event_file['tracks'][i])
-        self.client_tracks_changed(tracks)
-        self.event_tracks_changed_since_load = tracks
-        self.load_file_to_player()
+        affected_tracks = self.midievent.cut_area(self.event_file, area, remove_space)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
 
     def handle_paste_area(self, msg):
         print('editor got ' + repr(msg))
@@ -183,13 +185,27 @@ class funk_editor():
         insert_space = msg['insert_space']
         merge = msg['merge']
         cut_or_copy = msg['cut_or_copy']
-        self.event_file = self.midievent.paste_area(self.event_file, from_area, to_area, insert_space, merge, cut_or_copy)
-        tracks = []
-        for i in range(to_area['track_start'], to_area['track_stop']):
-            tracks.append(self.event_file['tracks'][i])
-        self.client_tracks_changed(tracks)
-        self.event_tracks_changed_since_load = tracks
-        self.load_file_to_player()
+        affected_tracks = self.midievent.paste_area(self.event_file, from_area, to_area, insert_space, merge, cut_or_copy)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
+    def handle_undo_last_edit(self, msg):
+        print('editor got ' + repr(msg))
+        affected_tracks = self.midievent.undo_edit(self.event_file)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
+    def handle_redo_last_edit(self, msg):
+        print('editor got ' + repr(msg))
+        affected_tracks = self.midievent.redo_edit(self.event_file)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
 
     def load_file_to_player(self):
         if self.event_tracks_changed_since_load:

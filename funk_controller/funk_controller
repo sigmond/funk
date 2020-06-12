@@ -171,6 +171,12 @@ class funk_controller():
             elif msg['command'] == 'paste_area':
                 # someone (e.g. the client) wants to paste an area into a midi file
                 self.handle_paste_area(msg)
+            elif msg['command'] == 'undo_last_edit':
+                # someone (e.g. the client) wants to undo last edit
+                self.handle_undo_last_edit(msg)
+            elif msg['command'] == 'redo_last_edit':
+                # someone (e.g. the client) wants to redo last undone edit
+                self.handle_redo_last_edit(msg)
             else:
                 self.log('Unknown controller command ' + repr(msg['command']))
                 print('Unknown controller command ' + repr(msg['command']))
@@ -339,6 +345,20 @@ class funk_controller():
                'insert_space' : (msg['insert_space'] == 1),
                'merge' : (msg['merge'] == 1),
                'cut_or_copy' : msg['cut_or_copy']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_undo_last_edit(self, msg):
+        print('handle_undo_last_edit')
+        obj = {'command': 'undo_last_edit'
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_redo_last_edit(self, msg):
+        print('handle_redo_last_edit')
+        obj = {'command': 'redo_last_edit'
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)

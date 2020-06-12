@@ -28,6 +28,9 @@ from mido import MidiFile
 
 class funk_midievent():
     def __init__(self):
+        self.undo_stack = []
+        self.redo_stack = []
+        self.cut_buffer = []
         pass
 
     def tracks2events(self, tracks):
@@ -53,7 +56,11 @@ class funk_midievent():
         event_track['events'] = events
 
         return event_track, last_track_tick
-    
+
+    def copy_event_track(self, event_track):
+        track_copy = event_track.copy()
+        track_copy['events'] = event_track['events'][:]
+        return track_copy
 
     def file2events(self, midi_obj, filename):
         if isinstance(midi_obj, MidiFile):
@@ -206,18 +213,18 @@ class funk_midievent():
         return abstime, sorted(events, key = lambda i: i['start'])
 
     def cut_area(self, event_file, area, remove_space):
+        print('cut_area')
+        affected_tracks = []
         length_ticks = area['tick_stop'] - area['tick_start']
         # loop through affected tracks
-        # TODO: for undo:
-        # original_tracks = []
+        original_tracks = []
 
         # remember cut area for any later paste (move)
-        self.cut_area = []
+        del self.cut_buffer[:]
         for track_index in range(area['track_start'], area['track_stop']):
             print('cutting area from track ' + repr(track_index))
             event_track = event_file['tracks'][track_index]
-            # TODO: for undo:
-            #original_tracks.append(event_track.copy())
+            original_tracks.append(self.copy_event_track(event_track))
             
             changed_events = []
             cut_events = []
@@ -232,10 +239,13 @@ class funk_midievent():
                 else:
                     cut_events.append(event)
             event_file['tracks'][track_index]['events'] = changed_events
-            self.cut_area.append(cut_events)
-        return event_file
+            affected_tracks.append(event_file['tracks'][track_index])
+            self.cut_buffer.append(cut_events)
+        self.undo_stack.insert(0, original_tracks)
+        return affected_tracks
         
     def paste_area(self, event_file, from_area, to_area, insert_space, merge, cut_or_copy):
+        affected_tracks = []
         # - in general, if from-area > to-area, paste into to-area only
         # - if from-ticks-length < to-tick-length, do a repetitive paste
         # - if from-tracks-length < to-track-length, only paste from-track-length (no repetition)
@@ -255,13 +265,12 @@ class funk_midievent():
             from_area['tick_stop'] -= (from_ticks_length - to_ticks_length)
             from_ticks_length = from_area['tick_stop'] - from_area['tick_start']
             
-        # TODO: for undo:
-        # original_tracks = []
+        original_tracks = []
 
         # loop through from-area and copy all from-events first
         paste_tracks = []
         if cut_or_copy == 'cut':
-            for cut_events in self.cut_area:
+            for cut_events in self.cut_buffer:
                 events_copied = []
                 for event in cut_events:
                     events_copied.append(event.copy())
@@ -310,8 +319,8 @@ class funk_midievent():
         while to_track_index < to_area['track_stop']:
             to_event_track = event_file['tracks'][to_track_index]
 
-            # TODO: for undo:
-            #original_tracks.append(to_event_track[:])
+            # for undo:
+            original_tracks.append(self.copy_event_track(to_event_track))
 
             # insert?
             if insert_space:
@@ -338,9 +347,34 @@ class funk_midievent():
             # to_events_after_remove is now prepared for pasting
             to_events_after_remove.extend(paste_tracks[paste_tracks_index])
             event_file['tracks'][to_track_index]['events'] = sorted(to_events_after_remove, key = lambda i: i['start'])
+            affected_tracks.append(event_file['tracks'][to_track_index])
 
             paste_tracks_index += 1
             to_track_index += 1
             
-        return event_file
+        self.undo_stack.insert(0, original_tracks)
+        return affected_tracks
         
+    def undo_edit(self, event_file):
+        if not self.undo_stack:
+            return []
+        undo_tracks = self.undo_stack.pop(0)
+        redo_tracks = []
+        for track in undo_tracks:
+            redo_tracks.append(event_file['tracks'][track['index']])
+            event_file['tracks'][track['index']] = track
+        self.redo_stack.insert(0, redo_tracks)
+        return undo_tracks
+
+    def redo_edit(self, event_file):
+        if not self.redo_stack:
+            return []
+        redo_tracks = self.redo_stack.pop(0)
+        undo_tracks = []
+        for track in redo_tracks:
+            undo_tracks.append(event_file['tracks'][track['index']])
+            event_file['tracks'][track['index']] = track
+        self.undo_stack.insert(0, undo_tracks)
+        return redo_tracks
+
+    
