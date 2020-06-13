@@ -33,6 +33,8 @@ const key_plus = 187;
 const key_minus = 189;
 const key_up = 38;
 const key_down = 40;
+const key_right = 39;
+const key_left = 37;
 
 
 var global_ctrl_down = false;
@@ -76,8 +78,10 @@ function keydownhandler(event)
              (event.keyCode == key_y) || // ctrl-y = redo
              (event.keyCode == key_plus) || // ctrl-plus = zoom in
              (event.keyCode == key_minus) || // ctrl-minus = zoom out
-             (event.keyCode == key_up) || // ctrl-up = next track up (pianowin)
-             (event.keyCode == key_down) // ctrl-down = next track down (pianowin)
+             (event.keyCode == key_up) || // ctrl-up = next track up (pianowin), shift-up = expand selection
+             (event.keyCode == key_down) || // ctrl-down = next track down (pianowin), shift-down = expand selection
+             (event.keyCode == key_left) || // shift-left = expand selection
+             (event.keyCode == key_right) // shift-right = expand selection
             )
     {
         event.preventDefault();

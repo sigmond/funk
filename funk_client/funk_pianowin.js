@@ -338,7 +338,7 @@ class pianowin extends eventwin
             {
                 if (global_shift_down)
                 {
-                    this.adjust_select_area(x, y, true);
+                    this.adjust_select_area(x, y, true, false);
                 }
                 else
                 {
@@ -418,12 +418,12 @@ class pianowin extends eventwin
 
         if (this._mouse_button_1_down)
         {
-            this.adjust_select_area(x, y, false);
+            this.adjust_select_area(x, y, false, false);
         }
     }
 
 
-    adjust_select_area(x, y, extend)
+    adjust_select_area(x, y, extend, key)
     {
         var tick = this.tick2snap(this.x2tick_zoomed(x));
         

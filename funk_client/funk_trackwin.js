@@ -435,7 +435,7 @@ class trackwin extends eventwin
             {
                 if (global_shift_down)
                 {
-                    this.adjust_select_area(x, y, true);
+                    this.adjust_select_area(x, y, true, false);
                 }
                 else
                 {
@@ -509,22 +509,143 @@ class trackwin extends eventwin
         
         if (this._mouse_button_1_down)
         {
-            this.adjust_select_area(x, y, false);
+            this.adjust_select_area(x, y, false, false);
         }
     }
 
     
 
     
-    adjust_select_area(x, y, extend)
+    adjust_select_area(x, y, extend, key)
     {
-        var tick = this.x2tick_zoomed(x);
+        var tick;
+        var track_index;
         
-        for (const bar of this._song.bars)
+        if (key && !this._track_select_element)
         {
+            return;
+        }
+        
+        if (!key)
+        {
+            tick = this.x2tick_zoomed(x);
+            track_index = this.y2track_zoomed(y);
+        }
+        else
+        {
+            if (key == key_left)
+            {
+                if (this._track_select_x2 >= this._track_select_x1)
+                {
+                    tick = this._track_select_tick_stop - 1;
+                }
+                else
+                {
+                    tick = this._track_select_tick_start;
+                }
+
+                if (this._track_select_y2 >= this._track_select_y1)
+                {
+                    track_index = this._track_select_track_stop - 1;
+                }
+                else
+                {
+                    track_index = this._track_select_track_start;
+                }
+            }
+            else if (key == key_right)
+            {
+                if (this._track_select_x2 >= this._track_select_x1)
+                {
+                    tick = this._track_select_tick_stop;
+                }
+                else
+                {
+                    tick = this._track_select_tick_start;
+                }
+
+                if (this._track_select_y2 >= this._track_select_y1)
+                {
+                    track_index = this._track_select_track_stop - 1;
+                }
+                else
+                {
+                    track_index = this._track_select_track_start;
+                }
+            }
+            else if (key == key_up)
+            {
+                if (this._track_select_track_start <= 0)
+                {
+                    return;
+                }
+                
+                if (this._track_select_x2 >= this._track_select_x1)
+                {
+                    tick = this._track_select_tick_stop - 1;
+                }
+                else
+                {
+                    tick = this._track_select_tick_start;
+                }
+                
+                if (this._track_select_y2 >= this._track_select_y1)
+                {
+                    track_index = this._track_select_track_stop - 2;
+                }
+                else
+                {
+                    track_index = this._track_select_track_start - 1;
+                }
+            }
+            else if (key == key_down)
+            {
+                if (this._track_select_track_stop > (this._song.tracks.length - 1))
+                {
+                    return;
+                }
+                
+                if (this._track_select_x2 >= this._track_select_x1)
+                {
+                    tick = this._track_select_tick_stop - 1;
+                }
+                else
+                {
+                    tick = this._track_select_tick_start;
+                }
+                
+                if (this._track_select_y2 >= this._track_select_y1)
+                {
+                    track_index = this._track_select_track_stop;
+                }
+                else
+                {
+                    track_index = this._track_select_track_start + 1;
+                }
+            }
+            output('track_index ' + track_index + ' start ' + this._track_select_track_start + ' stop ' + this._track_select_track_stop);
+        }
+        
+        var i;
+        var bar;
+        
+        for (i = 0; i < this._song.bars.length; i++)
+        {
+            bar = this._song.bars[i];
             if ((tick >= bar.start) && (tick < bar.end))
             {                
-                var track_index = this.y2track_zoomed(y);
+                if ((key == key_left) && (i > 0))
+                {
+                    bar = this._song.bars[i - 1];
+                }
+                else if (
+                         (key == key_right) && 
+                         (this._track_select_x2 < this._track_select_x1) && 
+                         (i < (this._song.bars.length - 1))
+                        )
+                {
+                    bar = this._song.bars[i + 1];
+                }
                 var xpos = parseInt(this.tick2x(bar.start));
                 var ypos = this._track_y + (track_index * this._track_height);
                 
@@ -545,61 +666,51 @@ class trackwin extends eventwin
                     this._track_select_y1 = ypos;
                     this._track_select_width = width;
                     this._track_select_height = this._track_height;
+                    this._track_select_x2 = xpos + width;
+                    this._track_select_y2 = ypos + height;
                     this._track_select_tick_start = bar.start;
                     this._track_select_tick_stop = bar.end;
-                    this._track_select_track_start = this.y2track(ypos);
-                    this._track_select_track_stop = this.y2track(ypos + this._track_select_height);
+                    this._track_select_track_start = track_index;
+                    this._track_select_track_stop = track_index + 1;
                 }
                 else
                 {
-                    if (ypos > this._track_select_y1)
+                    if (ypos >= this._track_select_y1)
                     {
-                        this._track_select_height = ypos - this._track_select_y1 + this._track_height;
+                        this._track_select_y2 = this.track2y(track_index + 1);
+                        this._track_select_height = this._track_select_y2 - this._track_select_y1;
+                        this._track_select_track_start = this.y2track(this._track_select_y1);
+                        this._track_select_track_stop = track_index + 1;
+                        this._track_select_element.setAttribute("y", this._track_select_y1);
                         this._track_select_element.setAttribute("height", this._track_select_height);
-                        this._track_select_track_stop = this.y2track(this._track_select_y1 + this._track_select_height);
                     }
                     else
                     {
-                        if (extend)
-                        {
-                            this._track_select_element.setAttribute("y", ypos);
-                            this._track_select_height += this._track_select_y1 - ypos;
-                            this._track_select_y1 = ypos;
-                            this._track_select_element.setAttribute("height", this._track_select_height);
-                            this._track_select_track_start = this.y2track(ypos);
-                        }
-                        else
-                        {
-                            this._track_select_height = this._track_select_y1 - ypos + this._track_height;
-                            this._track_select_element.setAttribute("y", ypos);
-                            this._track_select_element.setAttribute("height", this._track_select_height);
-                            this._track_select_track_stop = this.y2track(this._track_select_y1 + this._track_select_height);
-                        }
+                        this._track_select_y2 = this.track2y(track_index);
+                        this._track_select_height = this._track_select_y1 - this._track_select_y2;
+                        this._track_select_track_start = track_index;
+                        this._track_select_track_stop = this.y2track(this._track_select_y1);
+                        this._track_select_element.setAttribute("y", this._track_select_y2);
+                        this._track_select_element.setAttribute("height", this._track_select_height);
                     }
                     
-                    if (xpos > this._track_select_x1)
+                    if (xpos >= this._track_select_x1)
                     {
-                        this._track_select_width = xpos - this._track_select_x1 + parseInt(this.tick2x(bar.ticks));
+                        this._track_select_x2 = this.tick2x(bar.end);
+                        this._track_select_width = this._track_select_x2 - this._track_select_x1;
+                        this._track_select_tick_start = this.x2tick(this._track_select_x1);
                         this._track_select_tick_stop = bar.end;
+                        this._track_select_element.setAttribute("x", this._track_select_x1);
                         this._track_select_element.setAttribute("width", this._track_select_width); 
                     }
                     else
                     {
-                        if (extend)
-                        {
-                            this._track_select_element.setAttribute("x", xpos);
-                            this._track_select_width += this._track_select_x1 - xpos;
-                            this._track_select_x1 = xpos;
-                            this._track_select_tick_start = bar.start;
-                            this._track_select_element.setAttribute("width", this._track_select_width); 
-                        }
-                        else
-                        {
-                            this._track_select_width = this._track_select_x1 - xpos + parseInt(this.tick2x(bar.ticks));
-                            this._track_select_tick_start = bar.start;
-                            this._track_select_element.setAttribute("x", xpos);
-                            this._track_select_element.setAttribute("width", this._track_select_width); 
-                        }
+                        this._track_select_x2 = this.tick2x(bar.start);
+                        this._track_select_width = this._track_select_x1 - this._track_select_x2;
+                        this._track_select_tick_start = bar.start;
+                        this._track_select_tick_stop = this.x2tick(this._track_select_x1);
+                        this._track_select_element.setAttribute("x", this._track_select_x2);
+                        this._track_select_element.setAttribute("width", this._track_select_width); 
                     }
                 }
                 break;
