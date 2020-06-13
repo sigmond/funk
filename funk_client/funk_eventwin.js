@@ -190,7 +190,14 @@ class eventwin
                 {
                     this.tracks_do_zoom_y(this._mouse_at_y, false);
                 }
-                else if ((key == key_up) || (key == key_down) || (key == key_left) || (key == key_right))
+                else if (
+                         (key == key_up) || 
+                         (key == key_down) || 
+                         (key == key_left) || 
+                         (key == key_right) ||
+                         (key == key_home) ||
+                         (key == key_end)
+                        )
                 {
                     this.adjust_select_area(this._mouse_at_x, this._mouse_at_y, true, key);
                 }

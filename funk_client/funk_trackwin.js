@@ -533,15 +533,22 @@ class trackwin extends eventwin
         }
         else
         {
-            if (key == key_left)
+            if ((key == key_left) || (key == key_home))
             {
-                if (this._track_select_x2 >= this._track_select_x1)
+                if (key == key_home)
                 {
-                    tick = this._track_select_tick_stop - 1;
+                    tick = 1;
                 }
                 else
                 {
-                    tick = this._track_select_tick_start;
+                    if (this._track_select_x2 >= this._track_select_x1)
+                    {
+                        tick = this._track_select_tick_stop - 1;
+                    }
+                    else
+                    {
+                        tick = this._track_select_tick_start;
+                    }
                 }
 
                 if (this._track_select_y2 >= this._track_select_y1)
@@ -553,15 +560,22 @@ class trackwin extends eventwin
                     track_index = this._track_select_track_start;
                 }
             }
-            else if (key == key_right)
+            else if ((key == key_right) || (key == key_end))
             {
-                if (this._track_select_x2 >= this._track_select_x1)
+                if (key == key_end)
                 {
-                    tick = this._track_select_tick_stop;
+                    tick = this._song.length_ticks;
                 }
                 else
                 {
-                    tick = this._track_select_tick_start;
+                    if (this._track_select_x2 >= this._track_select_x1)
+                    {
+                        tick = this._track_select_tick_stop;
+                    }
+                    else
+                    {
+                        tick = this._track_select_tick_start;
+                    }
                 }
 
                 if (this._track_select_y2 >= this._track_select_y1)
@@ -575,11 +589,6 @@ class trackwin extends eventwin
             }
             else if (key == key_up)
             {
-                if (this._track_select_track_start <= 0)
-                {
-                    return;
-                }
-                
                 if (this._track_select_x2 >= this._track_select_x1)
                 {
                     tick = this._track_select_tick_stop - 1;
@@ -592,19 +601,22 @@ class trackwin extends eventwin
                 if (this._track_select_y2 >= this._track_select_y1)
                 {
                     track_index = this._track_select_track_stop - 2;
+                    if (track_index < 0)
+                    {
+                        track_index = 0;
+                    }
                 }
                 else
                 {
+                    if (this._track_select_track_start <= 0)
+                    {
+                        return;
+                    }
                     track_index = this._track_select_track_start - 1;
                 }
             }
             else if (key == key_down)
             {
-                if (this._track_select_track_stop > (this._song.tracks.length - 1))
-                {
-                    return;
-                }
-                
                 if (this._track_select_x2 >= this._track_select_x1)
                 {
                     tick = this._track_select_tick_stop - 1;
@@ -616,6 +628,10 @@ class trackwin extends eventwin
                 
                 if (this._track_select_y2 >= this._track_select_y1)
                 {
+                    if (this._track_select_track_stop > (this._song.tracks.length - 1))
+                    {
+                        return;
+                    }
                     track_index = this._track_select_track_stop;
                 }
                 else

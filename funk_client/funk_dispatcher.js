@@ -56,12 +56,28 @@ function keydownhandler(event)
     else if (event.keyCode == key_home)
     {
         event.preventDefault();
-        trackwin_object.go_to_start();
+        if (global_shift_down)
+        {
+            trackwin_object.tracks_handle_key_down(event.keyCode);
+            pianowin_object.tracks_handle_key_down(event.keyCode);
+        }
+        else
+        {
+            trackwin_object.go_to_start();
+        }
     }
     else if (event.keyCode == key_end)
     {
         event.preventDefault();
-        trackwin_object.go_to_end();
+        if (global_shift_down)
+        {
+            trackwin_object.tracks_handle_key_down(event.keyCode);
+            pianowin_object.tracks_handle_key_down(event.keyCode);
+        }
+        else
+        {
+            trackwin_object.go_to_end();
+        }
     }
     else if (event.keyCode == key_space)
     {
