@@ -28,7 +28,7 @@ const key_c = 67;
 const key_v = 86;
 const key_m = 77;
 const key_z = 90;
-const key_r = 82;
+const key_y = 89;
 const key_plus = 187;
 const key_minus = 189;
 const key_up = 38;
@@ -73,7 +73,7 @@ function keydownhandler(event)
              (event.keyCode == key_v) || // ctrl-v = paste overwrite, ctrl-shift-v = paste insert
              (event.keyCode == key_m) || // ctrl-m = paste merge
              (event.keyCode == key_z) || // ctrl-z = undo
-             (event.keyCode == key_r) || // ctrl-r = redo
+             (event.keyCode == key_y) || // ctrl-y = redo
              (event.keyCode == key_plus) || // ctrl-plus = zoom in
              (event.keyCode == key_minus) || // ctrl-minus = zoom out
              (event.keyCode == key_up) || // ctrl-up = next track up (pianowin)

@@ -115,14 +115,22 @@ class funk_editor():
                 self.handle_save(msg)
             elif msg['command'] == 'play':
                 self.handle_play(msg)
-            elif msg['command'] == 'cut_area':
-                self.handle_cut_area(msg)
-            elif msg['command'] == 'paste_area':
-                self.handle_paste_area(msg)
-            elif msg['command'] == 'undo_last_edit':
-                self.handle_undo_last_edit(msg)
-            elif msg['command'] == 'redo_last_edit':
-                self.handle_redo_last_edit(msg)
+            elif msg['command'] == 'cut_tracks_area':
+                self.handle_cut_tracks_area(msg)
+            elif msg['command'] == 'paste_tracks_area':
+                self.handle_paste_tracks_area(msg)
+            elif msg['command'] == 'undo_last_tracks_edit':
+                self.handle_undo_last_tracks_edit(msg)
+            elif msg['command'] == 'redo_last_tracks_edit':
+                self.handle_redo_last_tracks_edit(msg)
+            elif msg['command'] == 'cut_notes_area':
+                self.handle_cut_notes_area(msg)
+            elif msg['command'] == 'paste_notes_area':
+                self.handle_paste_notes_area(msg)
+            elif msg['command'] == 'undo_last_notes_edit':
+                self.handle_undo_last_notes_edit(msg)
+            elif msg['command'] == 'redo_last_notes_edit':
+                self.handle_redo_last_notes_edit(msg)
             else:
                 print('Unknown editor command ' + repr(msg['command']))
                 self.log('Unknown editor command ' + repr(msg['command']))

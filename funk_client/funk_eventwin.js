@@ -143,7 +143,7 @@ class eventwin
                 {
                     this.handle_undo(this._mouse_at_tick);
                 }
-                else if (key == key_r)
+                else if (key == key_y)
                 {
                     this.handle_redo(this._mouse_at_tick);
                 }

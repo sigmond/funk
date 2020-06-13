@@ -300,7 +300,7 @@ class pianowin extends eventwin
     
     y2note(y)
     {
-        return this._num_notes - this.y2line(y);
+        return this._num_notes - this.y2line(y) - 1;
     }
     
     y2line_zoomed(y)
@@ -308,6 +308,11 @@ class pianowin extends eventwin
         return parseInt((y - this._track_y) / (this._note_height * this._tracks_zoom_y));
     }
 
+    y2note_zoomed(y)
+    {
+        return this._num_notes - this.y2line_zoomed(y) - 1;
+    }
+    
     line2y(line)
     {
         return parseInt(line * this._note_height);
@@ -424,9 +429,11 @@ class pianowin extends eventwin
         
         var grid_width = this.tick2x(this._tick_snap_width);
 
-        var note = this.y2line_zoomed(y);
+        var line = this.y2line_zoomed(y);
+        var note = this.y2note_zoomed(y);
+        output('line = ' + line + ' note = ' + note);
         var xpos = this.tick2x(tick);
-        var ypos = this._track_y + (note * this._note_height);
+        var ypos = this._track_y + (line * this._note_height);
                 
         if (!this._notes_select_element)
         {
@@ -449,7 +456,7 @@ class pianowin extends eventwin
             this._notes_select_tick_start = tick;
             this._notes_select_tick_stop = tick + this._tick_snap_width;
             this._notes_select_note_start = note;
-            this._notes_select_note_stop = note - 1;
+            this._notes_select_note_stop = note + 1;
         }
         else
         {
@@ -457,7 +464,7 @@ class pianowin extends eventwin
             {
                 this._notes_select_height = ypos - this._notes_select_y1 + this._note_height;
                 this._notes_select_element.setAttribute("height", this._notes_select_height);
-                this._notes_select_note_stop = this.y2note(this._notes_select_y1 + this._notes_select_height);
+                this._notes_select_note_start = note;
             }
             else
             {
@@ -467,21 +474,21 @@ class pianowin extends eventwin
                     this._notes_select_height += this._notes_select_y1 - ypos;
                     this._notes_select_y1 = ypos;
                     this._notes_select_element.setAttribute("height", this._notes_select_height);
-                    this._notes_select_note_start = this.y2note(ypos);
+                    this._notes_select_note_stop = note + 1;
                 }
                 else
                 {
                     this._notes_select_height = this._notes_select_y1 - ypos + this._note_height;
                     this._notes_select_element.setAttribute("y", ypos);
                     this._notes_select_element.setAttribute("height", this._notes_select_height);
-                    this._notes_select_note_stop = this.y2note(this._notes_select_y1 + this._notes_select_height);
+                    this._notes_select_note_stop = note + 1;
                 }
             }
             
             if (xpos > this._notes_select_x1)
             {
                 this._notes_select_width = xpos - this._notes_select_x1 + parseInt(grid_width);
-                this._notes_select_tick_stop = this.x2tick(xpos + this._notes_select_width);
+                this._notes_select_tick_stop = this.x2tick(this._notes_select_x1 + this._notes_select_width);
                 this._notes_select_element.setAttribute("width", this._notes_select_width); 
             }
             else
@@ -491,14 +498,14 @@ class pianowin extends eventwin
                     this._notes_select_element.setAttribute("x", xpos);
                     this._notes_select_width += this._notes_select_x1 - xpos;
                     this._notes_select_x1 = xpos;
-                    this._notes_select_tick_start = this.x2tick(xpos);
+                    this._notes_select_tick_start = tick;
                     this._notes_select_element.setAttribute("width", this._notes_select_width); 
                 }
                 else
                 {
                     this._notes_select_width = this._notes_select_x1 - xpos + parseInt(grid_width);
                     this._notes_select_element.setAttribute("x", xpos);
-                    this._notes_select_tick_start = this.x2tick(xpos);
+                    this._notes_select_tick_start = tick;
                     this._notes_select_element.setAttribute("width", this._notes_select_width); 
                 }
             }
