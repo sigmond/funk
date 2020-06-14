@@ -86,14 +86,24 @@ class eventwin
         return parseInt(tick * this._pixels_per_tick * this._tracks_zoom_x);
     }
     
-    y2track(y)
+    line2y(line)
     {
-        return parseInt((y - this._track_y) / this._track_height);
+        return parseInt(line * this._line_height);
     }
     
-    y2track_zoomed(y)
+    line2y_zoomed(line)
     {
-        return parseInt((y - this._track_y) / (this._track_height * this._tracks_zoom_y));
+        return parseInt(line * this._line_height * this._tracks_zoom_y);
+    }
+
+    y2line(y)
+    {
+        return parseInt((y - this._track_y) / this._line_height);
+    }
+    
+    y2line_zoomed(y)
+    {
+        return parseInt((y - this._track_y) / (this._line_height * this._tracks_zoom_y));
     }
 
 
@@ -284,14 +294,7 @@ class eventwin
         var new_y = y * (this._tracks_zoom_y / old_zoom);
         eventwin_frame.scrollTop = new_y - (k * eventwin_frame.clientHeight);
         this._mouse_at_y = new_y;
-        if (this._mouse_at_track != undefined)
-        {
-            this._mouse_at_track = this.y2track(new_y);
-        }
-        else
-        {
-            this._mouse_at_line = this.y2line(new_y);
-        }
+        this._mouse_at_line = this.y2line(new_y);
     }
 
     rulers_handle_wheel(x, y, delta_y)
@@ -339,7 +342,164 @@ class eventwin
         }
     }
 
+
+    tick_line_from_key(key, tick_max, line_max)
+    {
+        var tick;
+        var line;
+        
+        if ((key == key_left) || (key == key_home))
+        {
+            if (key == key_home)
+            {
+                tick = 1;
+            }
+            else
+            {
+                if (this._select_x2 >= this._select_x1)
+                {
+                    tick = this._select_tick_stop - 1;
+                }
+                else
+                {
+                    tick = this._select_tick_start;
+                }
+            }
+            
+            if (this._select_y2 >= this._select_y1)
+            {
+                line = this._select_line_stop - 1;
+            }
+            else
+            {
+                line = this._select_line_start;
+            }
+        }
+        else if ((key == key_right) || (key == key_end))
+        {
+            if (key == key_end)
+            {
+                tick = tick_max;
+            }
+            else
+            {
+                if (this._select_x2 >= this._select_x1)
+                {
+                    tick = this._select_tick_stop;
+                }
+                else
+                {
+                    tick = this._select_tick_start;
+                }
+            }
+            
+            if (this._select_y2 >= this._select_y1)
+            {
+                line = this._select_line_stop - 1;
+            }
+            else
+            {
+                line = this._select_line_start;
+            }
+        }
+        else if (key == key_up)
+        {
+            if (this._select_x2 >= this._select_x1)
+            {
+                tick = this._select_tick_stop - 1;
+            }
+            else
+            {
+                tick = this._select_tick_start;
+            }
+            
+            if (this._select_y2 >= this._select_y1)
+            {
+                line = this._select_line_stop - 2;
+                if (line < 0)
+                {
+                    line = 0;
+                }
+            }
+            else
+            {
+                if (this._select_line_start <= 0)
+                {
+                    return;
+                }
+                line = this._select_line_start - 1;
+            }
+        }
+        else if (key == key_down)
+        {
+            if (this._select_x2 >= this._select_x1)
+            {
+                tick = this._select_tick_stop - 1;
+            }
+            else
+            {
+                tick = this._select_tick_start;
+            }
+            
+            if (this._select_y2 >= this._select_y1)
+            {
+                if (this._select_line_stop > (line_max - 1))
+                {
+                    return;
+                }
+                line = this._select_line_stop;
+            }
+            else
+            {
+                line = this._select_line_start + 1;
+            }
+        }
+
+        return { "tick" : tick, "line" : line };
+    }
     
+    change_select_area(xpos, ypos, pos, cell_tick_start, cell_tick_stop)
+    {
+        if (ypos >= this._select_y1)
+        {
+            this._select_y2 = this.line2y(pos.line + 1);
+            this._select_height = this._select_y2 - this._select_y1;
+            this._select_line_start = this.y2line(this._select_y1);
+            this._select_line_stop = pos.line + 1;
+            this._select_element.setAttribute("y", this._select_y1);
+            this._select_element.setAttribute("height", this._select_height);
+        }
+        else
+        {
+            this._select_y2 = this.line2y(pos.line);
+            this._select_height = this._select_y1 - this._select_y2;
+            this._select_line_start = pos.line;
+            this._select_line_stop = this.y2line(this._select_y1);
+            this._select_element.setAttribute("y", this._select_y2);
+            this._select_element.setAttribute("height", this._select_height);
+        }
+        
+        if (xpos >= this._select_x1)
+        {
+            this._select_x2 = this.tick2x(cell_tick_stop);
+            this._select_width = this._select_x2 - this._select_x1;
+            this._select_tick_start = this.x2tick(this._select_x1);
+            this._select_tick_stop = cell_tick_stop;
+            this._select_element.setAttribute("x", this._select_x1);
+            this._select_element.setAttribute("width", this._select_width); 
+        }
+        else
+        {
+            this._select_x2 = this.tick2x(cell_tick_start);
+            this._select_width = this._select_x1 - this._select_x2;
+            this._select_tick_start = cell_tick_start;
+            this._select_tick_stop = this.x2tick(this._select_x1);
+            this._select_element.setAttribute("x", this._select_x2);
+            this._select_element.setAttribute("width", this._select_width); 
+        }
+    }
+    
+
     get song()
     {
         return this._song;

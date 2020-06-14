@@ -25,10 +25,10 @@ class pianowin extends eventwin
         this._note_snap = 16;
         this._tick_snap_width = (this._song.ticks_per_beat * 4) / this._note_snap;
 
-        this._note_height = 12;
+        this._line_height = 12;
 
         this._white_notes = [0, 2, 4, 5, 7, 9, 11];
-        this._white_note_height = (this._note_height * 12) / this._white_notes.length;
+        this._white_note_height = (this._line_height * 12) / this._white_notes.length;
 
         this._num_notes = 128;
 
@@ -293,35 +293,15 @@ class pianowin extends eventwin
 
 
     
-    y2line(y)
+    line2note(line)
     {
-        return parseInt((y - this._track_y) / this._note_height);
+        return this._num_notes - line - 1;
     }
     
-    y2note(y)
+    note2line(note)
     {
-        return this._num_notes - this.y2line(y) - 1;
-    }
-    
-    y2line_zoomed(y)
-    {
-        return parseInt((y - this._track_y) / (this._note_height * this._tracks_zoom_y));
-    }
-
-    y2note_zoomed(y)
-    {
-        return this._num_notes - this.y2line_zoomed(y) - 1;
-    }
-    
-    line2y(line)
-    {
-        return parseInt(line * this._note_height);
-    }
-    
-    line2y_zoomed(line)
-    {
-        return parseInt(line * this._note_height * this._tracks_zoom_y);
-    }
+        return this._num_notes - note - 1;
+    }    
 
 
     tracks_handle_click(x, y, button)
@@ -334,7 +314,7 @@ class pianowin extends eventwin
         
         if (button == 0)
         {
-            if (this._notes_select_element)
+            if (this.select_element)
             {
                 if (global_shift_down)
                 {
@@ -342,8 +322,8 @@ class pianowin extends eventwin
                 }
                 else
                 {
-                    this._notes_select_element.remove();
-                    this._notes_select_element = null;
+                    this._select_element.remove();
+                    this._select_element = null;
                 }
             }
             this._mouse_button_1_down = true;
@@ -425,90 +405,56 @@ class pianowin extends eventwin
 
     adjust_select_area(x, y, extend, key)
     {
-        var tick = this.tick2snap(this.x2tick_zoomed(x));
         
-        var grid_width = this.tick2x(this._tick_snap_width);
-
-        var line = this.y2line_zoomed(y);
-        var note = this.y2note_zoomed(y);
-        output('line = ' + line + ' note = ' + note);
-        var xpos = this.tick2x(tick);
-        var ypos = this._track_y + (line * this._note_height);
-                
-        if (!this._notes_select_element)
+        if (key && !this._select_element)
         {
-            var width = parseInt(grid_width);
-            var height = this._note_height;
-            
-            this._notes_select_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            this._notes_select_element.id = 'pw_notes_select';
-            this._notes_select_element.setAttribute("height", height);
-            this._notes_select_element.setAttribute("width", width);
-            this._notes_select_element.setAttribute("x", xpos);
-            this._notes_select_element.setAttribute("y", ypos);
-            this._notes_select_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.2;stroke-opacity:0.0");
-            this._tracks_canvas.appendChild(this._notes_select_element);
-            this._notes_select_x1 = xpos;
-            this._notes_select_y1 = ypos;
-            this._notes_select_width = width;
-            this._notes_select_height = height;
+            return;
+        }
+        
+        var pos;
 
-            this._notes_select_tick_start = tick;
-            this._notes_select_tick_stop = tick + this._tick_snap_width;
-            this._notes_select_note_start = note;
-            this._notes_select_note_stop = note + 1;
+        if (!key)
+        {
+            pos = { "tick" : this.tick2snap(this.x2tick_zoomed(x)), "line" : this.y2line_zoomed(y) };
         }
         else
         {
-            if (ypos > this._notes_select_y1)
-            {
-                this._notes_select_height = ypos - this._notes_select_y1 + this._note_height;
-                this._notes_select_element.setAttribute("height", this._notes_select_height);
-                this._notes_select_note_start = note;
-            }
-            else
-            {
-                if (extend)
-                {
-                    this._notes_select_element.setAttribute("y", ypos);
-                    this._notes_select_height += this._notes_select_y1 - ypos;
-                    this._notes_select_y1 = ypos;
-                    this._notes_select_element.setAttribute("height", this._notes_select_height);
-                    this._notes_select_note_stop = note + 1;
-                }
-                else
-                {
-                    this._notes_select_height = this._notes_select_y1 - ypos + this._note_height;
-                    this._notes_select_element.setAttribute("y", ypos);
-                    this._notes_select_element.setAttribute("height", this._notes_select_height);
-                    this._notes_select_note_stop = note + 1;
-                }
-            }
+            pos = this.tick_line_from_key(key, this._song.length_ticks, this._num_notes);            
+        }        
+
+        var xpos = this.tick2x(pos.tick);
+        var grid_width = parseInt(this.tick2x(this._tick_snap_width));
+        var ypos = this._track_y + (pos.line * this._line_height);
+        var note = this.line2note(pos.line);
+                
+        if (!this._select_element)
+        {
+            var width = grid_width;
+            var height = this._line_height;
             
-            if (xpos > this._notes_select_x1)
-            {
-                this._notes_select_width = xpos - this._notes_select_x1 + parseInt(grid_width);
-                this._notes_select_tick_stop = this.x2tick(this._notes_select_x1 + this._notes_select_width);
-                this._notes_select_element.setAttribute("width", this._notes_select_width); 
-            }
-            else
-            {
-                if (extend)
-                {
-                    this._notes_select_element.setAttribute("x", xpos);
-                    this._notes_select_width += this._notes_select_x1 - xpos;
-                    this._notes_select_x1 = xpos;
-                    this._notes_select_tick_start = tick;
-                    this._notes_select_element.setAttribute("width", this._notes_select_width); 
-                }
-                else
-                {
-                    this._notes_select_width = this._notes_select_x1 - xpos + parseInt(grid_width);
-                    this._notes_select_element.setAttribute("x", xpos);
-                    this._notes_select_tick_start = tick;
-                    this._notes_select_element.setAttribute("width", this._notes_select_width); 
-                }
-            }
+            this._select_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            this._select_element.id = 'pw_notes_select';
+            this._select_element.setAttribute("height", height);
+            this._select_element.setAttribute("width", width);
+            this._select_element.setAttribute("x", xpos);
+            this._select_element.setAttribute("y", ypos);
+            this._select_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.2;stroke-opacity:0.0");
+            this._tracks_canvas.appendChild(this._select_element);
+            
+            this._select_x1 = xpos;
+            this._select_y1 = ypos;
+            this._select_width = width;
+            this._select_height = height;
+            this._select_x2 = xpos + width;
+            this._select_y2 = ypos + height;
+            this._select_tick_start = pos.tick;
+            this._select_tick_stop = pos.tick + this._tick_snap_width;
+            this._select_line_start = pos.line;
+            this._select_line_stop = pos.line + 1;
+        }
+        else
+        {
+            this.change_select_area(xpos, ypos, pos, pos.tick, pos.tick + this._tick_snap_width);
         }
     }
     
@@ -550,7 +496,7 @@ class pianowin extends eventwin
         var width = this.tick2x(this._tick_snap_width);
         this._xgrid_highlight_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         this._xgrid_highlight_element.id = "pw_xgrid_highlight";
-        this._xgrid_highlight_element.setAttribute("height", this._note_height * this._num_notes);
+        this._xgrid_highlight_element.setAttribute("height", this._line_height * this._num_notes);
         this._xgrid_highlight_element.setAttribute("width", width);
         this._xgrid_highlight_element.setAttribute("x", xpos);
         this._xgrid_highlight_element.setAttribute("y", this._track_y);
@@ -939,7 +885,7 @@ class pianowin extends eventwin
         notes_width = this.create_bars(this._song.bars);
         
         var width_style = "width:" + (notes_width + 100).toString() + ";";
-        var height_style = "height:" + ((this._note_height * this._num_notes) + this._track_y).toString() + ";";
+        var height_style = "height:" + ((this._line_height * this._num_notes) + this._track_y).toString() + ";";
 
         this._tracks_canvas.setAttribute("style", width_style + height_style);
 
@@ -960,7 +906,7 @@ class pianowin extends eventwin
 
         this.create_playhead();
 
-        var middle_y = this._track_y + ((this.note2line(middle_note) * this._note_height) * this._tracks_zoom_y);
+        var middle_y = this._track_y + ((this.note2line(middle_note) * this._line_height) * this._tracks_zoom_y);
         var pianowin_frame = document.getElementById("pianowin_frame");
         pianowin_frame.scrollTop = middle_y - (pianowin_frame.clientHeight / 2);
     }
@@ -1040,8 +986,8 @@ class pianowin extends eventwin
             lowest_note = parseInt(Math.min(lowest_note, note));
             
             var width = this.tick2x(event.end - event.start);
-            var height = this._note_height - 6;
-            var y = this._track_y + (this.note2line(note) * this._note_height) + 3;
+            var height = this._line_height - 6;
+            var y = this._track_y + (this.note2line(note) * this._line_height) + 3;
             var x = this.tick2x(event.start);
             var event_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
             event_rect.id = 'pw_event_' + track_index.toString() + '_' + note.toString() + '_' + event.start.toString();
@@ -1093,7 +1039,7 @@ class pianowin extends eventwin
     create_bars(bars)
     {
         var bar_index = 0;
-        var height = this._note_height * this._num_notes;
+        var height = this._line_height * this._num_notes;
         for (const bar of bars)
         {
             var x = this.tick2x(bar.start);
@@ -1134,7 +1080,7 @@ class pianowin extends eventwin
         var i;
         for (i = 0; i < this._num_notes + 1; i++)
         {
-            var y = i * this._note_height;
+            var y = i * this._line_height;
             var note_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
 
             note_line.id = 'tw_noteline_' + i.toString();
@@ -1180,8 +1126,8 @@ class pianowin extends eventwin
         else
         {
             width = parseInt(this._info_width * 2 / 3);
-            height = this._note_height;
-            y = this._track_y + (this.note2line(note) * this._note_height);
+            height = this._line_height;
+            y = this._track_y + (this.note2line(note) * this._line_height);
             fill_color = this._black_key_color;
         }
 
@@ -1230,7 +1176,7 @@ class pianowin extends eventwin
     {
         var end_tick = start_tick + this.x2tick(this._tracks_frame.clientWidth);
         var middle_note = this.find_note_center(track_index, start_tick, end_tick);
-        var middle_y = this._track_y + ((this.note2line(middle_note) * this._note_height) * this._tracks_zoom_y);
+        var middle_y = this._track_y + ((this.note2line(middle_note) * this._line_height) * this._tracks_zoom_y);
         var pianowin_frame = document.getElementById("pianowin_frame");
         pianowin_frame.scrollTop = middle_y - (pianowin_frame.clientHeight / 2);
     }
@@ -1252,17 +1198,17 @@ class pianowin extends eventwin
 
     select_tick_notes_area()
     {
-        return {'tick_start' : this._notes_select_tick_start,
-                'tick_stop' : this._notes_select_tick_stop,
-                'note_start' : this._notes_select_note_start,
-                'note_stop' : this._notes_select_note_stop
+        return {'tick_start' : this.select_tick_start,
+                'tick_stop' : this._select_tick_stop,
+                'note_start' : this.line2note(this._select_line_stop) + 1,
+                'note_stop' : this.line2note(this._select_line_start) + 1
                 };
     }
 
 
     handle_cut(tick, do_remove_space)
     {
-        if (!this._notes_select_element)
+        if (!this._select_element)
         {
             return;
         }
@@ -1271,13 +1217,13 @@ class pianowin extends eventwin
         this._notes_copy_buffer_type = 'cut';
         cut_notes_area(this._notes_copy_buffer, this._track_index);
 
-        this._notes_select_element.remove();
-        this._notes_select_element = null;
+        this._select_element.remove();
+        this._select_element = null;
     }
     
     handle_copy(tick)
     {
-        if (!this._notes_select_element)
+        if (!this._select_element)
         {
             return;
         }
@@ -1285,8 +1231,8 @@ class pianowin extends eventwin
         this._notes_copy_buffer = this.select_tick_notes_area();
         this._notes_copy_buffer_type = 'copy'
 
-        this._notes_select_element.remove();
-        this._notes_select_element = null;
+        this._select_element.remove();
+        this._select_element = null;
     }
     
     handle_paste_insert_merge(tick, do_insert, do_merge)
@@ -1308,8 +1254,8 @@ class pianowin extends eventwin
                          this._track_index
                         ); // paste copy buffer at playhead
         
-        this._notes_select_element.remove();
-        this._notes_select_element = null;
+        this._select_element.remove();
+        this._select_element = null;
     }    
     
     handle_undo(tick)

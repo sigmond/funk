@@ -21,11 +21,11 @@ class trackwin extends eventwin
         super(prefix, menu_frame, rulers_frame, info_frame, tracks_frame, song);
 
         this._pixels_per_tick = 0.04;
-        this._track_height = 20;
+        this._line_height = 20;
         
         this._button_padding = 4;
-        this._button_width = this._track_height - (2 * this._button_padding);
-        this._button_height = this._track_height - (2 * this._button_padding);
+        this._button_width = this._line_height - (2 * this._button_padding);
+        this._button_height = this._line_height - (2 * this._button_padding);
         this._button_width_space = this._button_width + (2 * this._button_padding);
         this._solo_button_left = this._info_width - (2 * this._button_width_space) + this._button_padding;
         this._solo_button_right = this._solo_button_left + this._button_width;
@@ -115,7 +115,7 @@ class trackwin extends eventwin
         
         this._bar_highlight_element = null;
         this._track_highlight_element = null;
-        this._track_select_element = null;
+        this._select_element = null;
 
         this._track_event_elements = []
 
@@ -176,28 +176,7 @@ class trackwin extends eventwin
             this._playing = false;
         }
     }
-    
-    
-    y2track(y)
-    {
-        return parseInt((y - this._track_y) / this._track_height);
-    }
-    
-    y2track_zoomed(y)
-    {
-        return parseInt((y - this._track_y) / (this._track_height * this._tracks_zoom_y));
-    }
-    
-    track2y(track_index)
-    {
-        return parseInt((track_index * this._track_height) + this._track_y);
-    }
-    
-    track2y_zoomed(track_index)
-    {
-        return parseInt((track_index * this._track_height * this._tracks_zoom_y) + this._track_y);
-    }
-    
+
 
     tracks_clickhandler(event)
     {
@@ -395,7 +374,7 @@ class trackwin extends eventwin
         if (button == 2)
         {
             // right click
-            var track_index = this.y2track_zoomed(y);
+            var track_index = this.y2line_zoomed(y);
             if (track_index < 0)
             {
                 track_index = 0;
@@ -431,7 +410,7 @@ class trackwin extends eventwin
         
         if (button == 0)
         {
-            if (this._track_select_element)
+            if (this._select_element)
             {
                 if (global_shift_down)
                 {
@@ -439,8 +418,8 @@ class trackwin extends eventwin
                 }
                 else
                 {
-                    this._track_select_element.remove();
-                    this._track_select_element = null;
+                    this._select_element.remove();
+                    this._select_element = null;
                 }
             }
             this._mouse_button_1_down = true;
@@ -468,7 +447,7 @@ class trackwin extends eventwin
             this._bar_highlight_element = null;
         }
 
-        var track_index = this.y2track_zoomed(y);
+        var track_index = this.y2line_zoomed(y);
         if (track_index < 0)
         {
             track_index = 0;
@@ -479,7 +458,7 @@ class trackwin extends eventwin
         }
             
         this._mouse_at_track = track_index;
-        this._mouse_at_y = this.track2y_zoomed(track_index);
+        this._mouse_at_y = this.line2y_zoomed(track_index);
 
         if (this._track_highlight_element)
         {
@@ -490,10 +469,10 @@ class trackwin extends eventwin
         var width = this._info_width;
             
         this._track_highlight_element.id = 'tw_track_highlight';
-        this._track_highlight_element.setAttribute("height", this._track_height);
+        this._track_highlight_element.setAttribute("height", this._line_height);
         this._track_highlight_element.setAttribute("width", width);
         this._track_highlight_element.setAttribute("x", 0);
-        this._track_highlight_element.setAttribute("y", this._track_y + (track_index * this._track_height));
+        this._track_highlight_element.setAttribute("y", this._track_y + (track_index * this._line_height));
         this._track_highlight_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.1;stroke-opacity:0.0");
         this._info_canvas.appendChild(this._track_highlight_element);
 
@@ -518,128 +497,20 @@ class trackwin extends eventwin
     
     adjust_select_area(x, y, extend, key)
     {
-        var tick;
-        var track_index;
+        var pos;
         
-        if (key && !this._track_select_element)
+        if (key && !this._select_element)
         {
             return;
         }
         
         if (!key)
         {
-            tick = this.x2tick_zoomed(x);
-            track_index = this.y2track_zoomed(y);
+            pos = {"tick" : this.x2tick_zoomed(x), "line" : this.y2line_zoomed(y) };
         }
         else
         {
-            if ((key == key_left) || (key == key_home))
-            {
-                if (key == key_home)
-                {
-                    tick = 1;
-                }
-                else
-                {
-                    if (this._track_select_x2 >= this._track_select_x1)
-                    {
-                        tick = this._track_select_tick_stop - 1;
-                    }
-                    else
-                    {
-                        tick = this._track_select_tick_start;
-                    }
-                }
-
-                if (this._track_select_y2 >= this._track_select_y1)
-                {
-                    track_index = this._track_select_track_stop - 1;
-                }
-                else
-                {
-                    track_index = this._track_select_track_start;
-                }
-            }
-            else if ((key == key_right) || (key == key_end))
-            {
-                if (key == key_end)
-                {
-                    tick = this._song.length_ticks;
-                }
-                else
-                {
-                    if (this._track_select_x2 >= this._track_select_x1)
-                    {
-                        tick = this._track_select_tick_stop;
-                    }
-                    else
-                    {
-                        tick = this._track_select_tick_start;
-                    }
-                }
-
-                if (this._track_select_y2 >= this._track_select_y1)
-                {
-                    track_index = this._track_select_track_stop - 1;
-                }
-                else
-                {
-                    track_index = this._track_select_track_start;
-                }
-            }
-            else if (key == key_up)
-            {
-                if (this._track_select_x2 >= this._track_select_x1)
-                {
-                    tick = this._track_select_tick_stop - 1;
-                }
-                else
-                {
-                    tick = this._track_select_tick_start;
-                }
-                
-                if (this._track_select_y2 >= this._track_select_y1)
-                {
-                    track_index = this._track_select_track_stop - 2;
-                    if (track_index < 0)
-                    {
-                        track_index = 0;
-                    }
-                }
-                else
-                {
-                    if (this._track_select_track_start <= 0)
-                    {
-                        return;
-                    }
-                    track_index = this._track_select_track_start - 1;
-                }
-            }
-            else if (key == key_down)
-            {
-                if (this._track_select_x2 >= this._track_select_x1)
-                {
-                    tick = this._track_select_tick_stop - 1;
-                }
-                else
-                {
-                    tick = this._track_select_tick_start;
-                }
-                
-                if (this._track_select_y2 >= this._track_select_y1)
-                {
-                    if (this._track_select_track_stop > (this._song.tracks.length - 1))
-                    {
-                        return;
-                    }
-                    track_index = this._track_select_track_stop;
-                }
-                else
-                {
-                    track_index = this._track_select_track_start + 1;
-                }
-            }
-            output('track_index ' + track_index + ' start ' + this._track_select_track_start + ' stop ' + this._track_select_track_stop);
+            pos = this.tick_line_from_key(key, this._song.length_ticks, this._song.tracks.length);            
         }
         
         var i;
@@ -648,7 +519,7 @@ class trackwin extends eventwin
         for (i = 0; i < this._song.bars.length; i++)
         {
             bar = this._song.bars[i];
-            if ((tick >= bar.start) && (tick < bar.end))
+            if ((pos.tick >= bar.start) && (pos.tick < bar.end))
             {                
                 if ((key == key_left) && (i > 0))
                 {
@@ -656,78 +527,42 @@ class trackwin extends eventwin
                 }
                 else if (
                          (key == key_right) && 
-                         (this._track_select_x2 < this._track_select_x1) && 
+                         (this._select_x2 < this._select_x1) && 
                          (i < (this._song.bars.length - 1))
                         )
                 {
                     bar = this._song.bars[i + 1];
                 }
                 var xpos = parseInt(this.tick2x(bar.start));
-                var ypos = this._track_y + (track_index * this._track_height);
+                var ypos = this._track_y + (pos.line * this._line_height);
                 
-                if (!this._track_select_element)
+                if (!this._select_element)
                 {
                     var width = parseInt(this.tick2x(bar.ticks));
-                    var height = this._track_height;
+                    var height = this._line_height;
                     
-                    this._track_select_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                    this._track_select_element.id = 'tw_track_select';
-                    this._track_select_element.setAttribute("height", height);
-                    this._track_select_element.setAttribute("width", width);
-                    this._track_select_element.setAttribute("x", xpos);
-                    this._track_select_element.setAttribute("y", ypos);
-                    this._track_select_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.2;stroke-opacity:0.0");
-                    this._tracks_canvas.appendChild(this._track_select_element);
-                    this._track_select_x1 = xpos;
-                    this._track_select_y1 = ypos;
-                    this._track_select_width = width;
-                    this._track_select_height = this._track_height;
-                    this._track_select_x2 = xpos + width;
-                    this._track_select_y2 = ypos + height;
-                    this._track_select_tick_start = bar.start;
-                    this._track_select_tick_stop = bar.end;
-                    this._track_select_track_start = track_index;
-                    this._track_select_track_stop = track_index + 1;
+                    this._select_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    this._select_element.id = 'tw_track_select';
+                    this._select_element.setAttribute("height", height);
+                    this._select_element.setAttribute("width", width);
+                    this._select_element.setAttribute("x", xpos);
+                    this._select_element.setAttribute("y", ypos);
+                    this._select_element.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:0;fill-opacity:0.2;stroke-opacity:0.0");
+                    this._tracks_canvas.appendChild(this._select_element);
+                    this._select_x1 = xpos;
+                    this._select_y1 = ypos;
+                    this._select_width = width;
+                    this._select_height = this._line_height;
+                    this._select_x2 = xpos + width;
+                    this._select_y2 = ypos + height;
+                    this._select_tick_start = bar.start;
+                    this._select_tick_stop = bar.end;
+                    this._select_line_start = pos.line;
+                    this._select_line_stop = pos.line + 1;
                 }
                 else
                 {
-                    if (ypos >= this._track_select_y1)
-                    {
-                        this._track_select_y2 = this.track2y(track_index + 1);
-                        this._track_select_height = this._track_select_y2 - this._track_select_y1;
-                        this._track_select_track_start = this.y2track(this._track_select_y1);
-                        this._track_select_track_stop = track_index + 1;
-                        this._track_select_element.setAttribute("y", this._track_select_y1);
-                        this._track_select_element.setAttribute("height", this._track_select_height);
-                    }
-                    else
-                    {
-                        this._track_select_y2 = this.track2y(track_index);
-                        this._track_select_height = this._track_select_y1 - this._track_select_y2;
-                        this._track_select_track_start = track_index;
-                        this._track_select_track_stop = this.y2track(this._track_select_y1);
-                        this._track_select_element.setAttribute("y", this._track_select_y2);
-                        this._track_select_element.setAttribute("height", this._track_select_height);
-                    }
-                    
-                    if (xpos >= this._track_select_x1)
-                    {
-                        this._track_select_x2 = this.tick2x(bar.end);
-                        this._track_select_width = this._track_select_x2 - this._track_select_x1;
-                        this._track_select_tick_start = this.x2tick(this._track_select_x1);
-                        this._track_select_tick_stop = bar.end;
-                        this._track_select_element.setAttribute("x", this._track_select_x1);
-                        this._track_select_element.setAttribute("width", this._track_select_width); 
-                    }
-                    else
-                    {
-                        this._track_select_x2 = this.tick2x(bar.start);
-                        this._track_select_width = this._track_select_x1 - this._track_select_x2;
-                        this._track_select_tick_start = bar.start;
-                        this._track_select_tick_stop = this.x2tick(this._track_select_x1);
-                        this._track_select_element.setAttribute("x", this._track_select_x2);
-                        this._track_select_element.setAttribute("width", this._track_select_width); 
-                    }
+                    this.change_select_area(xpos, ypos, pos, bar.start, bar.end);                    
                 }
                 break;
             }
@@ -785,7 +620,7 @@ class trackwin extends eventwin
                 var width = parseInt(this.tick2x(bar.ticks));
                 this._bar_highlight_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
                 this._bar_highlight_element.id = "tw_bar_highlight";
-                this._bar_highlight_element.setAttribute("height", this._track_height * this._song.tracks.length);
+                this._bar_highlight_element.setAttribute("height", this._line_height * this._song.tracks.length);
                 this._bar_highlight_element.setAttribute("width", width);
                 this._bar_highlight_element.setAttribute("x", xpos);
                 this._bar_highlight_element.setAttribute("y", this._track_y);
@@ -1020,7 +855,7 @@ class trackwin extends eventwin
         track_width = this.create_track_bars(this._song.bars);
         
         var width_style = "width:" + (track_width + 100).toString() + ";";
-        var height_style = "height:" + ((this._track_height * (this._song.tracks.length + 1)) + this._track_y).toString() + ";";
+        var height_style = "height:" + ((this._line_height * (this._song.tracks.length + 1)) + this._track_y).toString() + ";";
 
         this._tracks_canvas.setAttribute("style", width_style + height_style);
 
@@ -1206,7 +1041,7 @@ class trackwin extends eventwin
     
     create_track_bars(bars)
     {
-        var height = this._track_height * this._song.tracks.length;
+        var height = this._line_height * this._song.tracks.length;
         var bar_index = 0;
         for (const bar of this._song.bars)
         {
@@ -1233,7 +1068,7 @@ class trackwin extends eventwin
         
         for (i = 0; i < this._song.tracks.length + 1; i++)
         {
-            var y = this._track_height * i;
+            var y = this._line_height * i;
             var track_line = document.createElementNS("http://www.w3.org/2000/svg", "line");
             track_line.id = 'trackwin_track_line_' + i.toString();
             track_line.setAttribute("x1", 0);
@@ -1258,7 +1093,7 @@ class trackwin extends eventwin
         
         solo_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         var x1 = this._solo_button_left;
-        var y1 = this._track_y + (track_index * this._track_height) + this._button_padding;
+        var y1 = this._track_y + (track_index * this._line_height) + this._button_padding;
         var x2 = x1 + this._button_width;
         var y2 = y1 + this._button_height;
         var id = "track_solo_" + track_index.toString()
@@ -1288,7 +1123,7 @@ class trackwin extends eventwin
         mute_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         
         var x1 = this._mute_button_left;
-        var y1 = this._track_y + (track_index * this._track_height) + this._button_padding;
+        var y1 = this._track_y + (track_index * this._line_height) + this._button_padding;
         var x2 = x1 + this._button_width;
         var y2 = y1 + this._button_height;
         
@@ -1322,10 +1157,10 @@ class trackwin extends eventwin
         var width = this._info_width;
         
         info_rect.id = 'track_info_' + track_index.toString();
-        info_rect.setAttribute("height", this._track_height);
+        info_rect.setAttribute("height", this._line_height);
         info_rect.setAttribute("width", width);
         info_rect.setAttribute("x", 0);
-        info_rect.setAttribute("y", this._track_y + (track_index * this._track_height));
+        info_rect.setAttribute("y", this._track_y + (track_index * this._line_height));
         info_rect.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
         info_rect.addEventListener('mouseover', this.track_info_mouseoverhandler);
         info_rect.addEventListener('mouseout', this.track_info_mouseouthandler);
@@ -1346,7 +1181,7 @@ class trackwin extends eventwin
         info_name_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         info_name_text.id = 'track_name_' + track_index.toString();
         info_name_text.setAttribute("x", 2);
-        info_name_text.setAttribute("y", this._track_y + (track_index * this._track_height) + 12);
+        info_name_text.setAttribute("y", this._track_y + (track_index * this._line_height) + 12);
         info_name_text.setAttribute("style", "fill:black;font-size:12px;font-weight:bold");
         if (track_index == 0)
         {
@@ -1368,8 +1203,8 @@ class trackwin extends eventwin
         var width = 1;
         var last_painted_tick = -1;
         
-        var y = this._track_y + (track_index * this._track_height) + 4;
-        var height = this._track_height - 8;
+        var y = this._track_y + (track_index * this._line_height) + 4;
+        var height = this._line_height - 8;
 
         if (this._track_event_elements.length <= track_index)
         {
@@ -1416,7 +1251,7 @@ class trackwin extends eventwin
         playhead_line.setAttribute("x1", xpos);
         playhead_line.setAttribute("x2", xpos);
         playhead_line.setAttribute("y1", this._track_y);
-        playhead_line.setAttribute("y2", this._song.tracks.length * this._track_height);
+        playhead_line.setAttribute("y2", this._song.tracks.length * this._line_height);
         playhead_line.setAttribute("style", "stroke:" + this._playhead_color + ";stroke-width:3;");
         this._playhead_element = playhead_line;
         this._tracks_canvas.appendChild(playhead_line);
@@ -1427,17 +1262,17 @@ class trackwin extends eventwin
 
     select_tick_track_area()
     {
-        return {'tick_start' : this._track_select_tick_start,
-                'tick_stop' : this._track_select_tick_stop,
-                'track_start' : this._track_select_track_start,
-                'track_stop' : this._track_select_track_stop
+        return {'tick_start' : this._select_tick_start,
+                'tick_stop' : this._select_tick_stop,
+                'track_start' : this._select_line_start,
+                'track_stop' : this._select_line_stop
                 };
     }
 
 
     handle_cut(tick, do_remove_space)
     {
-        if (!this._track_select_element)
+        if (!this._select_element)
         {
             return;
         }
@@ -1446,13 +1281,13 @@ class trackwin extends eventwin
         this._area_copy_buffer_type = 'cut'
         cut_tracks_area(this._area_copy_buffer, do_remove_space);
 
-        this._track_select_element.remove();
-        this._track_select_element = null;
+        this._select_element.remove();
+        this._select_element = null;
     }
     
     handle_copy(tick)
     {
-        if (!this._track_select_element)
+        if (!this._select_element)
         {
             return;
         }
@@ -1460,8 +1295,8 @@ class trackwin extends eventwin
         this._area_copy_buffer = this.select_tick_track_area();
         this._area_copy_buffer_type = 'copy'
 
-        this._track_select_element.remove();
-        this._track_select_element = null;
+        this._select_element.remove();
+        this._select_element = null;
     }
     
     handle_paste_insert_merge(tick, do_insert, do_merge)
@@ -1471,7 +1306,7 @@ class trackwin extends eventwin
             return;
         }
 
-        if (!this._track_select_element)
+        if (!this._select_element)
         {
             // paste at playhead, same tracks as copy buffer
             paste_tracks_area(
@@ -1491,8 +1326,8 @@ class trackwin extends eventwin
             paste_tracks_area(this._area_copy_buffer, this.select_tick_track_area(), do_insert, do_merge, this._area_copy_buffer_type); // paste copy buffer to selected area, maybe insert space, maybe merge
         }
 
-        this._track_select_element.remove();
-        this._track_select_element = null;
+        this._select_element.remove();
+        this._select_element = null;
     }    
     
     handle_undo(tick)
