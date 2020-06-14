@@ -115,7 +115,6 @@ class trackwin extends eventwin
         
         this._bar_highlight_element = null;
         this._track_highlight_element = null;
-        this._select_element = null;
 
         this._track_event_elements = []
 
@@ -510,7 +509,8 @@ class trackwin extends eventwin
         }
         else
         {
-            pos = this.tick_line_from_key(key, this._song.length_ticks, this._song.tracks.length);            
+            pos = this.tick_line_from_key(key, this._song.bars[this._song.bars.length - 1].start, this._song.tracks.length);
+            output('track width ' + this.x2tick(this._tracks_width) + ' end tick ' + pos.tick + ' last bar end ' + this._song.bars[this._song.bars.length - 1].end);
         }
         
         var i;

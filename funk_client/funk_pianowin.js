@@ -314,7 +314,7 @@ class pianowin extends eventwin
         
         if (button == 0)
         {
-            if (this.select_element)
+            if (this._select_element)
             {
                 if (global_shift_down)
                 {
@@ -419,14 +419,33 @@ class pianowin extends eventwin
         }
         else
         {
-            pos = this.tick_line_from_key(key, this._song.length_ticks, this._num_notes);            
-        }        
+            pos = this.tick_line_from_key(key, this.x2tick(this._tracks_width), this._num_notes);
+            pos.tick = this.tick2snap(pos.tick);
+
+            if ((key == key_left) && (pos.tick > 0))
+            {
+                pos.tick -= this._tick_snap_width;
+            }
+            else if (
+                     (key == key_right) && 
+                     (this._select_x2 < this._select_x1) && 
+                     (pos.tick < (this._song.length_ticks - this._tick_snap_width))
+                    )
+            {
+                pos.tick += this._tick_snap_width;
+            }
+
+            if (pos.tick > this.x2tick(this._tracks_width))
+            {
+                return;
+            }
+        }
 
         var xpos = this.tick2x(pos.tick);
         var grid_width = parseInt(this.tick2x(this._tick_snap_width));
         var ypos = this._track_y + (pos.line * this._line_height);
         var note = this.line2note(pos.line);
-                
+
         if (!this._select_element)
         {
             var width = grid_width;
@@ -1198,7 +1217,7 @@ class pianowin extends eventwin
 
     select_tick_notes_area()
     {
-        return {'tick_start' : this.select_tick_start,
+        return {'tick_start' : this._select_tick_start,
                 'tick_stop' : this._select_tick_stop,
                 'note_start' : this.line2note(this._select_line_stop) + 1,
                 'note_stop' : this.line2note(this._select_line_start) + 1
@@ -1250,7 +1269,7 @@ class pianowin extends eventwin
                                  'note_start' : this._notes_copy_buffer['note_start'],
                                  'note_stop' : this._notes_copy_buffer['note_stop']
                                  },
-                         this._area_copy_buffer_type,
+                         this._notes_copy_buffer_type,
                          this._track_index
                         ); // paste copy buffer at playhead
         

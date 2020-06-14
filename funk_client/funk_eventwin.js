@@ -32,6 +32,7 @@ class eventwin
         this._playhead_xpos = 0;
 
         this._area_copy_buffer = null;
+        this._select_element = null;
         
         this._menu_frame = menu_frame;
         this._rulers_frame = rulers_frame;
