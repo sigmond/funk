@@ -520,6 +520,10 @@ function handle_editor(msg)
     {
         handle_editor_tracks_changed(msg);
     }
+    else if (msg['command'] == 'tracks_selected')
+    {
+        handle_editor_tracks_selected(msg);
+    }
     else
     {
         output("Unknown editor command '" + msg['command'] + "'");
@@ -562,6 +566,14 @@ function handle_editor_tracks_changed(msg)
     }
     trackwin_object.update_tracks(track_indexes);
     pianowin_object.update_tracks(track_indexes);
+}
+
+function handle_editor_events_selected(msg)
+{
+    output("Events selected: " + msg['events'].length);
+
+    trackwin_object.select_events(msg['track_index'], msg['events']);
+    pianowin_object.select_events(msg['track_index'], msg['events']);
 }
 
 function base64_decode(b64) {
@@ -667,6 +679,19 @@ function cut_notes_area(area, track_index)
     var msg;    
 
     cmd = { "command" : "cut_notes_area", "track_index" : track_index, "area" : area };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function select_notes_area(area, track_index)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { "command" : "select_notes_area", "track_index" : track_index, "area" : area };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);

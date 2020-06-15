@@ -165,6 +165,9 @@ class funk_controller():
             elif msg['command'] == 'tracks_changed':
                 # someone (e.g. the editor) wants to show changed tracks
                 self.handle_tracks_changed(msg)
+            elif msg['command'] == 'tracks_selected':
+                # someone (e.g. the editor) wants to show selected tracks (events)
+                self.handle_tracks_selected(msg)
             elif msg['command'] == 'cut_tracks_area':
                 # someone (e.g. the client) wants to cut an area in a midi file
                 self.handle_cut_tracks_area(msg)
@@ -322,6 +325,9 @@ class funk_controller():
     def handle_tracks_changed(self, msg):
         self.com.send_client_ctrl_msg('editor', msg)
     
+    def handle_events_selected(self, msg):
+        self.com.send_client_ctrl_msg('editor', msg)
+    
     def handle_record(self, msg):
         obj = {'command': 'record',
                'start' : msg['start']
@@ -379,6 +385,15 @@ class funk_controller():
     def handle_cut_notes_area(self, msg):
         print('handle_cut_notes_area')
         obj = {'command': 'cut_notes_area',
+               'track_index' : msg['track_index'],
+               'area' : msg['area']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_select_notes_area(self, msg):
+        print('handle_select_notes_area')
+        obj = {'command': 'select_notes_area',
                'track_index' : msg['track_index'],
                'area' : msg['area']
                }

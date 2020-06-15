@@ -34,6 +34,8 @@ class funk_midievent():
         self.undo_notes_edit_stack = []
         self.redo_notes_edit_stack = []
         self.cut_notes_buffer = []
+        self.event_id = 1
+        self.events = {}
         pass
 
     def tracks2events(self, tracks):
@@ -211,6 +213,9 @@ class funk_midievent():
                 event['length'] = 0
 #            print('event ' + repr(event))
             if event != None:
+                event['id'] = self.event_id
+                self.events[self.event_id] = event
+                self.event_id += 1
                 events.append(event)
 
         return abstime, sorted(events, key = lambda i: i['start'])
@@ -384,6 +389,11 @@ class funk_midievent():
     def cut_notes_area(self, track_index, event_file, area):
         print('cut_notes_area')
         return []
+
+    def select_notes_area(self, track_index, event_file, area):
+        print('select_notes_area')
+        selcted_events = []
+        return selected_events
 
     def paste_notes_area(self, track_index, event_file, from_area, to_area, cut_or_copy):
         print('paste_notes_area')

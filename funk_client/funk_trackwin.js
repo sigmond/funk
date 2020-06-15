@@ -143,6 +143,10 @@ class trackwin extends eventwin
         this.create_track_info(track_index, track, this._song.tracknames[track_index]);
     }
 
+    select_events(track_index, events)
+    {
+    }
+
     go_to_start()
     {
         if (!this._playing)

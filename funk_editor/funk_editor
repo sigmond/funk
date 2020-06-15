@@ -125,6 +125,8 @@ class funk_editor():
                 self.handle_redo_last_tracks_edit(msg)
             elif msg['command'] == 'cut_notes_area':
                 self.handle_cut_notes_area(msg)
+            elif msg['command'] == 'select_notes_area':
+                self.handle_select_notes_area(msg)
             elif msg['command'] == 'paste_notes_area':
                 self.handle_paste_notes_area(msg)
             elif msg['command'] == 'undo_last_notes_edit':
@@ -226,6 +228,14 @@ class funk_editor():
             self.event_tracks_changed_since_load = affected_tracks
             self.load_file_to_player()
 
+    def handle_select_notes_area(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        area = msg['area']
+        selected_events = self.midievent.select_notes_area(self.event_file, track_index, area)
+        if selected_events:
+            self.client_events_selected(track_index, selected_events)
+
     def handle_paste_notes_area(self, msg):
         print('editor got ' + repr(msg))
         track_index = msg['track_index']
@@ -279,10 +289,20 @@ class funk_editor():
                }
         self.send_ctrl_msg('controller', obj)
 
+    def client_events_selected(self, track_index, events):
+        obj = {'command' : 'events_selected',
+               'track_index' : track_index,
+               'events' : self.encode_events_for_client(events)
+               }
+        self.send_ctrl_msg('controller', obj)
+
     def encode_file_for_client(self):
         return self.event_file
 
     def encode_tracks_for_client(self, obj):
+        return obj
+
+    def encode_events_for_client(self, obj):
         return obj
 
 def main():

@@ -140,6 +140,9 @@ class pianowin extends eventwin
         this.fill_note_info();
     }
     
+    select_events(track_index, events)
+    {
+    }
 
     tracks_clickhandler(event)
     {
@@ -1009,7 +1012,7 @@ class pianowin extends eventwin
             var y = this._track_y + (this.note2line(note) * this._line_height) + 3;
             var x = this.tick2x(event.start);
             var event_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            event_rect.id = 'pw_event_' + track_index.toString() + '_' + note.toString() + '_' + event.start.toString();
+            event_rect.id = 'pwe_' + event.id.toString();
             event_rect.setAttribute("x", x);
             event_rect.setAttribute("y", y);
             event_rect.setAttribute("width", width);
@@ -1249,6 +1252,7 @@ class pianowin extends eventwin
 
         this._notes_copy_buffer = this.select_tick_notes_area();
         this._notes_copy_buffer_type = 'copy'
+        select_notes_area(this._notes_copy_buffer, this._track_index);
 
         this._select_element.remove();
         this._select_element = null;
