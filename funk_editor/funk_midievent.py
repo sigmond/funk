@@ -62,7 +62,7 @@ class funk_midievent():
 
         return event_track, last_track_tick
 
-    def copy_event(event):
+    def copy_event(self, event):
         event_copy = event.copy()
         event_copy['id'] = self.event_id
         self.events[self.event_id] = event_copy
@@ -149,6 +149,7 @@ class funk_midievent():
             del msg['start']
             del msg['length']
             del msg['end']
+            del msg['id']
             msg_off = msg.copy()
             msg_off['time'] = event['end']
             msg_off['velocity'] = 0
@@ -158,6 +159,7 @@ class funk_midievent():
             del msg['start']
             del msg['end']
             del msg['length']
+            del msg['id']
             return [msg]
 
     def msgs2events(self, msgs):
