@@ -111,6 +111,8 @@ class pianowin extends eventwin
         this._key_highlight_element = null;
         this._key_highlight_type = null;
 
+        this._selected_notes = [];
+
         this._track_index = 1;
 
         this.create_track();
@@ -142,6 +144,24 @@ class pianowin extends eventwin
     
     select_events(track_index, events)
     {
+        for (const note of this._selected_notes)
+        {
+            this.event_highlight(note.element, false);
+        }
+
+        this._selected_notes = [];
+        
+        for (const event of events)
+        {
+            var element = document.getElementById('pwe_' + event.id);
+            this.event_highlight(element, true);
+            this._selected_notes.push({'id': event.id, 'element' : element});
+        }
+    }
+
+    event_highlight(element, on)
+    {
+        element.style.strokeWidth = on ? 3 : 1;
     }
 
     tracks_clickhandler(event)
@@ -340,6 +360,7 @@ class pianowin extends eventwin
         if (button == 0)
         {
             this._mouse_button_1_down = false;
+            this.handle_select_area();
         }
 
         this._note_mouse_button_down = -1;
@@ -477,6 +498,11 @@ class pianowin extends eventwin
         else
         {
             this.change_select_area(xpos, ypos, pos, pos.tick, pos.tick + this._tick_snap_width);
+        }
+
+        if (key != undefined)
+        {
+            this.handle_select_area();
         }
     }
     
@@ -1228,7 +1254,7 @@ class pianowin extends eventwin
     }
 
 
-    handle_cut(tick, do_remove_space)
+    handle_select_area()
     {
         if (!this._select_element)
         {
@@ -1236,49 +1262,65 @@ class pianowin extends eventwin
         }
 
         this._notes_copy_buffer = this.select_tick_notes_area();
-        this._notes_copy_buffer_type = 'cut';
-        cut_notes_area(this._notes_copy_buffer, this._track_index);
+        this._notes_copy_buffer_type = 'select'
+        select_notes_area(this._notes_copy_buffer, this._track_index);
+    }
+    
+    handle_cut(tick, do_remove_space)
+    {
+        if (!this._selected_notes)
+        {
+            return;
+        }
 
-        this._select_element.remove();
-        this._select_element = null;
+        this._copied_notes = this._selected_notes;
+        this._notes_copy_buffer_type = 'cut';
+        cut_notes(this._selected_notes, this._track_index);
+
+        if (this._select_element)
+        {
+            this._select_element.remove();
+            this._select_element = null;
+        }
     }
     
     handle_copy(tick)
     {
-        if (!this._select_element)
+        if (!this._selected_notes)
         {
             return;
         }
 
-        this._notes_copy_buffer = this.select_tick_notes_area();
-        this._notes_copy_buffer_type = 'copy'
-        select_notes_area(this._notes_copy_buffer, this._track_index);
+        this._copied_notes = this._selected_notes;
+        this._notes_copy_buffer_type = 'copy';
 
-        this._select_element.remove();
-        this._select_element = null;
+        if (this._select_element)
+        {
+            this._select_element.remove();
+            this._select_element = null;
+        }
     }
     
     handle_paste_insert_merge(tick, do_insert, do_merge)
     {
-        if (!this._notes_copy_buffer)
+        if (!this._selected_notes)
         {
             return;
         }
 
         // paste at playhead
-        paste_notes_area(
-                         this._notes_copy_buffer, 
-                         {'tick_start' : this._playhead_ticks,
-                                 'tick_stop' : this._playhead_ticks + (this._notes_copy_buffer['tick_stop'] - this._notes_copy_buffer['tick_start']),
-                                 'note_start' : this._notes_copy_buffer['note_start'],
-                                 'note_stop' : this._notes_copy_buffer['note_stop']
-                                 },
-                         this._notes_copy_buffer_type,
-                         this._track_index
-                        ); // paste copy buffer at playhead
+        paste_notes(
+                    this._copied_notes,
+                    this._playhead_ticks,
+                    this._notes_copy_buffer_type,
+                    this._track_index
+                   ); // paste copy buffer at playhead
         
-        this._select_element.remove();
-        this._select_element = null;
+        if (this._select_element)
+        {
+            this._select_element.remove();
+            this._select_element = null;
+        }
     }    
     
     handle_undo(tick)

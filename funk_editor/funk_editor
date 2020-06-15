@@ -123,12 +123,12 @@ class funk_editor():
                 self.handle_undo_last_tracks_edit(msg)
             elif msg['command'] == 'redo_last_tracks_edit':
                 self.handle_redo_last_tracks_edit(msg)
-            elif msg['command'] == 'cut_notes_area':
-                self.handle_cut_notes_area(msg)
             elif msg['command'] == 'select_notes_area':
                 self.handle_select_notes_area(msg)
-            elif msg['command'] == 'paste_notes_area':
-                self.handle_paste_notes_area(msg)
+            elif msg['command'] == 'cut_notes':
+                self.handle_cut_notes(msg)
+            elif msg['command'] == 'paste_notes':
+                self.handle_paste_notes(msg)
             elif msg['command'] == 'undo_last_notes_edit':
                 self.handle_undo_last_notes_edit(msg)
             elif msg['command'] == 'redo_last_notes_edit':
@@ -218,31 +218,31 @@ class funk_editor():
             self.load_file_to_player()
 
 
-    def handle_cut_notes_area(self, msg):
-        print('editor got ' + repr(msg))
-        track_index = msg['track_index']
-        area = msg['area']
-        affected_tracks = self.midievent.cut_notes_area(self.event_file, track_index, area)
-        if affected_tracks:
-            self.client_tracks_changed(affected_tracks)
-            self.event_tracks_changed_since_load = affected_tracks
-            self.load_file_to_player()
-
     def handle_select_notes_area(self, msg):
         print('editor got ' + repr(msg))
         track_index = msg['track_index']
         area = msg['area']
         selected_events = self.midievent.select_notes_area(self.event_file, track_index, area)
-        if selected_events:
-            self.client_events_selected(track_index, selected_events)
+        print('selected_events ' + repr(selected_events))
+        self.client_events_selected(track_index, selected_events)
 
-    def handle_paste_notes_area(self, msg):
+    def handle_cut_notes(self, msg):
         print('editor got ' + repr(msg))
         track_index = msg['track_index']
-        from_area = msg['from']
-        to_area = msg['to']
+        notes = msg['notes']
+        affected_tracks = self.midievent.cut_notes(self.event_file, track_index, notes)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
+    def handle_paste_notes(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        tick = msg['tick']
         cut_or_copy = msg['cut_or_copy']
-        affected_tracks = self.midievent.paste_notes_area(self.event_file, track_index, from_area, to_area, cut_or_copy)
+        notes = msg['notes']
+        affected_tracks = self.midievent.paste_notes(self.event_file, track_index, tick, cut_or_copy, notes)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks

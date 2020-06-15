@@ -116,7 +116,7 @@ class trackwin extends eventwin
         this._bar_highlight_element = null;
         this._track_highlight_element = null;
 
-        this._track_event_elements = []
+        this._track_event_elements = [];
 
         this.create_tracks();
         this.create_rulers();
@@ -141,10 +141,6 @@ class trackwin extends eventwin
         var track = this._song.tracks[track_index];
         this.fill_track_events(track_index, track);
         this.create_track_info(track_index, track, this._song.tracknames[track_index]);
-    }
-
-    select_events(track_index, events)
-    {
     }
 
     go_to_start()
@@ -1233,7 +1229,7 @@ class trackwin extends eventwin
                     width = 1;
                 }
                 var event_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                event_rect.id = 'tw_event_' + track_index.toString() + '_' + event.start.toString();
+                event_rect.id = 'twe_' + event.id.toString();
                 event_rect.setAttribute("x", xpos);
                 event_rect.setAttribute("y", y);
                 event_rect.setAttribute("width", width);

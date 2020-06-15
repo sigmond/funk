@@ -520,9 +520,9 @@ function handle_editor(msg)
     {
         handle_editor_tracks_changed(msg);
     }
-    else if (msg['command'] == 'tracks_selected')
+    else if (msg['command'] == 'events_selected')
     {
-        handle_editor_tracks_selected(msg);
+        handle_editor_events_selected(msg);
     }
     else
     {
@@ -570,9 +570,8 @@ function handle_editor_tracks_changed(msg)
 
 function handle_editor_events_selected(msg)
 {
-    output("Events selected: " + msg['events'].length);
+    output("Events selected: " + msg['events'].length + " track index: " + msg['track_index']);
 
-    trackwin_object.select_events(msg['track_index'], msg['events']);
     pianowin_object.select_events(msg['track_index'], msg['events']);
 }
 
@@ -673,19 +672,6 @@ function redo_last_tracks_edit()
 
 
 
-function cut_notes_area(area, track_index)
-{
-    var cmd;
-    var msg;    
-
-    cmd = { "command" : "cut_notes_area", "track_index" : track_index, "area" : area };
-    msg = { "topic" : "controller", "msg" : cmd };
-    
-    json_message = JSON.stringify(msg);
-
-    ws_ctrl.send(json_message);
-}
-
 function select_notes_area(area, track_index)
 {
     var cmd;
@@ -699,16 +685,29 @@ function select_notes_area(area, track_index)
     ws_ctrl.send(json_message);
 }
 
-function paste_notes_area(from, to, cut_or_copy, track_index)
+function cut_notes(notes, track_index)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { "command" : "cut_notes", "track_index" : track_index, "notes" : notes };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function paste_notes(notes, tick, cut_or_copy, track_index)
 {
     var cmd;
     var msg;    
 
     cmd = { 
-        "command" : "paste_notes_area",
-        "track_index" : track_index, 
-        "from" : from, 
-        "to" : to,
+        "command" : "paste_notes",
+        "track_index" : track_index,
+        "notes" : notes,
+        "tick" : tick,
         "cut_or_copy" : cut_or_copy
     };
     msg = { "topic" : "controller", "msg" : cmd };

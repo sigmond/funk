@@ -62,9 +62,18 @@ class funk_midievent():
 
         return event_track, last_track_tick
 
+    def copy_event(event):
+        event_copy = event.copy()
+        event_copy['id'] = self.event_id
+        self.events[self.event_id] = event_copy
+        self.event_id += 1
+        return event_copy
+
     def copy_event_track(self, event_track):
         track_copy = event_track.copy()
-        track_copy['events'] = event_track['events'][:]
+        track_copy['events'] = []
+        for event in event_track['events']:
+            track_copy['events'].append(self.copy_event(event))
         return track_copy
 
     def file2events(self, midi_obj, filename):
@@ -281,7 +290,7 @@ class funk_midievent():
             for cut_events in self.cut_tracks_buffer:
                 events_copied = []
                 for event in cut_events:
-                    events_copied.append(event.copy())
+                    events_copied.append(self.copy_event(event))
                 paste_tracks.append(events_copied)
         else:
             for from_track_index in range(from_area['track_start'], from_area['track_stop']):
@@ -289,7 +298,7 @@ class funk_midievent():
                 events_copied = []
                 for event in from_track['events']:
                     if (event['start'] >= from_area['tick_start']) and (event['start'] < from_area['tick_stop']):
-                        events_copied.append(event.copy())
+                        events_copied.append(self.copy_event(event))
                     if event['start'] >= from_area['tick_stop']:
                         break
                 paste_tracks.append(events_copied)
@@ -305,7 +314,7 @@ class funk_midievent():
                     for event in source_tracks[index]:
                         dest_start = event['start'] + forward_ticks
                         if dest_start < (from_area['tick_start'] + to_ticks_length):
-                            rep_event = event.copy()
+                            rep_event = self.copy_event(event)
                             rep_event['start'] = dest_start
                             rep_event['end'] += forward_ticks
                             paste_tracks[index].append(rep_event)
@@ -386,17 +395,23 @@ class funk_midievent():
         return redo_tracks
 
     
-    def cut_notes_area(self, track_index, event_file, area):
-        print('cut_notes_area')
-        return []
-
-    def select_notes_area(self, track_index, event_file, area):
+    def select_notes_area(self, event_file, track_index, area):
         print('select_notes_area')
-        selcted_events = []
+        selected_events = []
+        event_track = event_file['tracks'][track_index]
+        for event in event_track['events']:
+            if (event['start'] >= area['tick_start']) and (event['start'] < area['tick_stop']) and (event['note'] >= area['note_start']) and (event['note'] < area['note_stop']):
+                selected_events.append(event)
+            if event['start'] >= area['tick_stop']:
+                break
         return selected_events
 
-    def paste_notes_area(self, track_index, event_file, from_area, to_area, cut_or_copy):
-        print('paste_notes_area')
+    def cut_notes(self, track_index, event_file, notes):
+        print('cut_notes')
+        return []
+
+    def paste_notes(self, track_index, event_file, to_tick, cut_or_copy, notes):
+        print('paste_notes')
         return []
 
     def undo_notes_edit(self, event_file):

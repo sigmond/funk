@@ -165,9 +165,9 @@ class funk_controller():
             elif msg['command'] == 'tracks_changed':
                 # someone (e.g. the editor) wants to show changed tracks
                 self.handle_tracks_changed(msg)
-            elif msg['command'] == 'tracks_selected':
-                # someone (e.g. the editor) wants to show selected tracks (events)
-                self.handle_tracks_selected(msg)
+            elif msg['command'] == 'events_selected':
+                # someone (e.g. the editor) wants to show selected events
+                self.handle_events_selected(msg)
             elif msg['command'] == 'cut_tracks_area':
                 # someone (e.g. the client) wants to cut an area in a midi file
                 self.handle_cut_tracks_area(msg)
@@ -180,12 +180,15 @@ class funk_controller():
             elif msg['command'] == 'redo_last_tracks_edit':
                 # someone (e.g. the client) wants to redo last undone edit
                 self.handle_redo_last_tracks_edit(msg)
-            elif msg['command'] == 'cut_notes_area':
-                # someone (e.g. the client) wants to cut an area in a midi track
-                self.handle_cut_notes_area(msg)
-            elif msg['command'] == 'paste_notes_area':
-                # someone (e.g. the client) wants to paste an area into a midi track
-                self.handle_paste_notes_area(msg)
+            elif msg['command'] == 'select_notes_area':
+                # someone (e.g. the client) wants to select notes area in a midi track
+                self.handle_select_notes_area(msg)
+            elif msg['command'] == 'cut_notes':
+                # someone (e.g. the client) wants to cut notes in a midi track
+                self.handle_cut_notes(msg)
+            elif msg['command'] == 'paste_notes':
+                # someone (e.g. the client) wants to paste notes into a midi track
+                self.handle_paste_notes(msg)
             elif msg['command'] == 'undo_last_notes_edit':
                 # someone (e.g. the client) wants to undo last notes edit
                 self.handle_undo_last_notes_edit(msg)
@@ -382,15 +385,6 @@ class funk_controller():
         self.com.send_bus_msg('editor', obj)
         
     
-    def handle_cut_notes_area(self, msg):
-        print('handle_cut_notes_area')
-        obj = {'command': 'cut_notes_area',
-               'track_index' : msg['track_index'],
-               'area' : msg['area']
-               }
-        print('Calling send_bus_msg')
-        self.com.send_bus_msg('editor', obj)
-        
     def handle_select_notes_area(self, msg):
         print('handle_select_notes_area')
         obj = {'command': 'select_notes_area',
@@ -400,13 +394,22 @@ class funk_controller():
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
         
-    def handle_paste_notes_area(self, msg):
-        print('handle_paste_notes_area')
-        obj = {'command': 'paste_notes_area',
+    def handle_cut_notes(self, msg):
+        print('handle_cut_notes')
+        obj = {'command': 'cut_notes',
                'track_index' : msg['track_index'],
-               'from' : msg['from'],
-               'to' : msg['to'],
-               'cut_or_copy' : msg['cut_or_copy']
+               'notes' : msg['notes']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_paste_notes(self, msg):
+        print('handle_paste_notes')
+        obj = {'command': 'paste_notes',
+               'track_index' : msg['track_index'],
+               'tick' : msg['tick'],
+               'cut_or_copy' : msg['cut_or_copy'],
+               'notes' : msg['notes']
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
