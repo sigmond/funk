@@ -117,6 +117,7 @@ class trackwin extends eventwin
         this._track_highlight_element = null;
 
         this._track_event_elements = [];
+        this._selected_notes = [];
 
         this.create_tracks();
         this.create_rulers();
@@ -142,6 +143,8 @@ class trackwin extends eventwin
         this.fill_track_events(track_index, track);
         this.create_track_info(track_index, track, this._song.tracknames[track_index]);
     }
+
+
 
     go_to_start()
     {
@@ -1217,6 +1220,7 @@ class trackwin extends eventwin
         {
             event_element.remove();
         }
+        
 
         for (const event of track.events)
         {

@@ -105,7 +105,7 @@ class pianowin extends eventwin
         this._rulers_canvas.addEventListener('mousemove', this.rulers_mousemovehandler);
 
 
-        this._track_event_elements = [];
+        this._track_event_elements = {};
         
         this._xgrid_highlight_element = null;
         this._key_highlight_element = null;
@@ -153,7 +153,7 @@ class pianowin extends eventwin
         
         for (const event of events)
         {
-            var element = document.getElementById('pwe_' + event.id);
+            var element = this._track_event_elements[event.id];
             this.event_highlight(element, true);
             this._selected_notes.push({'id': event.id, 'element' : element});
         }
@@ -911,12 +911,11 @@ class pianowin extends eventwin
     
     remove_track_events()
     {
-        var event;
-        
-        while ((event = this._track_event_elements.pop()))
+        for (var id in this._track_event_elements)
         {
-            event.remove();
+            this._track_event_elements[id].remove();
         }
+        this._track_event_elements = {};
     }
     
     create_track()
@@ -1045,7 +1044,7 @@ class pianowin extends eventwin
             event_rect.setAttribute("height", height);
             event_rect.setAttribute("style", "fill:" + this._note_color + ";stroke:black;stroke-width:1;fill-opacity:" + opacity + ";stroke-opacity:1.0");
             this._tracks_canvas.appendChild(event_rect);
-            this._track_event_elements.push(event_rect);
+            this._track_event_elements[event.id] = event_rect;
         }
         
         return parseInt((highest_note + lowest_note) / 2);

@@ -248,17 +248,17 @@ class funk_editor():
             self.event_tracks_changed_since_load = affected_tracks
             self.load_file_to_player()
 
-    def handle_undo_last_tracks_edit(self, msg):
+    def handle_undo_last_notes_edit(self, msg):
         print('editor got ' + repr(msg))
-        affected_tracks = self.midievent.undo_tracks_edit(self.event_file)
+        affected_tracks = self.midievent.undo_notes_edit(self.event_file)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks
             self.load_file_to_player()
 
-    def handle_redo_last_tracks_edit(self, msg):
+    def handle_redo_last_notes_edit(self, msg):
         print('editor got ' + repr(msg))
-        affected_tracks = self.midievent.redo_tracks_edit(self.event_file)
+        affected_tracks = self.midievent.redo_notes_edit(self.event_file)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks
