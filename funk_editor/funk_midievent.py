@@ -34,6 +34,7 @@ class funk_midievent():
         self.undo_notes_edit_stack = []
         self.redo_notes_edit_stack = []
         self.cut_notes_buffer = []
+        self.cut_notes_events = {}
         self.event_id = 1
         self.events = {}
         pass
@@ -403,23 +404,79 @@ class funk_midievent():
         event_track = event_file['tracks'][track_index]
         for event in event_track['events']:
             if (event['start'] >= area['tick_start']) and (event['start'] < area['tick_stop']) and (event['note'] >= area['note_start']) and (event['note'] < area['note_stop']):
-                selected_events.append(event)
+                selected_events.append(event['id'])
             if event['start'] >= area['tick_stop']:
                 break
         return selected_events
 
-    def cut_notes(self, track_index, event_file, notes):
+    def cut_notes(self, event_file, track_index, notes):
         print('cut_notes')
-        return []
+        affected_tracks = []
+        # loop through affected tracks
+        original_tracks = []
 
-    def paste_notes(self, track_index, event_file, to_tick, cut_or_copy, notes):
+        print('cutting events from track ' + repr(track_index))
+        event_track = event_file['tracks'][track_index]
+        original_tracks.append(self.copy_event_track(event_track))
+            
+        changed_events = []
+        self.cut_notes_events = {}
+        
+        # loop through events in event-track, remove events with same id as notes
+        for event in event_track['events']:
+            if event['id'] in notes:
+                self.cut_notes_events[event['id']] = event
+                del self.events[event['id']]
+            else:
+                changed_events.append(event)                
+        event_file['tracks'][track_index]['events'] = changed_events
+        affected_tracks.append(event_file['tracks'][track_index])
+        
+        self.undo_tracks_edit_stack.insert(0, original_tracks)
+        return affected_tracks
+
+    def paste_notes(self, event_file, track_index, to_tick, cut_or_copy, notes):
         print('paste_notes')
-        return []
+        affected_tracks = []
+        # loop through affected tracks
+        original_tracks = []
+
+        print('pasting events to track ' + repr(track_index))
+        event_track = event_file['tracks'][track_index]
+        original_tracks.append(self.copy_event_track(event_track))
+
+        # move in time
+        # find events
+        note_events = []
+        for id in notes:
+            if cut_or_copy == 'copy':
+                note_events.append(self.copy_event(self.events[id]))
+            else:
+                note_events.append(self.copy_event(self.cut_notes_events[id]))
+
+        sorted_events = sorted(note_events, key = lambda i: i['start'])
+        tick_shift = to_tick - sorted_events[0]['start']
+        events_to_paste = []
+        for event in sorted_events:
+            event['start'] += tick_shift
+            event['end'] += tick_shift
+            event['id'] = self.event_id
+            self.events[self.event_id] = event
+            self.event_id += 1
+            events_to_paste.append(event)
+            
+        changed_events = event_file['tracks'][track_index]['events']
+        changed_events.extend(events_to_paste)        
+        event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])
+        affected_tracks.append(event_file['tracks'][track_index])
+        
+        self.undo_tracks_edit_stack.insert(0, original_tracks)
+        return affected_tracks
 
     def undo_notes_edit(self, event_file):
         print('undo_notes_edit')
-        return []
+        return self.undo_tracks_edit(event_file)
 
     def redo_notes_edit(self, event_file):
         print('redo_notes_edit')
-        return []
+        return self.redo_tracks_edit(event_file)

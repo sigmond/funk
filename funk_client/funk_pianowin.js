@@ -45,6 +45,7 @@ class pianowin extends eventwin
         this._white_key_highlight_color = "grey";
         this._black_key_highlight_color = "grey"; 
         this._note_color = "red";  
+        this._note_highlight_color = "yellow";  
         this._playhead_color = "darkred";
         this._menu_bg_color = "black";
         
@@ -142,7 +143,7 @@ class pianowin extends eventwin
         this.fill_note_info();
     }
     
-    select_events(track_index, events)
+    select_events(track_index, event_ids)
     {
         for (const note of this._selected_notes)
         {
@@ -151,17 +152,17 @@ class pianowin extends eventwin
 
         this._selected_notes = [];
         
-        for (const event of events)
+        for (const id of event_ids)
         {
-            var element = this._track_event_elements[event.id];
+            var element = this._track_event_elements[id];
             this.event_highlight(element, true);
-            this._selected_notes.push({'id': event.id, 'element' : element});
+            this._selected_notes.push({'id': id, 'element' : element});
         }
     }
 
     event_highlight(element, on)
     {
-        element.style.strokeWidth = on ? 3 : 1;
+        element.style.fill = on ? this._note_highlight_color : this._note_color;
     }
 
     tracks_clickhandler(event)
@@ -1272,9 +1273,13 @@ class pianowin extends eventwin
             return;
         }
 
-        this._copied_notes = this._selected_notes;
+        this._copied_notes = [];
+        for (const note of this._selected_notes)
+        {
+            this._copied_notes.push(note.id);
+        }
         this._notes_copy_buffer_type = 'cut';
-        cut_notes(this._selected_notes, this._track_index);
+        cut_notes(this._copied_notes, this._track_index);
 
         if (this._select_element)
         {
@@ -1290,7 +1295,11 @@ class pianowin extends eventwin
             return;
         }
 
-        this._copied_notes = this._selected_notes;
+        this._copied_notes = [];
+        for (const note of this._selected_notes)
+        {
+            this._copied_notes.push(note.id);
+        }
         this._notes_copy_buffer_type = 'copy';
 
         if (this._select_element)
