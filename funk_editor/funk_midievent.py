@@ -398,15 +398,17 @@ class funk_midievent():
         return redo_tracks
 
     
-    def select_notes_area(self, event_file, track_index, area):
+    def select_notes_area(self, event_file, track_index, area, notes):
         print('select_notes_area')
         selected_events = []
         event_track = event_file['tracks'][track_index]
-        for event in event_track['events']:
-            if (event['start'] >= area['tick_start']) and (event['start'] < area['tick_stop']) and (event['note'] >= area['note_start']) and (event['note'] < area['note_stop']):
-                selected_events.append(event['id'])
-            if event['start'] >= area['tick_stop']:
-                break
+        if area:
+            for event in event_track['events']:
+                if (event['start'] >= area['tick_start']) and (event['start'] < area['tick_stop']) and (event['note'] >= area['note_start']) and (event['note'] < area['note_stop']):
+                    selected_events.append(event['id'])
+                if event['start'] >= area['tick_stop']:
+                    break
+        selected_events.extend(notes)
         return selected_events
 
     def cut_notes(self, event_file, track_index, notes):

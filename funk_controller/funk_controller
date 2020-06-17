@@ -389,7 +389,8 @@ class funk_controller():
         print('handle_select_notes_area')
         obj = {'command': 'select_notes_area',
                'track_index' : msg['track_index'],
-               'area' : msg['area']
+               'area' : msg['area'],
+               'notes' : msg['notes']
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)

@@ -222,7 +222,8 @@ class funk_editor():
         print('editor got ' + repr(msg))
         track_index = msg['track_index']
         area = msg['area']
-        selected_events = self.midievent.select_notes_area(self.event_file, track_index, area)
+        notes = msg['notes']
+        selected_events = self.midievent.select_notes_area(self.event_file, track_index, area, notes)
         print('selected_events ' + repr(selected_events))
         self.client_events_selected(track_index, selected_events)
 

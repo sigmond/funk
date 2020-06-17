@@ -34,6 +34,7 @@ class pianowin extends eventwin
 
         this._mouse_button_1_down = false;
         this._note_mouse_button_down = -1;
+        this._event_mouse_button_down = -1;
 
         this._mouse_at_tick = 0;
         this._mouse_at_x = 0;
@@ -113,6 +114,7 @@ class pianowin extends eventwin
         this._key_highlight_type = null;
 
         this._selected_notes = [];
+        this._selected_events = [];
 
         this._track_index = 1;
 
@@ -338,7 +340,7 @@ class pianowin extends eventwin
         
         if (button == 0)
         {
-            if (this._select_element)
+            if (this._select_element || this._selected_events)
             {
                 if (global_shift_down)
                 {
@@ -346,8 +348,16 @@ class pianowin extends eventwin
                 }
                 else
                 {
-                    this._select_element.remove();
-                    this._select_element = null;
+                    if (!global_ctrl_down)
+                    {
+                        if (this._select_element)
+                        {
+                            this._select_element.remove();
+                            this._select_element = null;
+                        }
+                        this._selected_events = [];
+                        this.handle_select_area();
+                    }
                 }
             }
             this._mouse_button_1_down = true;
@@ -750,6 +760,87 @@ class pianowin extends eventwin
     }
 
 
+    event_mousedownhandler(event)
+    {
+        let svg = event.currentTarget;
+        let id = parseInt(svg.id.slice(svg.id.lastIndexOf('_') + 1));
+
+        pianowin_object._event_mouse_button_down = event.button;
+        pianowin_object.handle_event_down(svg, id);
+    }
+
+    event_mouseuphandler(event)
+    {
+        let svg = event.currentTarget;
+        let id = parseInt(svg.id.slice(svg.id.lastIndexOf('_') + 1));
+        pianowin_object._event_mouse_button_down = -1;
+        pianowin_object.handle_event_up(svg, id);
+    }
+
+    event_mouseoverhandler(event)
+    {
+        let svg = event.currentTarget;
+        let id = parseInt(svg.id.slice(svg.id.lastIndexOf('_') + 1));
+        pianowin_object.handle_event_over(svg, id);
+    }
+
+    event_mouseouthandler(event)
+    {
+        let svg = event.currentTarget;
+        let id = parseInt(svg.id.slice(svg.id.lastIndexOf('_') + 1));
+        pianowin_object.handle_event_out(svg, id);
+    }
+
+
+    handle_event_down(svg, id)
+    {
+        if (this._event_mouse_button_down == 0)
+        {
+            if (global_ctrl_down)
+            {
+                if (this._selected_events.includes(id))
+                {
+                    const index = this._selected_events.indexOf(id);
+                    if (index > -1)
+                    {
+                        this._selected_events.splice(index, 1);
+                    }
+                }
+                else
+                {
+                    this._selected_events.push(id);
+                }
+                this.handle_select_area();
+            }
+        }
+        else if (this._event_mouse_button_down == 1)
+        {
+            if (global_ctrl_down)
+            {
+                this.handle_copy_notes([id]);
+            }
+            else
+            {
+                this.handle_cut_notes([id]);
+            }
+        }
+    }
+
+    handle_event_up(svg, id)
+    {
+    }
+
+    handle_event_over(svg, id)
+    {
+        svg.style.strokeWidth = 2;
+    }
+
+    handle_event_out(svg, id)
+    {
+        svg.style.strokeWidth = 1;
+    }
+
+
     create_rulers()
     {
         var tick;
@@ -1044,6 +1135,10 @@ class pianowin extends eventwin
             event_rect.setAttribute("width", width);
             event_rect.setAttribute("height", height);
             event_rect.setAttribute("style", "fill:" + this._note_color + ";stroke:black;stroke-width:1;fill-opacity:" + opacity + ";stroke-opacity:1.0");
+            event_rect.addEventListener('mousedown', this.event_mousedownhandler);
+            event_rect.addEventListener('mouseup', this.event_mouseuphandler);
+            event_rect.addEventListener('mouseover', this.event_mouseoverhandler);
+            event_rect.addEventListener('mouseout', this.event_mouseouthandler);
             this._tracks_canvas.appendChild(event_rect);
             this._track_event_elements[event.id] = event_rect;
         }
@@ -1256,14 +1351,17 @@ class pianowin extends eventwin
 
     handle_select_area()
     {
-        if (!this._select_element)
+        if (this._select_element)
         {
-            return;
+            this._notes_copy_buffer = this.select_tick_notes_area();
         }
-
-        this._notes_copy_buffer = this.select_tick_notes_area();
-        this._notes_copy_buffer_type = 'select'
-        select_notes_area(this._notes_copy_buffer, this._track_index);
+        else
+        {
+            this._notes_copy_buffer = {};
+        }
+        
+        this._notes_copy_buffer_type = 'select';
+        select_notes_area(this._notes_copy_buffer, this._selected_events, this._track_index);
     }
     
     handle_cut(tick, do_remove_space)
@@ -1288,6 +1386,19 @@ class pianowin extends eventwin
         }
     }
     
+    handle_cut_notes(ids)
+    {
+        this._copied_notes = ids;
+        this._notes_copy_buffer_type = 'cut';
+        cut_notes(this._copied_notes, this._track_index);
+
+        if (this._select_element)
+        {
+            this._select_element.remove();
+            this._select_element = null;
+        }
+    }
+    
     handle_copy(tick)
     {
         if (!this._selected_notes)
@@ -1300,6 +1411,18 @@ class pianowin extends eventwin
         {
             this._copied_notes.push(note.id);
         }
+        this._notes_copy_buffer_type = 'copy';
+
+        if (this._select_element)
+        {
+            this._select_element.remove();
+            this._select_element = null;
+        }
+    }
+    
+    handle_copy_notes(ids)
+    {
+        this._copied_notes = ids;
         this._notes_copy_buffer_type = 'copy';
 
         if (this._select_element)

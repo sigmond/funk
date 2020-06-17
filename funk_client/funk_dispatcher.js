@@ -672,12 +672,12 @@ function redo_last_tracks_edit()
 
 
 
-function select_notes_area(area, track_index)
+function select_notes_area(area, notes, track_index)
 {
     var cmd;
     var msg;    
 
-    cmd = { "command" : "select_notes_area", "track_index" : track_index, "area" : area };
+    cmd = { "command" : "select_notes_area", "track_index" : track_index, "area" : area, "notes" : notes };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
