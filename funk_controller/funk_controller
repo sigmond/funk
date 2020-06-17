@@ -26,8 +26,7 @@ import time
 import io
 import os
 from mido import MidiFile, Message, tempo2bpm, MidiTrack, second2tick
-import json
-import ast
+import simplejson
 import binascii
 import funk_com
     

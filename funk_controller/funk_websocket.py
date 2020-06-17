@@ -14,8 +14,7 @@
 
 from websocket_server import WebsocketServer
 import binascii
-import ast
-import json
+import simplejson
 import mido
 import io
 
@@ -62,7 +61,7 @@ class funk_websocket_server():
 
     # Called when a client sends a message
     def message_received(self, client, server, json_message):
-        message = ast.literal_eval(json_message)
+        message = simplejson.loads(json_message)
         print("Message from ctrl client")
         self.handle_client_ctrl_message(message)
 
@@ -105,7 +104,7 @@ class funk_websocket_server():
         else:
             message = {'topic' : topic, 'msg' : ctrl_msg}
 
-        json_message = json.dumps(message)
+        json_message = simplejson.dumps(message)
         print ('sending ctrl message to websocket ctrl_client')
         self.server.send_message(self.ctrl_client, json_message)
         
@@ -124,7 +123,7 @@ class funk_websocket_server():
             print ('websocket time_client not connected, discarding')
             return
         message = {'topic' : topic, 'msg' : time_msg}
-        json_message = json.dumps(message)
+        json_message = simplejson.dumps(message)
         print ('sending time message to websocket time_client')
         self.server.send_message(self.time_client, json_message)
         
@@ -133,7 +132,7 @@ class funk_websocket_server():
             print ('websocket ctrl_client not connected, discarding')
             return
         message = {'topic' : topic, 'msg' : error_msg}
-        json_message = json.dumps(message)
+        json_message = simplejson.dumps(message)
         print ('sending error message to websocket ctrl_client')
         self.server.send_message(self.ctrl_client, json_message)
         
@@ -142,7 +141,7 @@ class funk_websocket_server():
             print ('websocket ctrl_client not connected, discarding')
             return
         message = {'topic' : topic, 'msg' : log_msg}
-        json_message = json.dumps(message)
+        json_message = simplejson.dumps(message)
         print ('sending log message to websocket ctrl_client')
         self.server.send_message(self.ctrl_client, json_message)
         
