@@ -373,6 +373,11 @@ class pianowin extends eventwin
             this._mouse_button_1_down = false;
             this.handle_select_area();
         }
+        else if (button == 1)
+        {
+            // paste at mouse
+            this.handle_paste_at_mouse(this._mouse_at_tick, this.line2note(this._mouse_at_line));
+        }
 
         this._note_mouse_button_down = -1;
     }
@@ -1446,6 +1451,29 @@ class pianowin extends eventwin
                     this._notes_copy_buffer_type,
                     this._track_index
                    ); // paste copy buffer at playhead
+        
+        if (this._select_element)
+        {
+            this._select_element.remove();
+            this._select_element = null;
+        }
+    }    
+    
+    handle_paste_at_mouse(tick, note)
+    {
+        if (!this._selected_notes)
+        {
+            return;
+        }
+
+        // paste at playhead
+        paste_notes_at_mouse(
+                             this._copied_notes,
+                             tick,
+                             note,
+                             this._notes_copy_buffer_type,
+                             this._track_index
+                            ); // paste copy buffer at mouse
         
         if (this._select_element)
         {

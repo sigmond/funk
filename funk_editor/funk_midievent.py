@@ -437,7 +437,7 @@ class funk_midievent():
         self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
 
-    def paste_notes(self, event_file, track_index, to_tick, cut_or_copy, notes):
+    def paste_notes(self, event_file, track_index, to_tick, to_note, cut_or_copy, notes):
         print('paste_notes')
         affected_tracks = []
         # loop through affected tracks
@@ -447,7 +447,7 @@ class funk_midievent():
         event_track = event_file['tracks'][track_index]
         original_tracks.append(self.copy_event_track(event_track))
 
-        # move in time
+        # move in time and note
         # find events
         note_events = []
         for id in notes:
@@ -458,10 +458,20 @@ class funk_midievent():
 
         sorted_events = sorted(note_events, key = lambda i: i['start'])
         tick_shift = to_tick - sorted_events[0]['start']
+        if to_note >= 0:
+            highest_note = 0
+            for event in sorted_events:
+                if ('note' in event) and (event['note'] > highest_note):
+                    highest_note = event['note']
+            note_shift = to_note - highest_note
+        else:
+            note_shift = 0
         events_to_paste = []
         for event in sorted_events:
             event['start'] += tick_shift
             event['end'] += tick_shift
+            if 'note' in event:
+                event['note'] += note_shift
             event['id'] = self.event_id
             self.events[self.event_id] = event
             self.event_id += 1

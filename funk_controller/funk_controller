@@ -26,8 +26,6 @@ import time
 import io
 import os
 from mido import MidiFile, Message, tempo2bpm, MidiTrack, second2tick
-import simplejson
-import binascii
 import funk_com
     
 def parse_args():
@@ -405,9 +403,14 @@ class funk_controller():
         
     def handle_paste_notes(self, msg):
         print('handle_paste_notes')
+        if 'note' in msg:
+            note = msg['note']
+        else:
+            note = -1
         obj = {'command': 'paste_notes',
                'track_index' : msg['track_index'],
                'tick' : msg['tick'],
+               'note' : note,
                'cut_or_copy' : msg['cut_or_copy'],
                'notes' : msg['notes']
                }

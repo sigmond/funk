@@ -241,9 +241,10 @@ class funk_editor():
         print('editor got ' + repr(msg))
         track_index = msg['track_index']
         tick = msg['tick']
+        note = msg['note']
         cut_or_copy = msg['cut_or_copy']
         notes = msg['notes']
-        affected_tracks = self.midievent.paste_notes(self.event_file, track_index, tick, cut_or_copy, notes)
+        affected_tracks = self.midievent.paste_notes(self.event_file, track_index, tick, note, cut_or_copy, notes)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks

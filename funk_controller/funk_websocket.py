@@ -61,7 +61,7 @@ class funk_websocket_server():
 
     # Called when a client sends a message
     def message_received(self, client, server, json_message):
-        message = simplejson.loads(json_message)
+        message = simplejson.loads(str(json_message))
         print("Message from ctrl client")
         self.handle_client_ctrl_message(message)
 

@@ -717,6 +717,26 @@ function paste_notes(notes, tick, cut_or_copy, track_index)
     ws_ctrl.send(json_message);
 }
 
+function paste_notes_at_mouse(notes, tick, note, cut_or_copy, track_index)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { 
+        "command" : "paste_notes",
+        "track_index" : track_index,
+        "notes" : notes,
+        "tick" : tick,
+        "note" : note,
+        "cut_or_copy" : cut_or_copy
+    };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
 function undo_last_notes_edit()
 {
     var cmd;
