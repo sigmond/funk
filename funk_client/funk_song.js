@@ -24,6 +24,10 @@ class funk_song
         this._tracks = [];
 
         this.update_tracks(tracks);
+
+        this._note_playing = null;
+        this._channel_playing = null;
+        this._note_off_timer_function = null;
     }
 
     update_tracks(tracks)
@@ -213,10 +217,32 @@ class funk_song
         return parseInt(second / seconds_per_tick);
     }
 
-    play_note(track_index, note, velocity)
+    play_track_notes(track_index, notes, velocity, length = 200)
     {
-        play_note(this._channels[track_index], note, velocity);
+        for (const note of notes)
+        {
+            play_note(this._channels[track_index], note, velocity);
+        }
+        
+        if (length != 0)
+        {
+            this.start_note_off_timer(this._channels[track_index], notes, length);
+        }
     }
+
+    start_note_off_timer(channel, notes, length_ms)
+    {
+        global_song_channel_playing = channel;
+        global_song_notes_playing = notes;
+        this._note_off_timer_function = setTimeout(this.note_off, length_ms);
+    }
+    
+    note_off() {
+        for (const note of global_song_notes_playing)
+        {
+            play_note(global_song_channel_playing, note, 0);
+        }
+    }    
 }
     
 class funk_bar

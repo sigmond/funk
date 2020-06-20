@@ -336,8 +336,8 @@ class pianowin extends eventwin
     
     tracks_handle_mouse_down(x, y, button)
     {
-        output("mouse down x " + x + " y " + y + " button " + button);
-        
+        output("tracks handle mouse down x " + x + " y " + y + " button " + button);
+        output('this._event_mouse_button_down = ' + this._event_mouse_button_down);
         if (button == 0)
         {
             if (this._select_element || this._selected_events)
@@ -362,6 +362,16 @@ class pianowin extends eventwin
             }
             this._mouse_button_1_down = true;
         }
+        else if (button == 1)
+        {
+            if (this._event_mouse_button_down != 1)
+            {
+                // mouse down not handled by event handler
+                // paste at mouse
+                this.handle_paste_at_mouse(this._mouse_at_tick, this.line2note(this._mouse_at_line));
+                this._song.play_track_notes(this._track_index, [this.line2note(this._mouse_at_line)], 100);
+            }
+        }
     }
 
     tracks_handle_mouse_up(x, y, button)
@@ -373,13 +383,9 @@ class pianowin extends eventwin
             this._mouse_button_1_down = false;
             this.handle_select_area();
         }
-        else if (button == 1)
-        {
-            // paste at mouse
-            this.handle_paste_at_mouse(this._mouse_at_tick, this.line2note(this._mouse_at_line));
-        }
 
         this._note_mouse_button_down = -1;
+        this._event_mouse_button_down = -1;
     }
 
     tracks_handle_mouse_move(x, y)
@@ -751,7 +757,7 @@ class pianowin extends eventwin
         if (this._note_mouse_button_down >= 0)
         {
             svg.style.strokeWidth = 3 + this._note_mouse_button_down;
-            this._song.play_note(this._track_index, note, 47 + (40 * this._note_mouse_button_down));
+            this._song.play_track_notes(this._track_index, [note], 47 + (40 * this._note_mouse_button_down), 0);
         }
     }
 
@@ -760,7 +766,7 @@ class pianowin extends eventwin
         if (force || (this._note_mouse_button_down >= 0))
         {
             svg.style.strokeWidth = 1;
-            this._song.play_note(this._track_index, note, 0);
+            this._song.play_track_notes(this._track_index, [note], 0, 0);
         }
     }
 
@@ -820,13 +826,16 @@ class pianowin extends eventwin
         }
         else if (this._event_mouse_button_down == 1)
         {
+            output('event mouse 1 down');
             if (global_ctrl_down)
             {
                 this.handle_copy_notes([id]);
+                this._song.play_track_notes(this._track_index, [this.line2note(this._mouse_at_line)], 100);
             }
             else
             {
                 this.handle_cut_notes([id]);
+                this._song.play_track_notes(this._track_index, [this.line2note(this._mouse_at_line)], 100);
             }
         }
     }
@@ -1459,7 +1468,7 @@ class pianowin extends eventwin
         }
     }    
     
-    handle_paste_at_mouse(tick, note)
+    handle_paste_at_mouse(tick, to_note)
     {
         if (!this._selected_notes)
         {
@@ -1470,11 +1479,11 @@ class pianowin extends eventwin
         paste_notes_at_mouse(
                              this._copied_notes,
                              tick,
-                             note,
+                             to_note,
                              this._notes_copy_buffer_type,
                              this._track_index
                             ); // paste copy buffer at mouse
-        
+
         if (this._select_element)
         {
             this._select_element.remove();

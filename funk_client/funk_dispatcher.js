@@ -39,6 +39,8 @@ const key_left = 37;
 
 var global_ctrl_down = false;
 var global_shift_down = false;
+var global_song_channel_playing = -1;
+var global_song_notes_playing = [];
 
 function keydownhandler(event)
 {
@@ -368,8 +370,7 @@ function play_note(channel, note, velocity)
     var msg;
     var note_on;
     
-    note_on = {"type" : "note_on", "channel" : channel, "note" : note, "velocity" : velocity, "time" : 0};
-    
+    note_on = {"type" : "note_on", "channel" : channel, "note" : note, "velocity" : velocity, "time" : 0};    
 
     cmd = { "command" : "play_event", "midi_event" : note_on };
     msg = { "topic" : "controller", "msg" : cmd };
