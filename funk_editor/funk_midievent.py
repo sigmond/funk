@@ -485,6 +485,36 @@ class funk_midievent():
         self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
 
+    def set_note_end(self, event_file, track_index, note_id, end_tick):
+        print('set_note_end')
+        affected_tracks = []
+        # loop through affected tracks
+        original_tracks = []
+
+        event_track = event_file['tracks'][track_index]
+        original_tracks.append(self.copy_event_track(event_track))
+            
+        changed_events = []
+        
+        # loop through events in event-track, adjust event with same id as note
+        for event in event_track['events']:
+            if event['id'] == note_id:
+                changed_event = self.copy_event(event)
+                changed_event['end'] = end_tick
+                del self.events[note_id]
+                changed_event['id'] = self.event_id
+                self.events[self.event_id] = changed_event
+                self.event_id += 1
+                changed_events.append(changed_event)
+            else:
+                changed_events.append(event)                
+        event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])
+        affected_tracks.append(event_file['tracks'][track_index])
+        
+        self.undo_tracks_edit_stack.insert(0, original_tracks)
+        return affected_tracks
+
+
     def undo_notes_edit(self, event_file):
         print('undo_notes_edit')
         return self.undo_tracks_edit(event_file)

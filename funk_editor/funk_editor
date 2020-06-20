@@ -129,6 +129,8 @@ class funk_editor():
                 self.handle_cut_notes(msg)
             elif msg['command'] == 'paste_notes':
                 self.handle_paste_notes(msg)
+            elif msg['command'] == 'set_note_end':
+                self.handle_set_note_end(msg)
             elif msg['command'] == 'undo_last_notes_edit':
                 self.handle_undo_last_notes_edit(msg)
             elif msg['command'] == 'redo_last_notes_edit':
@@ -245,6 +247,17 @@ class funk_editor():
         cut_or_copy = msg['cut_or_copy']
         notes = msg['notes']
         affected_tracks = self.midievent.paste_notes(self.event_file, track_index, tick, note, cut_or_copy, notes)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
+    def handle_set_note_end(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        tick = msg['tick']
+        note = msg['note']
+        affected_tracks = self.midievent.set_note_end(self.event_file, track_index, note, tick)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks

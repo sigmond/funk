@@ -738,6 +738,24 @@ function paste_notes_at_mouse(notes, tick, note, cut_or_copy, track_index)
     ws_ctrl.send(json_message);
 }
 
+function set_note_end(track_index, note, tick)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { 
+        "command" : "set_note_end",
+        "track_index" : track_index,
+        "note" : note,
+        "tick" : tick
+    };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
 function undo_last_notes_edit()
 {
     var cmd;

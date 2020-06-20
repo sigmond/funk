@@ -37,6 +37,7 @@ class pianowin extends eventwin
         this._event_mouse_button_down = -1;
 
         this._mouse_at_tick = 0;
+        this._mouse_at_tick_snap = 0;
         this._mouse_at_x = 0;
         this._mouse_at_line = 0;
         this._mouse_at_y = 0;
@@ -55,6 +56,11 @@ class pianowin extends eventwin
         this._info_frame = info_frame;
         this._tracks_frame = tracks_frame;
         
+        this._tracks_canvas.addEventListener('contextmenu', function(ev) {
+                                                 ev.preventDefault();
+                                                 trackwin_object.tracks_mousedownhandler(ev);
+                                                 return false;
+                                             }, false);
         this._tracks_canvas.addEventListener('click', this.tracks_clickhandler);
         this._tracks_canvas.addEventListener('mousedown', this.tracks_mousedownhandler);
         this._tracks_canvas.addEventListener('mouseup', this.tracks_mouseuphandler);
@@ -115,6 +121,9 @@ class pianowin extends eventwin
 
         this._selected_notes = [];
         this._selected_events = [];
+
+        this._event_length_adjust_id = -1;
+        this._event_length_adjust_element = null;
 
         this._track_index = 1;
 
@@ -368,7 +377,7 @@ class pianowin extends eventwin
             {
                 // mouse down not handled by event handler
                 // paste at mouse
-                this.handle_paste_at_mouse(this._mouse_at_tick, this.line2note(this._mouse_at_line));
+                this.handle_paste_at_mouse(this._mouse_at_tick_snap, this.line2note(this._mouse_at_line));
                 this._song.play_track_notes(this._track_index, [this.line2note(this._mouse_at_line)], 100);
             }
         }
@@ -382,6 +391,16 @@ class pianowin extends eventwin
         {
             this._mouse_button_1_down = false;
             this.handle_select_area();
+        }
+        else if (button == 2)
+        {
+            if ((this._event_length_adjust_id >= 0) && this._event_length_adjust_element)
+            {
+                this.handle_note_adjust_length(this._event_length_adjust_element, this._event_length_adjust_id, true);
+            }
+            
+            this._event_length_adjust_id = -1;
+            this._event_length_adjust_element = null;
         }
 
         this._note_mouse_button_down = -1;
@@ -439,15 +458,46 @@ class pianowin extends eventwin
             this._key_highlight_type = 'black_key';
         }
 
-        this._mouse_at_tick = this.tick2snap(tick);
-        this._mouse_at_x = this.tick2x_zoomed(this._mouse_at_tick);
+        this._mouse_at_tick = tick;
+        this._mouse_at_tick_snap = this.tick2snap(tick);
+        this._mouse_at_x = this.tick2x_zoomed(tick);
 
         if (this._mouse_button_1_down)
         {
             this.adjust_select_area(x, y, false, false);
         }
+
+        if ((this._event_length_adjust_id >= 0) && this._event_length_adjust_element)
+        {
+            if ((this._event_length_adjust_id >= 0) && this._event_length_adjust_element)
+            {
+                this.handle_note_adjust_length(this._event_length_adjust_element, this._event_length_adjust_id);
+            }
+        }
     }
 
+    handle_note_adjust_length(svg, note_id, set_length = false)
+    {
+        var start_tick = this.x2tick(svg.getAttribute("x"));
+        var length = this.x2tick(svg.getAttribute("width"));
+
+        if (this._mouse_at_tick > (start_tick + (this._tick_snap_width / 2)))
+        {
+            svg.style.width = this.tick2x(this._mouse_at_tick - start_tick);
+        }
+
+        if (set_length)
+        {
+            if (this._mouse_at_tick >= (start_tick + (this._tick_snap_width / 2)))
+            {
+                this.handle_set_note_end(note_id, this._mouse_at_tick);
+            }
+            else
+            {
+                this.handle_set_note_end(note_id, start_tick + (this._tick_snap_width / 2));
+            }
+        }
+    }
 
     adjust_select_area(x, y, extend, key)
     {
@@ -802,6 +852,13 @@ class pianowin extends eventwin
         pianowin_object.handle_event_out(svg, id);
     }
 
+    event_mousemovehandler(event)
+    {
+        let svg = event.currentTarget;
+        let id = parseInt(svg.id.slice(svg.id.lastIndexOf('_') + 1));
+        pianowin_object.handle_event_move(svg, id);
+    }
+
 
     handle_event_down(svg, id)
     {
@@ -838,10 +895,22 @@ class pianowin extends eventwin
                 this._song.play_track_notes(this._track_index, [this.line2note(this._mouse_at_line)], 100);
             }
         }
+        else if (this._event_mouse_button_down == 2)
+        {
+            output('event mouse 2 down. id = ' + id);
+            this._event_length_adjust_id = id;
+            this._event_length_adjust_element = svg;
+        }
+    }
+
+    handle_event_move(svg, id)
+    {
+        output('event move, id = ' + id);
     }
 
     handle_event_up(svg, id)
     {
+        output('event up, id = ' + id);
     }
 
     handle_event_over(svg, id)
@@ -1153,6 +1222,7 @@ class pianowin extends eventwin
             event_rect.addEventListener('mouseup', this.event_mouseuphandler);
             event_rect.addEventListener('mouseover', this.event_mouseoverhandler);
             event_rect.addEventListener('mouseout', this.event_mouseouthandler);
+            event_rect.addEventListener('mousemove', this.event_mousemovehandler);
             this._tracks_canvas.appendChild(event_rect);
             this._track_event_elements[event.id] = event_rect;
         }
@@ -1489,7 +1559,12 @@ class pianowin extends eventwin
             this._select_element.remove();
             this._select_element = null;
         }
-    }    
+    } 
+
+    handle_set_note_end(note_id, end_tick)
+    {
+        set_note_end(this._track_index, note_id, end_tick);
+    }
     
     handle_undo(tick)
     {

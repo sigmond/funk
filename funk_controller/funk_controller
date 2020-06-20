@@ -186,6 +186,9 @@ class funk_controller():
             elif msg['command'] == 'paste_notes':
                 # someone (e.g. the client) wants to paste notes into a midi track
                 self.handle_paste_notes(msg)
+            elif msg['command'] == 'set_note_end':
+                # someone (e.g. the client) wants to set note end of a note
+                self.handle_set_note_end(msg)
             elif msg['command'] == 'undo_last_notes_edit':
                 # someone (e.g. the client) wants to undo last notes edit
                 self.handle_undo_last_notes_edit(msg)
@@ -413,6 +416,16 @@ class funk_controller():
                'note' : note,
                'cut_or_copy' : msg['cut_or_copy'],
                'notes' : msg['notes']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_set_note_end(self, msg):
+        print('handle_set_note_end')
+        obj = {'command': 'set_note_end',
+               'track_index' : msg['track_index'],
+               'tick' : msg['tick'],
+               'note' : msg['note']
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
