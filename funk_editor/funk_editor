@@ -131,6 +131,8 @@ class funk_editor():
                 self.handle_paste_notes(msg)
             elif msg['command'] == 'set_note_end':
                 self.handle_set_note_end(msg)
+            elif msg['command'] == 'set_note_velocity':
+                self.handle_set_note_velocity(msg)
             elif msg['command'] == 'undo_last_notes_edit':
                 self.handle_undo_last_notes_edit(msg)
             elif msg['command'] == 'redo_last_notes_edit':
@@ -258,6 +260,17 @@ class funk_editor():
         tick = msg['tick']
         note = msg['note']
         affected_tracks = self.midievent.set_note_end(self.event_file, track_index, note, tick)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
+    def handle_set_note_velocity(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        note = msg['note']
+        value = msg['value']
+        affected_tracks = self.midievent.set_note_velocity(self.event_file, track_index, note, value)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks

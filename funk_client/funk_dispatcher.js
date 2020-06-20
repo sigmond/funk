@@ -756,6 +756,24 @@ function set_note_end(track_index, note, tick)
     ws_ctrl.send(json_message);
 }
 
+function set_note_velocity(track_index, note, value)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { 
+        "command" : "set_note_velocity",
+        "track_index" : track_index,
+        "note" : note,
+        "value" : value
+    };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
 function undo_last_notes_edit()
 {
     var cmd;

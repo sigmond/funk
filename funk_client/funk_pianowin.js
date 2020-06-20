@@ -124,7 +124,13 @@ class pianowin extends eventwin
 
         this._event_length_adjust_id = -1;
         this._event_length_adjust_element = null;
-
+        this._event_velocity_adjust_id = -1;
+        this._event_velocity_adjust_element = null;
+        this._event_velocity_adjust_value = 0;        
+        this._velocity_add_per_line_small = -1;
+        this._velocity_add_per_line_big = -10;
+        this._event_highlight_text_element = null;
+        
         this._track_index = 1;
 
         this.create_track();
@@ -175,6 +181,7 @@ class pianowin extends eventwin
     {
         element.style.fill = on ? this._note_highlight_color : this._note_color;
     }
+
 
     tracks_clickhandler(event)
     {
@@ -353,7 +360,10 @@ class pianowin extends eventwin
             {
                 if (global_shift_down)
                 {
-                    this.adjust_select_area(x, y, true, false);
+                    if (this._event_mouse_button_down != 0)
+                    {
+                        this.adjust_select_area(x, y, true, false);
+                    }
                 }
                 else
                 {
@@ -390,7 +400,23 @@ class pianowin extends eventwin
         if (button == 0)
         {
             this._mouse_button_1_down = false;
-            this.handle_select_area();
+
+            if (this._event_highlight_text_element != null)
+            {
+                this._event_highlight_text_element.remove();
+            }
+
+
+            if ((this._event_velocity_adjust_id >= 0) && this._event_velocity_adjust_element)
+            {
+                this.handle_note_adjust_velocity(this._event_velocity_adjust_element, this._event_velocity_adjust_id, true);
+                this._event_velocity_adjust_id = -1;
+                this._event_velocity_adjust_element = null;
+            }
+            else
+            {
+                this.handle_select_area();
+            }
         }
         else if (button == 2)
         {
@@ -464,16 +490,21 @@ class pianowin extends eventwin
 
         if (this._mouse_button_1_down)
         {
-            this.adjust_select_area(x, y, false, false);
+            if ((this._event_velocity_adjust_id >= 0) && this._event_velocity_adjust_element)
+            {
+                this.handle_note_adjust_velocity(this._event_velocity_adjust_element, this._event_velocity_adjust_id);
+            }
+            else
+            {
+                this.adjust_select_area(x, y, false, false);
+            }
         }
 
         if ((this._event_length_adjust_id >= 0) && this._event_length_adjust_element)
         {
-            if ((this._event_length_adjust_id >= 0) && this._event_length_adjust_element)
-            {
-                this.handle_note_adjust_length(this._event_length_adjust_element, this._event_length_adjust_id);
-            }
+            this.handle_note_adjust_length(this._event_length_adjust_element, this._event_length_adjust_id);
         }
+
     }
 
     handle_note_adjust_length(svg, note_id, set_length = false)
@@ -496,6 +527,37 @@ class pianowin extends eventwin
             {
                 this.handle_set_note_end(note_id, start_tick + (this._tick_snap_width / 2));
             }
+        }
+    }
+
+    handle_note_adjust_velocity(svg, note_id, set_velocity = false)
+    {
+        if (set_velocity)
+        {
+            this.handle_set_note_velocity(note_id, this._event_velocity_adjust_value);
+            return;
+        }
+
+        var start_line = this.y2line(svg.getAttribute("y"));
+        var line_diff = this._mouse_at_line - start_line;
+        var add_per_line = global_shift_down ? this._velocity_add_per_line_small : this._velocity_add_per_line_big;
+
+        if (this._event_highlight_text_element)
+        {
+            var new_velocity = parseInt(svg.dataset.velocity) + (line_diff * add_per_line);
+
+            if (new_velocity > 127)
+            {
+                new_velocity = 127;
+            }
+
+            if (new_velocity < 0)
+            {
+                new_velocity = 0;
+            }
+
+            this._event_highlight_text_element.textContent = 'note: ' + svg.dataset.note + ' velocity: ' + new_velocity.toString();
+            this._event_velocity_adjust_value = new_velocity;
         }
     }
 
@@ -880,6 +942,12 @@ class pianowin extends eventwin
                 }
                 this.handle_select_area();
             }
+            else
+            {
+                this._event_velocity_adjust_id = id;
+                this._event_velocity_adjust_element = svg;
+                this._event_velocity_adjust_value = 0;
+            }
         }
         else if (this._event_mouse_button_down == 1)
         {
@@ -916,11 +984,30 @@ class pianowin extends eventwin
     handle_event_over(svg, id)
     {
         svg.style.strokeWidth = 2;
+
+        if (this._event_highlight_text_element != null)
+        {
+            this._event_highlight_text_element.remove();
+        }
+
+        var event_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        event_text.id = 'event_highlight_text';
+        event_text.setAttribute("x", this._mouse_at_x + 10);
+        event_text.setAttribute("y", this._mouse_at_y - 2);
+        event_text.setAttribute("style", "fill:black;font-size:12px;font-weight:bold;");
+        event_text.textContent = 'note: ' + svg.dataset.note + ' velocity: ' + svg.dataset.velocity;
+        this._event_highlight_text_element = event_text;
+        this._tracks_canvas.appendChild(event_text);
     }
 
     handle_event_out(svg, id)
     {
         svg.style.strokeWidth = 1;
+
+        if (!this._mouse_button_1_down && this._event_highlight_text_element != null)
+        {
+            this._event_highlight_text_element.remove();
+        }
     }
 
 
@@ -1202,7 +1289,7 @@ class pianowin extends eventwin
             }
             
             var note = event.note;
-            var opacity = (event.velocity / this._num_notes).toString();
+            var opacity = (event.velocity / 128).toString();
 
             highest_note = parseInt(Math.max(highest_note, note));
             lowest_note = parseInt(Math.min(lowest_note, note));
@@ -1223,6 +1310,8 @@ class pianowin extends eventwin
             event_rect.addEventListener('mouseover', this.event_mouseoverhandler);
             event_rect.addEventListener('mouseout', this.event_mouseouthandler);
             event_rect.addEventListener('mousemove', this.event_mousemovehandler);
+            event_rect.dataset.note = event.note;
+            event_rect.dataset.velocity = event.velocity;
             this._tracks_canvas.appendChild(event_rect);
             this._track_event_elements[event.id] = event_rect;
         }
@@ -1564,6 +1653,11 @@ class pianowin extends eventwin
     handle_set_note_end(note_id, end_tick)
     {
         set_note_end(this._track_index, note_id, end_tick);
+    }
+    
+    handle_set_note_velocity(note_id, value)
+    {
+        set_note_velocity(this._track_index, note_id, value);
     }
     
     handle_undo(tick)

@@ -189,6 +189,9 @@ class funk_controller():
             elif msg['command'] == 'set_note_end':
                 # someone (e.g. the client) wants to set note end of a note
                 self.handle_set_note_end(msg)
+            elif msg['command'] == 'set_note_velocity':
+                # someone (e.g. the client) wants to add to note velocity
+                self.handle_set_note_velocity(msg)
             elif msg['command'] == 'undo_last_notes_edit':
                 # someone (e.g. the client) wants to undo last notes edit
                 self.handle_undo_last_notes_edit(msg)
@@ -426,6 +429,16 @@ class funk_controller():
                'track_index' : msg['track_index'],
                'tick' : msg['tick'],
                'note' : msg['note']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_set_note_velocity(self, msg):
+        print('handle_set_note_velocity')
+        obj = {'command': 'set_note_velocity',
+               'track_index' : msg['track_index'],
+               'note' : msg['note'],
+               'value' : msg['value']
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
