@@ -37,6 +37,8 @@ const key_right = 39;
 const key_left = 37;
 
 
+var global_disable_keydownhandler = false;
+
 var global_ctrl_down = false;
 var global_shift_down = false;
 var global_song_channel_playing = -1;
@@ -44,6 +46,11 @@ var global_song_notes_playing = [];
 
 function keydownhandler(event)
 {
+    if (global_disable_keydownhandler)
+    {
+        return true;
+    }
+    
     output("keycode down: " + event.keyCode);
     if (event.keyCode == key_ctrl)
     {
@@ -125,7 +132,63 @@ function keyuphandler(event)
     
 document.addEventListener("keydown", keydownhandler);
 document.addEventListener("keyup", keyuphandler);
+
+var global_edit_elements = [];
+var global_edit_track_index = -1;
     
+function edit_track_name(track_index, name)
+{
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+    
+    global_disable_keydownhandler = true;
+    global_edit_track_index = track_index;
+    var label = document.createTextNode("Track name:");
+    var input = document.createElement("input");
+    input.setAttribute('type', 'text');
+    input.id = 'new_track_name';
+    input.setAttribute("value",name);
+    var save = document.createElement("button");
+    save.innerText = "Save";
+    save.onclick = save_track_name;
+    var cancel = document.createElement("button");
+    cancel.innerText = "Cancel";
+    cancel.onclick = cancel_edit;
+    global_edit_elements.push(label);
+    global_edit_elements.push(input);
+    global_edit_elements.push(save);
+    global_edit_elements.push(cancel);
+    var menu = document.getElementById("topmenu");
+    menu.appendChild(label);
+    menu.appendChild(input);
+    menu.appendChild(save);
+    menu.appendChild(cancel);
+}
+
+function save_track_name()
+{
+    var new_name = document.getElementById('new_track_name').value;
+    output('save_track_name ' + new_name + ' index ' + global_edit_track_index);
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+    global_disable_keydownhandler = false;
+    change_track_name(parseInt(global_edit_track_index), new_name);
+    global_edit_track_index = -1;
+}
+
+function cancel_edit()
+{
+    output('cancel edit');
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+    global_disable_keydownhandler = false;
+}
 
 
 function ctrl_onopen()
@@ -446,7 +509,7 @@ function handle_outputter(msg)
 
 function handle_outputter_output_ports(msg)
 {
-      select_choice(msg['output_ports'], msg['current_port'], 'select_output_port', output_port_selected);
+    select_choice("Select output port:", msg['output_ports'], msg['current_port'], 'select_output_port', output_port_selected);
 }
 
 function output_port_selected()
@@ -472,7 +535,7 @@ function handle_capturer(msg)
 
 function handle_capturer_input_ports(msg)
 {
-      select_choice(msg['input_ports'], msg['current_port'], 'select_input_port', input_port_selected);
+    select_choice("Select input port:", msg['input_ports'], msg['current_port'], 'select_input_port', input_port_selected);
 }
 
 function input_port_selected()
@@ -484,28 +547,41 @@ function input_port_selected()
       open_input_port(value);
 }
 
-function select_choice(choice_list, selected, id, onchange)
+function select_choice(label_text, choice_list, selected, id, onchange)
 {
-      var selector = document.createElement("SELECT");
-      var selected_index = 0;
-      var index;
-      for (index in choice_list)
-      {
-          var option = document.createElement("option");
-          option.text = choice_list[index];
-          selector.add(option);
-          if (choice_list[index] == selected)
-          {
-              selected_index = index;
-          }
-      }
-      selector.selectedIndex = selected_index;
-      selector.id = id;
-      selector.onchange = onchange;
-      var menu = document.getElementById("topmenu");
-      menu.appendChild(selector);
-}
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
 
+    var label = document.createTextNode(label_text);
+    var selector = document.createElement("SELECT");
+    var selected_index = 0;
+    var index;
+    for (index in choice_list)
+    {
+        var option = document.createElement("option");
+        option.text = choice_list[index];
+        selector.add(option);
+        if (choice_list[index] == selected)
+        {
+            selected_index = index;
+        }
+    }
+    selector.selectedIndex = selected_index;
+    selector.id = id;
+    selector.onchange = onchange;
+    var cancel = document.createElement("button");
+    cancel.innerText = "Cancel";
+    cancel.onclick = cancel_edit;
+    global_edit_elements.push(label);
+    global_edit_elements.push(selector);
+    global_edit_elements.push(cancel);
+    var menu = document.getElementById("topmenu");
+    menu.appendChild(label);
+    menu.appendChild(selector);
+    menu.appendChild(cancel);
+}
 
 function handle_editor(msg)
 {
@@ -793,6 +869,23 @@ function redo_last_notes_edit()
     var msg;    
 
     cmd = { "command" : "redo_last_notes_edit" };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function change_track_name(track_index, new_name)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { 
+        "command" : "change_track_name",
+        "track_index" : track_index,
+        "name" : new_name
+    };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);

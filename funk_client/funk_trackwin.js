@@ -721,6 +721,15 @@ class trackwin extends eventwin
         svg.style.fillOpacity = 0.1;
     }
 
+    track_info_clickhandler(event)
+    {
+        let svg = event.currentTarget;
+        output('track_info_clickhandler, name=' + svg.dataset.name + ', index=' + svg.dataset.index + ', channel=' + svg.dataset.channel);
+        if (svg.dataset.index != 0)
+        {
+            edit_track_name(svg.dataset.index, svg.dataset.name);
+        }
+    }
 
     startAllSoloAnimation() {
         if(this._allSoloTimerFunction == null) {
@@ -1150,29 +1159,11 @@ class trackwin extends eventwin
 
     create_track_info(track_index, track, trackname)
     {
+        output('create_track_info ' + trackname);
         var info_rect = document.getElementById('track_info_' + track_index.toString());
         if (info_rect != undefined)
         {
             info_rect.remove();
-        }
-
-        info_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        var width = this._info_width;
-        
-        info_rect.id = 'track_info_' + track_index.toString();
-        info_rect.setAttribute("height", this._line_height);
-        info_rect.setAttribute("width", width);
-        info_rect.setAttribute("x", 0);
-        info_rect.setAttribute("y", this._track_y + (track_index * this._line_height));
-        info_rect.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
-        info_rect.addEventListener('mouseover', this.track_info_mouseoverhandler);
-        info_rect.addEventListener('mouseout', this.track_info_mouseouthandler);
-        this._info_canvas.appendChild(info_rect);
-
-        this._info_canvas.appendChild(this.create_solo_button(track_index));
-        if (track_index > 0)
-        {
-            this._info_canvas.appendChild(this.create_mute_button(track_index));
         }
 
         var info_name_text = document.getElementById('track_name_' + track_index.toString());
@@ -1196,6 +1187,31 @@ class trackwin extends eventwin
         }
         
         this._info_canvas.appendChild(info_name_text);
+
+        info_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        var width = this._info_width;
+        
+        info_rect.id = 'track_info_' + track_index.toString();
+        info_rect.setAttribute("height", this._line_height);
+        info_rect.setAttribute("width", width);
+        info_rect.setAttribute("x", 0);
+        info_rect.setAttribute("y", this._track_y + (track_index * this._line_height));
+        info_rect.setAttribute("style", "fill:" + this._bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
+        info_rect.addEventListener('mouseover', this.track_info_mouseoverhandler);
+        info_rect.addEventListener('mouseout', this.track_info_mouseouthandler);
+        info_rect.addEventListener('click', this.track_info_clickhandler);
+        info_rect.dataset.index = track_index;
+        info_rect.dataset.name = trackname;
+        info_rect.dataset.channel = this._song.channels[track_index] + 1;
+        
+        this._info_canvas.appendChild(info_rect);
+
+        this._info_canvas.appendChild(this.create_solo_button(track_index));
+        if (track_index > 0)
+        {
+            this._info_canvas.appendChild(this.create_mute_button(track_index));
+        }
+
         
         return width;
     }

@@ -198,6 +198,9 @@ class funk_controller():
             elif msg['command'] == 'redo_last_notes_edit':
                 # someone (e.g. the client) wants to redo last undone notes edit
                 self.handle_redo_last_notes_edit(msg)
+            elif msg['command'] == 'change_track_name':
+                # someone (e.g. the client) wants to change a track name
+                self.handle_change_track_name(msg)
             else:
                 self.log('Unknown controller command ' + repr(msg['command']))
                 print('Unknown controller command ' + repr(msg['command']))
@@ -453,6 +456,15 @@ class funk_controller():
     def handle_redo_last_notes_edit(self, msg):
         print('handle_redo_last_notes_edit')
         obj = {'command': 'redo_last_notes_edit'
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_change_track_name(self, msg):
+        print('handle_change_track_name')
+        obj = {'command': 'change_track_name',
+               'track_index' : msg['track_index'],
+               'name' : msg['name']
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)

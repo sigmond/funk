@@ -5,7 +5,7 @@
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
+    the Free Software Foundation either version 3 of the License, or
     (at your option) any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -961,6 +961,10 @@ class pianowin extends eventwin
             {
                 this.handle_cut_notes([id]);
                 this._song.play_track_notes(this._track_index, [this.line2note(this._mouse_at_line)], 100);
+                if (this._event_highlight_text_element != null)
+                {
+                    this._event_highlight_text_element.remove();
+                }
             }
         }
         else if (this._event_mouse_button_down == 2)

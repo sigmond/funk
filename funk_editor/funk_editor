@@ -137,6 +137,8 @@ class funk_editor():
                 self.handle_undo_last_notes_edit(msg)
             elif msg['command'] == 'redo_last_notes_edit':
                 self.handle_redo_last_notes_edit(msg)
+            elif msg['command'] == 'change_track_name':
+                self.handle_change_track_name(msg)
             else:
                 print('Unknown editor command ' + repr(msg['command']))
                 self.log('Unknown editor command ' + repr(msg['command']))
@@ -287,6 +289,16 @@ class funk_editor():
     def handle_redo_last_notes_edit(self, msg):
         print('editor got ' + repr(msg))
         affected_tracks = self.midievent.redo_notes_edit(self.event_file)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
+    def handle_change_track_name(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        name = msg['name']
+        affected_tracks = self.midievent.change_track_name(self.event_file, track_index, name)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks
