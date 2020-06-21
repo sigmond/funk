@@ -136,7 +136,7 @@ document.addEventListener("keyup", keyuphandler);
 var global_edit_elements = [];
 var global_edit_track_index = -1;
     
-function edit_track_name(track_index, name)
+function edit_track_name(track_index, name, channel, new_track)
 {
     while ((elem = global_edit_elements.pop()))
     {
@@ -150,33 +150,73 @@ function edit_track_name(track_index, name)
     input.setAttribute('type', 'text');
     input.id = 'new_track_name';
     input.setAttribute("value",name);
+    var selector = document.createElement("SELECT");
+    var channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+    var selected_index = 0;
+    var index;
+    for (index in channels)
+    {
+        var option = document.createElement("option");
+        option.text = channels[index].toString();
+        selector.add(option);
+        if (index == channel)
+        {
+            selected_index = index;
+        }
+    }
+    selector.selectedIndex = selected_index;
+    selector.id = 'edit_track_channel_select';
     var save = document.createElement("button");
     save.innerText = "Save";
-    save.onclick = save_track_name;
+    if (!new_track)
+    {
+        save.onclick = save_track_info;
+    }
+    else
+    {
+        save.onclick = save_new_track_info;
+    }
     var cancel = document.createElement("button");
     cancel.innerText = "Cancel";
     cancel.onclick = cancel_edit;
     global_edit_elements.push(label);
     global_edit_elements.push(input);
+    global_edit_elements.push(selector);
     global_edit_elements.push(save);
     global_edit_elements.push(cancel);
     var menu = document.getElementById("topmenu");
     menu.appendChild(label);
     menu.appendChild(input);
+    menu.appendChild(selector);
     menu.appendChild(save);
     menu.appendChild(cancel);
 }
 
-function save_track_name()
+function save_track_info()
 {
     var new_name = document.getElementById('new_track_name').value;
-    output('save_track_name ' + new_name + ' index ' + global_edit_track_index);
+    var new_channel = parseInt(document.getElementById('edit_track_channel_select').value) - 1;
+    output('save_track_info ' + new_name + ' channel ' + new_channel);
     while ((elem = global_edit_elements.pop()))
     {
         elem.remove();
     }
     global_disable_keydownhandler = false;
-    change_track_name(parseInt(global_edit_track_index), new_name);
+    change_track_info(parseInt(global_edit_track_index), new_name, new_channel);
+    global_edit_track_index = -1;
+}
+
+function save_new_track_info()
+{
+    var new_name = document.getElementById('new_track_name').value;
+    var new_channel = parseInt(document.getElementById('edit_track_channel_select').value) - 1;
+    output('save_new_track_info ' + new_name + ' channel ' + new_channel);
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+    global_disable_keydownhandler = false;
+    create_new_track(parseInt(global_edit_track_index), new_name, parseInt(new_channel));
     global_edit_track_index = -1;
 }
 
@@ -876,15 +916,34 @@ function redo_last_notes_edit()
     ws_ctrl.send(json_message);
 }
 
-function change_track_name(track_index, new_name)
+function change_track_info(track_index, new_name, new_channel)
 {
     var cmd;
     var msg;    
 
     cmd = { 
-        "command" : "change_track_name",
+        "command" : "change_track_info",
         "track_index" : track_index,
-        "name" : new_name
+        "name" : new_name,
+        "channel" : new_channel
+    };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function create_new_track(track_index, new_name, new_channel)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { 
+        "command" : "create_new_track",
+        "track_index" : track_index,
+        "name" : new_name,
+        "channel" : new_channel
     };
     msg = { "topic" : "controller", "msg" : cmd };
     

@@ -141,7 +141,7 @@ class trackwin extends eventwin
     {
         var track = this._song.tracks[track_index];
         this.fill_track_events(track_index, track);
-        this.create_track_info(track_index, track, this._song.tracknames[track_index]);
+        this.create_track_info(track_index, this._song.tracknames[track_index]);
     }
 
 
@@ -727,7 +727,7 @@ class trackwin extends eventwin
         output('track_info_clickhandler, name=' + svg.dataset.name + ', index=' + svg.dataset.index + ', channel=' + svg.dataset.channel);
         if (svg.dataset.index != 0)
         {
-            edit_track_name(svg.dataset.index, svg.dataset.name);
+            edit_track_name(svg.dataset.index, svg.dataset.name, svg.dataset.channel, parseInt(svg.dataset.new_track));
         }
     }
 
@@ -892,13 +892,15 @@ class trackwin extends eventwin
 
         for (const track of this._song.tracks)
         {
-            info_width_tmp = this.create_track_info(track_index, track, this._song.tracknames[track_index]);
+            info_width_tmp = this.create_track_info(track_index, this._song.tracknames[track_index]);
             if (info_width_tmp > info_width)
             {
                 info_width = info_width_tmp;
             }
             track_index++;
         }
+
+        this.create_track_info(track_index, 'New Track', true);
 
         width_style = "width:" + (info_width).toString() + ";";
 
@@ -1157,7 +1159,7 @@ class trackwin extends eventwin
     }
 
 
-    create_track_info(track_index, track, trackname)
+    create_track_info(track_index, trackname, new_track = false)
     {
         output('create_track_info ' + trackname);
         var info_rect = document.getElementById('track_info_' + track_index.toString());
@@ -1202,20 +1204,30 @@ class trackwin extends eventwin
         info_rect.addEventListener('click', this.track_info_clickhandler);
         info_rect.dataset.index = track_index;
         info_rect.dataset.name = trackname;
-        info_rect.dataset.channel = this._song.channels[track_index] + 1;
+        if (new_track)
+        {
+            info_rect.dataset.channel = 0;
+            info_rect.dataset.new_track = 1;
+        }
+        else
+        {
+            info_rect.dataset.channel = this._song.channels[track_index];
+            info_rect.dataset.new_track = 0;
+        }
         
         this._info_canvas.appendChild(info_rect);
 
-        this._info_canvas.appendChild(this.create_solo_button(track_index));
-        if (track_index > 0)
+        if (!new_track)
         {
-            this._info_canvas.appendChild(this.create_mute_button(track_index));
+            this._info_canvas.appendChild(this.create_solo_button(track_index));
+            if (track_index > 0)
+            {
+                this._info_canvas.appendChild(this.create_mute_button(track_index));
+            }
         }
-
         
         return width;
     }
-
 
     fill_track_events(track_index, track)
     {

@@ -547,18 +547,35 @@ class funk_midievent():
         self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
 
-    def change_track_name(self, event_file, track_index, name):
-        print('change_track_name')
+    def change_track_info(self, event_file, track_index, name, channel, create_track = False):
+        print('change_track_info')
         affected_tracks = []
         # loop through affected tracks
         original_tracks = []
 
-        event_track = event_file['tracks'][track_index]
-        original_tracks.append(self.copy_event_track(event_track))
+        if create_track:
+            name_event = {'type': 'track_name',
+                          'name' : name,
+                          'start' : 0,
+                          'end': 0,
+                          'length' : 0,
+                          'id' : self.event_id
+                          }
+            self.events[self.event_id] = name_event
+            self.event_id += 1
+            event_track = {'index' : track_index,
+                           'name' : name,
+                           'events' : [name_event]
+                           }
+
+            event_file['tracks'].append(event_track)
+        else:
+            event_track = event_file['tracks'][track_index]
+            original_tracks.append(self.copy_event_track(event_track))
             
         changed_events = []
 
-        # loop through events in event-track, change track-name event
+        # loop through events in event-track, change track-name event and set channel on all events
         for event in event_track['events']:
             if event['type'] == 'track_name':
                 changed_event = self.copy_event(event)
@@ -568,13 +585,23 @@ class funk_midievent():
                 self.events[self.event_id] = changed_event
                 self.event_id += 1
                 changed_events.append(changed_event)
+            elif 'channel' in event and event['channel'] != channel:
+                changed_event = self.copy_event(event)
+                changed_event['channel'] = channel
+                del self.events[changed_event['id']]
+                changed_event['id'] = self.event_id
+                self.events[self.event_id] = changed_event
+                self.event_id += 1
+                changed_events.append(changed_event)
             else:
-                changed_events.append(event)                
+                changed_events.append(event)
+                
         event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])
         event_file['tracks'][track_index]['name'] = name
         affected_tracks.append(event_file['tracks'][track_index])
-        
-        self.undo_tracks_edit_stack.insert(0, original_tracks)
+
+        if not create_track:
+            self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
 
 
