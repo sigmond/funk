@@ -47,6 +47,8 @@ sudo apt install libzmq3-dev
 
 sudo apt install libczmq-dev
 
+sudo apt install python-simplejson
+
 pip install pyzmq
 
 pip install git+https://github.com/Pithikos/python-websocket-server

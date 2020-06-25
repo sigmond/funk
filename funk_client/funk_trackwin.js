@@ -121,9 +121,9 @@ class trackwin extends eventwin
 
         this._num_painted_tracks = this.create_tracks();
         this.create_rulers();
-        this.create_menu();
         this.fill_song_info();
         this.fill_tempo_info();
+        this.create_menu();
 
         this._tracks_canvas.setAttribute("preserveAspectRatio", "none");
         this._tracks_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._height.toString());
@@ -151,6 +151,28 @@ class trackwin extends eventwin
         }
     }
 
+
+    tick2snap(tick)
+    {
+        var bar;
+        
+        for (bar of this._song.bars)
+        {
+            if ((tick >= bar.start) && (tick < bar.end))
+            {
+                break;
+            }
+        }
+
+        if ((tick - bar.start) < (bar.end - tick))
+        {
+            return bar.start;
+        }
+        else
+        {
+            return bar.end;
+        }        
+    }
 
 
     go_to_start()
@@ -922,19 +944,14 @@ class trackwin extends eventwin
 
     create_rulers()
     {
+        if (this._rulers_box_element)
+        {
+            this._rulers_box_element.remove();
+        }
+
         var tick;
         var next_seconds = 0;
 
-        this._rulers_box_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        this._rulers_box_element.id = "tw_rulers_box";
-        this._rulers_box_element.setAttribute("height", this._ruler_height);
-        this._rulers_box_element.setAttribute("width", this._tracks_width);
-        this._rulers_box_element.setAttribute("x", 0);
-        this._rulers_box_element.setAttribute("y", 0);
-        this._rulers_box_element.setAttribute("style", "fill:" + this._menu_bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
-        this._rulers_canvas.appendChild(this._rulers_box_element);        
-        
-        
         for (tick = 0; tick < this._song.ticks; tick++)
         {
             var seconds = this._song.tick2second(tick);
@@ -1004,11 +1021,26 @@ class trackwin extends eventwin
 
         this._rulers_canvas.setAttribute("style", width_style + height_style);
 
+        this._rulers_box_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        this._rulers_box_element.id = "tw_rulers_box";
+        this._rulers_box_element.setAttribute("height", this._ruler_height);
+        this._rulers_box_element.setAttribute("width", this._tracks_width);
+        this._rulers_box_element.setAttribute("x", 0);
+        this._rulers_box_element.setAttribute("y", 0);
+        this._rulers_box_element.setAttribute("style", "fill:" + this._menu_bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
+        this._rulers_canvas.appendChild(this._rulers_box_element);        
+        
+        
         return this._tracks_width;
     }
 
     create_menu()
     {
+        if (this._menu_box_element)
+        {
+            this._menu_box_element.remove();
+        }
+
         var width_style = "width:" + this._info_width.toString() + ";";
         var height_style = "height:" + (this._ruler_height + 10).toString() + ";";
 

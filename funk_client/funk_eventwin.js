@@ -484,7 +484,7 @@ class eventwin
         {
             this._select_x2 = this.tick2x(cell_tick_stop);
             this._select_width = this._select_x2 - this._select_x1;
-            this._select_tick_start = this.x2tick(this._select_x1);
+            this._select_tick_start = this.tick2snap(this.x2tick(this._select_x1));
             this._select_tick_stop = cell_tick_stop;
             this._select_element.setAttribute("x", this._select_x1);
             this._select_element.setAttribute("width", this._select_width); 
@@ -494,7 +494,7 @@ class eventwin
             this._select_x2 = this.tick2x(cell_tick_start);
             this._select_width = this._select_x1 - this._select_x2;
             this._select_tick_start = cell_tick_start;
-            this._select_tick_stop = this.x2tick(this._select_x1);
+            this._select_tick_stop = this.tick2snap(this.x2tick(this._select_x1));
             this._select_element.setAttribute("x", this._select_x2);
             this._select_element.setAttribute("width", this._select_width); 
         }

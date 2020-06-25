@@ -554,11 +554,17 @@ function handle_outputter_output_ports(msg)
 
 function output_port_selected()
 {
-      var selector = document.getElementById("select_output_port");
-      var value = selector.value;
-      output(value);
-      selector.remove();
-      open_output_port(value);
+    var selector = document.getElementById("select_output_port");
+    var value = selector.value;
+    output(value);
+    selector.remove();
+
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+
+    open_output_port(value);
 }
 
 function handle_capturer(msg)
@@ -584,6 +590,12 @@ function input_port_selected()
       var value = selector.value;
       output(value);
       selector.remove();
+
+      while ((elem = global_edit_elements.pop()))
+      {
+          elem.remove();
+      }
+
       open_input_port(value);
 }
 

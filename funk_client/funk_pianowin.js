@@ -135,9 +135,9 @@ class pianowin extends eventwin
 
         this.create_track();
         this.create_rulers();
-        this.create_menu();
         this.fill_track_info();
         this.fill_channel_info();
+        this.create_menu();
 
         var wh = this._tracks_canvas.getClientRects()[0];
         this._height = wh.height;
@@ -556,7 +556,7 @@ class pianowin extends eventwin
                 new_velocity = 0;
             }
 
-            this._event_highlight_text_element.textContent = 'note: ' + svg.dataset.note + ' velocity: ' + new_velocity.toString();
+            this._event_highlight_text_element.textContent = 'note: ' + svg.dataset.note + ' velocity: ' + new_velocity.toString() + ' tick: ' + svg.dataset.tick;
             this._event_velocity_adjust_value = new_velocity;
         }
     }
@@ -996,10 +996,10 @@ class pianowin extends eventwin
 
         var event_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         event_text.id = 'event_highlight_text';
-        event_text.setAttribute("x", this._mouse_at_x + 10);
-        event_text.setAttribute("y", this._mouse_at_y - 2);
+        event_text.setAttribute("x", (this._mouse_at_x / this._tracks_zoom_x) + 10);
+        event_text.setAttribute("y", (this._mouse_at_y / this._tracks_zoom_y) - 2);
         event_text.setAttribute("style", "fill:black;font-size:12px;font-weight:bold;");
-        event_text.textContent = 'note: ' + svg.dataset.note + ' velocity: ' + svg.dataset.velocity;
+        event_text.textContent = 'note: ' + svg.dataset.note + ' velocity: ' + svg.dataset.velocity + ' tick: ' + svg.dataset.tick;
         this._event_highlight_text_element = event_text;
         this._tracks_canvas.appendChild(event_text);
     }
@@ -1017,18 +1017,14 @@ class pianowin extends eventwin
 
     create_rulers()
     {
+        if (this._rulers_box_element)
+        {
+            this._rulers_box_element.remove();
+        }
+        
         var tick;
         var next_seconds = 0;
         
-        this._rulers_box_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        this._rulers_box_element.id = "pw_rulers_box";
-        this._rulers_box_element.setAttribute("height", this._ruler_height);
-        this._rulers_box_element.setAttribute("width", this._notes_width);
-        this._rulers_box_element.setAttribute("x", 0);
-        this._rulers_box_element.setAttribute("y", 0);
-        this._rulers_box_element.setAttribute("style", "fill:" + this._menu_bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
-        this._rulers_canvas.appendChild(this._rulers_box_element);        
-
         for (tick = 0; tick < this._song.ticks; tick++)
         {
             var seconds = this._song.tick2second(tick);
@@ -1119,11 +1115,25 @@ class pianowin extends eventwin
 
         this._rulers_canvas.setAttribute("style", width_style + height_style);
 
+        this._rulers_box_element = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        this._rulers_box_element.id = "pw_rulers_box";
+        this._rulers_box_element.setAttribute("height", this._ruler_height);
+        this._rulers_box_element.setAttribute("width", this._notes_width);
+        this._rulers_box_element.setAttribute("x", 0);
+        this._rulers_box_element.setAttribute("y", 0);
+        this._rulers_box_element.setAttribute("style", "fill:" + this._menu_bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.1;stroke-opacity:1.0");
+        this._rulers_canvas.appendChild(this._rulers_box_element);        
+
         return this._tracks_width;
     }
 
     create_menu()
     {
+        if (this._menu_box_element)
+        {
+            this._menu_box_element.remove();
+        }
+
         var width_style = "width:" + this._info_width.toString() + ";";
         var height_style = "height:" + (this._ruler_height + 10).toString() + ";";
 
@@ -1316,6 +1326,7 @@ class pianowin extends eventwin
             event_rect.addEventListener('mousemove', this.event_mousemovehandler);
             event_rect.dataset.note = event.note;
             event_rect.dataset.velocity = event.velocity;
+            event_rect.dataset.tick = event.start;
             this._tracks_canvas.appendChild(event_rect);
             this._track_event_elements[event.id] = event_rect;
         }

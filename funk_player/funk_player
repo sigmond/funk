@@ -260,7 +260,7 @@ class funk_player():
         self.playing = True
 
         # loop the message generator (will yield at appropriate realtime)
-        for message in self.play(start_tick, meta_messages=True):
+        for message in self.play(start_tick, meta_messages=False):
             # Instant mute/unmute track:
             # lookup track index of message
             track_index = self.frozen_msg_dict[freeze_message(message)]
