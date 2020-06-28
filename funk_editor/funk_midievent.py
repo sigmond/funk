@@ -623,6 +623,12 @@ class funk_midievent():
         self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
 
+    def track_recorded(self, event_file, track_index, start_ticks, start_seconds, midi_track):
+        print('track_recorded')
+        affected_tracks = []
+        # loop through affected tracks
+        original_tracks = []
+        return affected_tracks
 
     def undo_notes_edit(self, event_file):
         print('undo_notes_edit')

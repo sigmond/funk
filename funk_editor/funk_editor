@@ -143,6 +143,8 @@ class funk_editor():
                 self.handle_create_new_track(msg)
             elif msg['command'] == 'remove_track':
                 self.handle_remove_track(msg)
+            elif msg['command'] == 'track_recorded':
+                self.handle_track_recorded(msg)
             else:
                 print('Unknown editor command ' + repr(msg['command']))
                 self.log('Unknown editor command ' + repr(msg['command']))
@@ -330,6 +332,18 @@ class funk_editor():
             self.midi_file = self.midievent.events2file(self.event_file)
             # event file and midi file is the same:
             self.event_tracks_changed_since_load = False
+            self.load_file_to_player()
+
+    def handle_track_recorded(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        start_ticks = msg['start_ticks']
+        start_seconds = msg['start_seconds']
+        track = msg['track']
+        affected_tracks = self.midievent.track_recorded(self.event_file, track_index, start_ticks, start_seconds, track)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
             self.load_file_to_player()
 
 

@@ -71,7 +71,8 @@ class funk_recorder:
     ctrl_socket = None
     subpoller = None
     track = None
-    last_seconds = None
+    start_seconds = None
+    start_ticks = None
     recording = False
     tempo = None
     ticks_per_beat = None
@@ -100,9 +101,6 @@ class funk_recorder:
 
         self.recording = False
         self.track = None
-    
-        self.last_seconds = time.time()
-    
 
 
     def connect_subscriber(self, path):
@@ -135,23 +133,33 @@ class funk_recorder:
         self.pub_socket.send_pyobj(msg)
     
 
-    def handle_midi_msg(self, topic, midi_msg, delta_ticks):
-        print('Got midi message, delta_ticks = %d' % delta_ticks)
+    def handle_midi_msg(self, topic, midi_msg, now_seconds):
+        print('Got midi message, seconds = %f' % now_seconds)
         if topic == 'midi_rec':
-            midi_msg.time = delta_ticks
+            midi_msg.time = now_seconds
             self.track.append(midi_msg)
 
     def handle_record_command(self, msg):
         print('handle_record_command')
+        self.track_index = msg['track_index']
         self.track = MidiTrack()
         self.track.name = 'Capture'
-        self.start_play = msg['start']
-        self.last_seconds = time.time() + self.start_play
         self.recording = True
+            
+    def handle_start_sync_command(self, msg):
+        print('handle_start_sync_command')
+        self.start_ticks = msg['start_ticks']
+        self.start_seconds = msg['start_seconds']
             
     def handle_stop_command(self, msg):
         self.recording = False
-        self.send_ctrl_msg(self.pub_socket, 'recorded', self.track)
+        obj = {'command': 'track_recorded',
+               'track_index' : self.track_index,
+               'start_ticks' : self.start_ticks,
+               'start_seconds' : self.start_seconds,
+               'track' : self.track
+               }
+        self.send_ctrl_msg(self.pub_socket, 'editor', obj)
         self.track = None
             
     def handle_ctrl_msg(self, topic, msg):
@@ -160,6 +168,8 @@ class funk_recorder:
                 self.handle_record_command(msg)
             elif msg['command'] == 'stop':
                 return self.handle_stop_command(msg)
+            elif msg['command'] == 'start_sync':
+                return self.handle_start_sync_command(msg)
             else:
                 print('Unknown recorder command ' + repr(msg['command']))
         elif topic == 'all':
@@ -184,13 +194,10 @@ def main():
 
             if clientsock:
                 if recorder.midi_socket in clientsock and clientsock[recorder.midi_socket] == zmq.POLLIN:
-                    now = time.time() + recorder.start_play
-                    delta_ticks = int(round(second2tick(now - recorder.last_seconds, recorder.ticks_per_beat, recorder.tempo)))
-                    recorder.last_seconds = now
                     topic = recorder.midi_socket.recv()
                     midi_msg = recorder.midi_socket.recv_pyobj()
                     if recorder.recording:
-                        recorder.handle_midi_msg(topic, midi_msg, delta_ticks)
+                        recorder.handle_midi_msg(topic, midi_msg, time.time())
                 elif recorder.ctrl_socket in clientsock and clientsock[recorder.ctrl_socket] == zmq.POLLIN:
                     topic = recorder.ctrl_socket.recv()
                     ctrl_msg = recorder.ctrl_socket.recv_pyobj()

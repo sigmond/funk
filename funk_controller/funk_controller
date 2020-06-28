@@ -69,7 +69,6 @@ class funk_controller():
         self.com = funk_com.funk_com(self, zmq_path_in, zmq_path_out, websocket_port, websocket_host)
         self.com.subscribe('all')
         self.com.subscribe('controller')
-        self.com.subscribe('recorded')
         self.com.subscribe('time')
         self.com.subscribe('error')
         self.com.subscribe('log')
@@ -345,7 +344,8 @@ class funk_controller():
     
     def handle_record(self, msg):
         obj = {'command': 'record',
-               'start' : msg['start']
+               'start' : msg['start'],
+               'track_index' : msg['track_index']
                }
         self.com.send_bus_msg('recorder', obj)
         obj['command'] = 'play'
