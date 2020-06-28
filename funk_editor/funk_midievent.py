@@ -604,6 +604,25 @@ class funk_midievent():
             self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
 
+    def remove_track(self, event_file, track_index):
+        print('change_track_info')
+        affected_tracks = []
+        # loop through affected tracks
+        original_tracks = []
+        for event_track in event_file['tracks']:
+            original_tracks.append(event_track)
+            if event_track['index'] < track_index:
+                affected_tracks.append(self.copy_event_track(event_track))
+            elif event_track['index'] > track_index:
+                changed_track = self.copy_event_track(event_track)
+                changed_track['index'] -= 1
+                affected_tracks.append(changed_track)
+                
+        event_file['tracks'] = affected_tracks
+
+        self.undo_tracks_edit_stack.insert(0, original_tracks)
+        return affected_tracks
+
 
     def undo_notes_edit(self, event_file):
         print('undo_notes_edit')

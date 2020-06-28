@@ -141,6 +141,8 @@ class funk_editor():
                 self.handle_change_track_info(msg)
             elif msg['command'] == 'create_new_track':
                 self.handle_create_new_track(msg)
+            elif msg['command'] == 'remove_track':
+                self.handle_remove_track(msg)
             else:
                 print('Unknown editor command ' + repr(msg['command']))
                 self.log('Unknown editor command ' + repr(msg['command']))
@@ -319,6 +321,17 @@ class funk_editor():
             self.midi_file.tracks.append(mido.MidiTrack())
             self.load_file_to_player()
 
+    def handle_remove_track(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        affected_tracks = self.midievent.remove_track(self.event_file, track_index)
+        if affected_tracks:
+            self.client_tracks_changed(self.event_file['tracks'])
+            self.midi_file = self.midievent.events2file(self.event_file)
+            # event file and midi file is the same:
+            self.event_tracks_changed_since_load = False
+            self.load_file_to_player()
+
 
     def load_file_to_player(self):
         if self.event_tracks_changed_since_load:
@@ -340,7 +353,8 @@ class funk_editor():
 
     def client_tracks_changed(self, tracks):
         obj = {'command' : 'tracks_changed',
-               'tracks' : self.encode_tracks_for_client(tracks)
+               'tracks' : self.encode_tracks_for_client(tracks),
+               'total_num_tracks' : len(self.event_file['tracks'])
                }
         self.send_ctrl_msg('controller', obj)
 

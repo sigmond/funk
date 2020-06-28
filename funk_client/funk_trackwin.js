@@ -119,7 +119,7 @@ class trackwin extends eventwin
         this._track_event_elements = [];
         this._selected_notes = [];
 
-        this._num_painted_tracks = this.create_tracks();
+        this._num_painted_tracks = this.create_tracks(0);
         this.create_rulers();
         this.fill_song_info();
         this.fill_tempo_info();
@@ -135,15 +135,7 @@ class trackwin extends eventwin
     
     update_track(track_index)
     {
-        if (track_index >= this._num_painted_tracks)
-        {
-            this._num_painted_tracks = this.create_tracks();
-            this._tracks_canvas.setAttribute("preserveAspectRatio", "none");
-            this._tracks_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._height.toString());
-            this._info_canvas.setAttribute("preserveAspectRatio", "none");
-            this._info_canvas.setAttribute("viewBox", "0 0 " + this._info_width.toString() + ' ' + this._height.toString());
-        }
-        else
+        if (track_index < this._num_painted_tracks)
         {
             var track = this._song.tracks[track_index];
             this.fill_track_events(track_index, track);
@@ -151,6 +143,18 @@ class trackwin extends eventwin
         }
     }
 
+    adjust_num_tracks(num_tracks)
+    {
+        if (this._song.tracks.length != this._num_painted_tracks)
+        {
+            this._num_painted_tracks = this.create_tracks(this._song.tracks.length);
+        }
+        
+        this._tracks_canvas.setAttribute("preserveAspectRatio", "none");
+        this._tracks_canvas.setAttribute("viewBox", "0 0 " + this._tracks_width.toString() + ' ' + this._height.toString());
+        this._info_canvas.setAttribute("preserveAspectRatio", "none");
+        this._info_canvas.setAttribute("viewBox", "0 0 " + this._info_width.toString() + ' ' + this._height.toString());
+    }
 
     tick2snap(tick)
     {
@@ -412,7 +416,7 @@ class trackwin extends eventwin
             }
             else if (track_index >= (this._song.tracks.length))
             {
-                track_index = this._song.tracks.length - 1;
+                return;
             }
             
             pianowin_object.update_track(track_index);
@@ -537,11 +541,22 @@ class trackwin extends eventwin
         
         if (!key)
         {
-            pos = {"tick" : this.x2tick_zoomed(x), "line" : this.y2line_zoomed(y) };
+            var line = this.y2line_zoomed(y);
+            if (line >= (this._song.tracks.length))
+            {
+                return;
+            }
+            
+            pos = {"tick" : this.x2tick_zoomed(x), "line" : line };
         }
         else
         {
             pos = this.tick_line_from_key(key, this._song.bars[this._song.bars.length - 1].start, this._song.tracks.length);
+            if (!pos)
+            {
+                return;
+            }
+            
             output('track width ' + this.x2tick(this._tracks_width) + ' end tick ' + pos.tick + ' last bar end ' + this._song.bars[this._song.bars.length - 1].end);
         }
         
@@ -888,18 +903,32 @@ class trackwin extends eventwin
     }
     
 
-    create_tracks()
+    create_tracks(num_tracks)
     {
         var track_index = 0;
         var track_width = 0;
         var track_canvas_width;
         var track_canvas_height;
 
+        if (num_tracks < this._num_painted_tracks)
+        {
+            for (var i = num_tracks; i < this._num_painted_tracks; i++)
+            {
+                this.remove_track_events(i);
+                this.remove_track_info(i);
+                this.remove_solo_button(i);
+                this.remove_mute_button(i);
+                this._track_event_elements.pop();
+            }
+        }
+
         track_width = this.create_track_bars(this._song.bars);
         
         this._tracks_width = track_width + 100;
         this._height = (this._line_height * (this._song.tracks.length + 1)) + this._track_y;        
 
+        this._solo_state = [];
+        this._mute_state = [];
         track_index = 0;
         for (const track of this._song.tracks)
         {
@@ -1154,16 +1183,20 @@ class trackwin extends eventwin
         return y;
     }
 
-
-    create_solo_button(track_index)
+    remove_solo_button(track_index)
     {
         var solo_rect = document.getElementById("track_solo_" + track_index.toString());
         if (solo_rect)
         {
             solo_rect.remove();
         }
-        
-        solo_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    }
+
+    create_solo_button(track_index)
+    {
+        this.remove_solo_button(track_index);
+
+        var solo_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         var x1 = this._solo_button_left;
         var y1 = this._track_y + (track_index * this._line_height) + this._button_padding;
         var x2 = x1 + this._button_width;
@@ -1184,15 +1217,20 @@ class trackwin extends eventwin
         return solo_rect;
     }
 
-    create_mute_button(track_index)
+    remove_mute_button(track_index)
     {
         var mute_rect = document.getElementById("track_mute_" + track_index.toString());
         if (mute_rect)
         {
             mute_rect.remove();
         }
+    }
 
-        mute_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    create_mute_button(track_index)
+    {
+        this.remove_mute_button(track_index);
+
+        var mute_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         
         var x1 = this._mute_button_left;
         var y1 = this._track_y + (track_index * this._line_height) + this._button_padding;
@@ -1217,9 +1255,8 @@ class trackwin extends eventwin
     }
 
 
-    create_track_info(track_index, trackname, new_track = false)
+    remove_track_info(track_index)
     {
-        output('create_track_info ' + trackname);
         var info_rect_id = 'track_info_' + track_index.toString();
         var info_rect = document.getElementById(info_rect_id);
         if (info_rect)
@@ -1233,8 +1270,18 @@ class trackwin extends eventwin
         {
             info_name_text.remove();
         }
+    }
+
+    create_track_info(track_index, trackname, new_track = false)
+    {
+        output('create_track_info ' + trackname);
+
+        this.remove_track_info(track_index);
+
+        var info_rect_id = 'track_info_' + track_index.toString();
+        var info_name_id = 'track_name_' + track_index.toString();
         
-        info_name_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        var info_name_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         info_name_text.id = info_name_id;
         info_name_text.setAttribute("x", 2);
         info_name_text.setAttribute("y", this._track_y + (track_index * this._line_height) + 12);
@@ -1250,7 +1297,7 @@ class trackwin extends eventwin
         
         this._info_canvas.appendChild(info_name_text);
 
-        info_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        var info_rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
         var width = this._info_width;
         
         info_rect.id = info_rect_id;
@@ -1289,6 +1336,16 @@ class trackwin extends eventwin
         return width;
     }
 
+    remove_track_events(track_index)
+    {
+        var event_element;
+        
+        while ((event_element = this._track_event_elements[track_index].pop()))
+        {
+            event_element.remove();
+        }
+    }
+    
     fill_track_events(track_index, track)
     {
         var width = 1;
@@ -1301,14 +1358,8 @@ class trackwin extends eventwin
         {
             this._track_event_elements.push([]);
         }
-        
-        var event_element;
-        
-        while ((event_element = this._track_event_elements[track_index].pop()))
-        {
-            event_element.remove();
-        }
-        
+    
+        this.remove_track_events(track_index);        
 
         for (const event of track.events)
         {

@@ -39,32 +39,74 @@ class eventwin
         this._tracks_frame = tracks_frame;
         this._info_frame = info_frame;
         
+        this.create_tracks_canvas(); 
+        this.create_info_canvas();
+        this.create_rulers_canvas();
+        this.create_menu_canvas();
+    }
+
+    create_tracks_canvas()
+    {
+        this._tracks_canvas = document.getElementById(this._prefix + '_tracks_canvas');
+        if (this._tracks_canvas)
+        {
+            this._tracks_canvas.remove();
+        }
         this._tracks_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");        
         this._tracks_canvas.setAttribute("class", this._prefix + "-tracks-canvas");
-        this._tracks_canvas.id = this.prefix + '_tracks_canvas';        
-        tracks_frame.appendChild(this._tracks_canvas);
-        
+        this._tracks_canvas.id = this._prefix + '_tracks_canvas';        
+        this._tracks_frame.appendChild(this._tracks_canvas);
+    }
+
+    create_info_canvas()
+    {
+        this._info_canvas = document.getElementById(this._prefix + '_info_canvas');
+        if (this._info_canvas)
+        {
+            this._info_canvas.remove();
+        }
         this._info_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         this._info_canvas.setAttribute("class", this._prefix + "-info-canvas");
         this._info_canvas.id = this._prefix + '_info_canvas';
-        info_frame.appendChild(this._info_canvas);
-        
+        this._info_frame.appendChild(this._info_canvas);
+    }
+    
+    create_rulers_canvas()
+    {
+        this._rulers_canvas = document.getElementById(this._prefix + '_rulers_canvas');
+        if (this._rulers_canvas)
+        {
+            this._rulers_canvas.remove();
+        }
         this._rulers_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         this._rulers_canvas.id = this._prefix + '_rulers_canvas';
-        rulers_frame.appendChild(this._rulers_canvas);
-
-
+        this._rulers_frame.appendChild(this._rulers_canvas);
+    }
+    
+    create_menu_canvas()
+    {
+        this._menu_canvas = document.getElementById(this._prefix + '_menu_canvas');
+        if (this._menu_canvas)
+        {
+            this._menu_canvas.remove();
+        }
         this._menu_canvas = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         this._menu_canvas.id = this._prefix + '_menu_canvas';
-        menu_frame.appendChild(this._menu_canvas);        
+        this._menu_frame.appendChild(this._menu_canvas);        
     }
-
+    
     update_tracks(track_indexes)
     {
         for (const track_index of track_indexes)
         {
             this.update_track(track_index);
         }
+
+        this.adjust_num_tracks(track_indexes.length);
+    }
+
+    adjust_num_tracks(num_tracks)
+    {
     }
     
     x2tick(x)

@@ -179,17 +179,22 @@ function edit_track_name(track_index, name, channel, new_track)
     var cancel = document.createElement("button");
     cancel.innerText = "Cancel";
     cancel.onclick = cancel_edit;
+    var remove = document.createElement("button");
+    remove.innerText = "Remove";
+    remove.onclick = remove_track_info;
     global_edit_elements.push(label);
     global_edit_elements.push(input);
     global_edit_elements.push(selector);
     global_edit_elements.push(save);
     global_edit_elements.push(cancel);
+    global_edit_elements.push(remove);
     var menu = document.getElementById("topmenu");
     menu.appendChild(label);
     menu.appendChild(input);
     menu.appendChild(selector);
     menu.appendChild(save);
     menu.appendChild(cancel);
+    menu.appendChild(remove);
 }
 
 function save_track_info()
@@ -230,6 +235,18 @@ function cancel_edit()
     global_disable_keydownhandler = false;
 }
 
+
+function remove_track_info()
+{
+    output('remove_track_info ' + global_edit_track_index);
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+    global_disable_keydownhandler = false;
+    remove_track(parseInt(global_edit_track_index));
+    global_edit_track_index = -1;
+}
 
 function ctrl_onopen()
 {
@@ -660,6 +677,7 @@ function handle_editor(msg)
 }
 
 var trackwin_object;
+var pianowin_object;
 
 function handle_editor_file_loaded(msg)
 {
@@ -674,20 +692,22 @@ function handle_editor_file_loaded(msg)
     var trackwin_info_frame = document.getElementById("trackwin_info_container");
     var trackwin_menu_frame = document.getElementById("trackwin_rulers_menu_container");
     var trackwin_rulers_frame = document.getElementById("trackwin_rulers_rulers_container");
+
     trackwin_object = new trackwin("trackwin", trackwin_menu_frame, trackwin_rulers_frame, trackwin_info_frame, trackwin_tracks_frame, song);
 
     var pianowin_tracks_frame = document.getElementById("pianowin_tracks_container");
     var pianowin_info_frame = document.getElementById("pianowin_info_container");
     var pianowin_menu_frame = document.getElementById("pianowin_rulers_menu_container");
     var pianowin_rulers_frame = document.getElementById("pianowin_rulers_rulers_container");
+
     pianowin_object = new pianowin("pianowin", pianowin_menu_frame, pianowin_rulers_frame, pianowin_info_frame, pianowin_tracks_frame, song);
 }
 
 function handle_editor_tracks_changed(msg)
 {
-    output("Tracks changed: " + msg['tracks'].length);
+    output("Tracks changed: " + msg['tracks'].length + " " + msg['total_num_tracks']);
 
-    trackwin_object._song.update_tracks(msg['tracks']);
+    trackwin_object._song.update_tracks(msg['tracks'], msg['total_num_tracks']);
     var track_indexes = [];
     for (const track of msg['tracks'])
     {
@@ -956,6 +976,22 @@ function create_new_track(track_index, new_name, new_channel)
         "track_index" : track_index,
         "name" : new_name,
         "channel" : new_channel
+    };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function remove_track(track_index)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { 
+        "command" : "remove_track",
+        "track_index" : track_index
     };
     msg = { "topic" : "controller", "msg" : cmd };
     
