@@ -658,6 +658,10 @@ function handle_editor(msg)
     {
         handle_editor_file_loaded(msg);
     }
+    else if (msg['command'] == 'load_synth')
+    {
+        handle_editor_load_synth(msg);
+    }
     else if (msg['command'] == 'download')
     {
         handle_editor_download(msg);
@@ -701,6 +705,13 @@ function handle_editor_file_loaded(msg)
     var pianowin_rulers_frame = document.getElementById("pianowin_rulers_rulers_container");
 
     pianowin_object = new pianowin("pianowin", pianowin_menu_frame, pianowin_rulers_frame, pianowin_info_frame, pianowin_tracks_frame, song);
+}
+
+function handle_editor_load_synth(msg)
+{
+    output("Load synth: " + msg.type);
+
+    synth_object = new funk_synth(msg.type, msg.synth);
 }
 
 function handle_editor_tracks_changed(msg)

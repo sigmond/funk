@@ -158,6 +158,9 @@ class funk_controller():
             elif msg['command'] == 'file_loaded':
                 # someone (e.g. the editor) wants to show loaded midi file
                 self.handle_file_loaded(msg)
+            elif msg['command'] == 'load_synth':
+                # someone (e.g. the editor) wants to load synth info to client
+                self.handle_load_synth(msg)
             elif msg['command'] == 'tracks_changed':
                 # someone (e.g. the editor) wants to show changed tracks
                 self.handle_tracks_changed(msg)
@@ -334,6 +337,9 @@ class funk_controller():
         self.com.send_client_ctrl_msg('outputter', msg)
     
     def handle_file_loaded(self, msg):
+        self.com.send_client_ctrl_msg('editor', msg)
+    
+    def handle_load_synth(self, msg):
         self.com.send_client_ctrl_msg('editor', msg)
     
     def handle_tracks_changed(self, msg):

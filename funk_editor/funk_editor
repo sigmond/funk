@@ -27,6 +27,7 @@ import time
 import io
 from mido import MidiFile, Message, tempo2bpm, MidiTrack, second2tick
 import funk_midievent
+from funk_patches import synths
 
 DEFAULT_TEMPO = 500000
 DEFAULT_TICKS_PER_BEAT = 480
@@ -64,6 +65,7 @@ class funk_editor():
     event_tracks_changed_since_load = False
     filename = ""
     midievent = None
+    synth_type = 'GM'
     
     def __init__(self, zmq_path_in, zmq_path_out):
         
@@ -162,6 +164,7 @@ class funk_editor():
             # event file and midi file is the same:
             self.event_tracks_changed_since_load = False
             self.load_file_to_player()
+            self.client_load_synth()
             self.client_file_loaded()
         else:
             self.log('Unknown open type ' + repr(msg['type']))
@@ -355,6 +358,13 @@ class funk_editor():
                }
         self.send_ctrl_msg('player', obj)
         self.event_tracks_changed_since_load = False
+
+    def client_load_synth(self):
+        obj = {'command' : 'load_synth',
+               'type' : self.synth_type,
+               'synth' : synths[self.synth_type]
+               }
+        self.send_ctrl_msg('controller', obj)
 
     def client_file_loaded(self):
         obj = {'command' : 'file_loaded',
