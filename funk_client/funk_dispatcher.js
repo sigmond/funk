@@ -432,12 +432,12 @@ function play_midi_file(start)
     ws_ctrl.send(json_message);
 }
 
-function record_midi_file(start)
+function record_midi_file(start, record_area)
 { 
     var cmd;
     var msg;
 
-    cmd = { "command" : "record", "start" : start };
+    cmd = { "command" : "record", "start" : start, "record_area" : record_area };
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);

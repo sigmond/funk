@@ -345,7 +345,7 @@ class funk_controller():
     def handle_record(self, msg):
         obj = {'command': 'record',
                'start' : msg['start'],
-               'track_index' : msg['track_index']
+               'record_area' : msg['record_area']
                }
         self.com.send_bus_msg('recorder', obj)
         obj['command'] = 'play'

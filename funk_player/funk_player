@@ -73,6 +73,8 @@ class funk_player():
     muted_tracks = []
     subpoller = None
     print_messages = False
+    record_time_gap = 0.01
+    playhead_time_interval = 10
 
     def __init__(self, data_bus_in, data_bus_out, print_messages):
 
@@ -137,14 +139,11 @@ class funk_player():
 
     def send_time(self, tick_now):
         obj = {'t': tick_now}
-        self.send_ctrl_msg(self.pub_socket, 'time', obj)
-
-    def send_start_sync(self, start_ticks, start_seconds):
-        obj = {'command': 'start_sync',
-               'start_ticks' : start_ticks,
-               'start_seconds' : start_seconds
-               }
-        self.send_ctrl_msg(self.pub_socket, 'recorder', obj)
+        self.send_ctrl_msg(self.pub_socket, 'rectime', obj)
+        self.rectime_counter -= 1
+        if self.rectime_counter <= 0:
+            self.send_ctrl_msg(self.pub_socket, 'time', obj)
+            self.rectime_counter = self.playhead_time_interval
 
 
     def poll_ctrl_command(self):
@@ -172,15 +171,13 @@ class funk_player():
         tempo = 500000
 
         # sleep a maximum time between each check for control messages
-        max_sleep_ticks = mido.second2tick(0.1, self.midi_file.ticks_per_beat, tempo)
+        max_sleep_ticks = mido.second2tick(self.record_time_gap, self.midi_file.ticks_per_beat, tempo)
 
         # always send all events with time 0 (typically channel setup)
         input_tick = 0
 
         # allow a little time for the module to be ready after the tick-zero events
-        tick_now = start_tick - max_sleep_ticks
-        start_seconds = time.time() + 0.1
-        self.send_start_sync(start_tick, start_seconds)
+        tick_now = start_tick - (max_sleep_ticks * 20)
 
         # this will give all messages of all tracks ordered by absolute tick
         # msg.time will be in delta ticks though
@@ -195,7 +192,7 @@ class funk_player():
             # if tempo changes, recalculate the sleep time
             if msg.type == 'set_tempo':
                 tempo = msg.tempo
-                max_sleep_ticks = mido.second2tick(0.1, self.midi_file.ticks_per_beat, tempo)
+                max_sleep_ticks = mido.second2tick(self.record_time_gap, self.midi_file.ticks_per_beat, tempo)
 
             # skip all events between zero and start tick
             if (input_tick > 0) and (input_tick < start_tick):
@@ -211,7 +208,7 @@ class funk_player():
                 if command == 'stop':
                     return
                 self.send_time(tick_now)
-                time.sleep(0.1)
+                time.sleep(self.record_time_gap)
                 ticks_to_next_event = ticks_to_next_event - max_sleep_ticks
                 tick_now = tick_now + max_sleep_ticks
 
@@ -267,6 +264,7 @@ class funk_player():
     def play_file(self, start_tick, print_messages):
 
         self.playing = True
+        self.rectime_counter = self.playhead_time_interval
 
         # loop the message generator (will yield at appropriate realtime)
         for message in self.play(start_tick, meta_messages=False):

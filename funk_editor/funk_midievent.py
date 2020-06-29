@@ -623,11 +623,50 @@ class funk_midievent():
         self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
 
-    def track_recorded(self, event_file, track_index, start_ticks, start_seconds, midi_track):
+    def get_tempos(self, event_file):
+        tempos = []
+        for event in event_file['tracks'][0]['events']:
+            if event['type'] == 'set_tempo':
+                tempos.append(event)
+
+        return tempos
+    
+    def track_recorded(self, event_file, record_area, midi_track):
         print('track_recorded')
+
+        print('record_area ' + repr(record_area))
+        #print('midi_track ' + repr(midi_track))
+
+        #print('track 0: ' + repr(event_file['tracks'][0]))
+
+        track_index = record_area['track_start']
+
+        last_tick = 0
+        for msg in midi_track:
+            abstick = msg.time
+            msg.time = abstick - last_tick
+            last_tick = abstick
+
+        event_track, last_track_tick = self.track2events(track_index, midi_track)
+
+        recorded_events = []
+        for event in event_track['events']:
+            if (event['start'] >= record_area['tick_start']) and (event['start'] < record_area['tick_stop']):
+                recorded_events.append(event)
+        
+        print('recorded_events ' + repr(recorded_events))
+        
         affected_tracks = []
         # loop through affected tracks
         original_tracks = []
+        original_tracks.append(self.copy_event_track(event_file['tracks'][track_index]))
+
+        orig_events = event_file['tracks'][track_index]['events']
+        orig_events.extend(recorded_events)
+        event_file['tracks'][track_index]['events'] = sorted(orig_events, key = lambda i: i['start'])
+        affected_tracks.append(event_file['tracks'][track_index])
+
+        self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
 
     def undo_notes_edit(self, event_file):

@@ -336,11 +336,9 @@ class funk_editor():
 
     def handle_track_recorded(self, msg):
         print('editor got ' + repr(msg))
-        track_index = msg['track_index']
-        start_ticks = msg['start_ticks']
-        start_seconds = msg['start_seconds']
+        record_area = msg['record_area']
         track = msg['track']
-        affected_tracks = self.midievent.track_recorded(self.event_file, track_index, start_ticks, start_seconds, track)
+        affected_tracks = self.midievent.track_recorded(self.event_file, record_area, track)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks

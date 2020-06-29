@@ -656,7 +656,7 @@ class pianowin extends eventwin
         
         output("play: start = " + tick_snapped);
         trackwin_object._playing = true;
-        play_midi_file(tick_snapped);
+        play_midi_file(tick_snapped, false);
     }
 
     tick2snap(tick)

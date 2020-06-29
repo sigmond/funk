@@ -203,7 +203,14 @@ class trackwin extends eventwin
         if (!this._playing)
         {
             this._playing = true;
-            play_midi_file(this._playhead_ticks);
+            if (this._select_element)
+            {
+                record_midi_file(this._playhead_ticks, this.select_tick_track_area());
+            }
+            else
+            {
+                play_midi_file(this._playhead_ticks);
+            }
         }
         else
         {
@@ -634,7 +641,14 @@ class trackwin extends eventwin
             {
                 output("play: start = " + bar.start);
                 this._playing = true;
-                play_midi_file(bar.start);
+                if (this._select_element)
+                {
+                    record_midi_file(bar.start, this.select_tick_track_area());
+                }
+                else
+                {
+                    play_midi_file(bar.start);
+                }
                 break;
             }
         }
@@ -1478,7 +1492,10 @@ class trackwin extends eventwin
             paste_tracks_area(this._area_copy_buffer, this.select_tick_track_area(), do_insert, do_merge, this._area_copy_buffer_type); // paste copy buffer to selected area, maybe insert space, maybe merge
         }
 
-        this._select_element.remove();
+        if (this._select_element)
+        {
+            this._select_element.remove();
+        }
         this._select_element = null;
     }    
     
