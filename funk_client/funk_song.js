@@ -124,6 +124,11 @@ class funk_song
         return this._tempos;
     }
 
+    is_drum_channel(track_index)
+    {
+        return (this._channels[track_index] == 9);
+    }
+
     bpm()
     {
         return parseInt((60 * 1000000) / this.tempos[0]);

@@ -18,11 +18,61 @@ class funk_synth
 {
     constructor(type, synth)
     {
-        for (const name of Object.keys(synth.controllers))
-        {
-            output('controller ' + synth.controllers[name]);
-        }
+        this._type = type;
+        this._controllers = synth.controllers;
+        this._drumnames = synth.drumnames;
+        this._drumsets = synth.drumsets;
+        this._voices = synth.voices;
+
+//         output('voice 3: ' + this._voices[3]);
+//         output('drumname 30: ' + this._drumnames[30]);        
     }
+
+    get type()
+    {
+        return this._type;
+    }
+
+    drumname(note)
+    {
+        return this._drumnames[note];
+    }
+
+    voice(index)
+    {
+        return this._voices[index];
+    }
+
+    drumset(index)
+    {
+        return this._drumsets[index];
+    }
+
+    controller(index)
+    {
+        return this._controllers[index];
+    }
+
+    get num_voices()
+    {
+        return object.keys(this._voices).length;
+    }
+
+    get num_drumsets()
+    {
+        return object.keys(this._drumsets).length;
+    }
+
+    get num_drumnames()
+    {
+        return object.keys(this._drumnames).length;
+    }
+
+    get num_controllers()
+    {
+        return object.keys(this._controllers).length;
+    }
+
 }
 
 

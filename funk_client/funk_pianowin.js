@@ -437,6 +437,7 @@ class pianowin extends eventwin
     {
         //output("handle_mouse_over " + x + " " + y);
         var tick = this.x2tick_zoomed(x);
+        var is_drum_channel = this._song.is_drum_channel(this._track_index);
         
         if (this._xgrid_highlight_element)
         {
@@ -459,7 +460,7 @@ class pianowin extends eventwin
         
         if (this._key_highlight_element)
         {
-            if (this._key_highlight_type == 'white_key')
+            if ((this._key_highlight_type == 'white_key') || is_drum_channel)
             {
                 this._key_highlight_element.style.fill = this._white_key_color;
             }
@@ -473,7 +474,7 @@ class pianowin extends eventwin
         var is_white_key = this._white_notes.includes(note % 12);
         
         this._key_highlight_element = document.getElementById("note_info_" + this.line2note(line_index));
-        if (is_white_key)
+        if (is_white_key || is_drum_channel)
         {
             this._key_highlight_element.style.fill = this._white_key_highlight_color;
             this._key_highlight_type = 'white_key';
@@ -668,6 +669,7 @@ class pianowin extends eventwin
     {
         // output("handle_mouse_over " + x + " " + y);
         var tick = this.x2tick_zoomed(x);
+        var is_drum_channel = this._song.is_drum_channel(this._track_index);
 
         if (this._xgrid_highlight_element)
         {
@@ -687,7 +689,7 @@ class pianowin extends eventwin
         
         if (this._key_highlight_element)
         {
-            if (this._key_highlight_type == 'white_key')
+            if ((this._key_highlight_type == 'white_key') || is_drum_channel)
             {
                 this._key_highlight_element.style.fill = this._white_key_color;
             }
@@ -768,12 +770,14 @@ class pianowin extends eventwin
     info_handle_mouse_move(x, y)
     {
         // output("handle_mouse_over " + x + " " + y);
+
+        var is_drum_channel = this._song.is_drum_channel(this._track_index);
         
         if (y < this._ruler_height)
         {
             if (this._key_highlight_element)
             {
-                if (this._key_highlight_type == 'white_key')
+                if ((this._key_highlight_type == 'white_key') || is_drum_channel)
                 {
                     this._key_highlight_element.style.fill = this._white_key_color;
                 }
@@ -804,7 +808,7 @@ class pianowin extends eventwin
             
             if (this._key_highlight_element)
             {
-                if (this._key_highlight_type == 'white_key')
+                if ((this._key_highlight_type == 'white_key') || is_drum_channel)
                 {
                     this._key_highlight_element.style.fill = this._white_key_color;
                 }
@@ -818,7 +822,7 @@ class pianowin extends eventwin
             var is_white_key = this._white_notes.includes(note % 12);
 
             this._key_highlight_element = document.getElementById("note_info_" + this.line2note(line_index));
-            if (is_white_key)
+            if ((is_white_key) || is_drum_channel)
             {
                 this._key_highlight_element.style.fill = this._white_key_highlight_color;
                 this._key_highlight_type = 'white_key';
@@ -1243,10 +1247,9 @@ class pianowin extends eventwin
         var i;
         var note;
         var track;
+        var is_drum_channel = this._song.is_drum_channel(this._track_index);
         
         track = this._song.tracks[this._track_index];
-
-        
 
         for (i = 0; i < this._num_notes; i++)
         {
@@ -1261,7 +1264,7 @@ class pianowin extends eventwin
         {
             if (this._white_notes.includes(note % 12))
             {
-                info_width_tmp = this.create_note_info(note, true, i, track);
+                info_width_tmp = this.create_note_info(note, true, i, track, is_drum_channel);
                 if (info_width_tmp > info_width)
                 {
                     info_width = info_width_tmp;
@@ -1274,7 +1277,7 @@ class pianowin extends eventwin
         {
             if (!this._white_notes.includes(note % 12))
             {
-                info_width_tmp = this.create_note_info(note, false, 0, track);
+                info_width_tmp = this.create_note_info(note, false, 0, track, is_drum_channel);
                 if (info_width_tmp > info_width)
                 {
                     info_width = info_width_tmp;
@@ -1427,8 +1430,21 @@ class pianowin extends eventwin
     }
 
 
-    create_note_info(note, is_white, white_key_num, track)
+    create_note_info(note, is_white, white_key_num, track, is_drum_channel)
     {
+        var create_note_text = is_drum_channel;
+
+        var info_text = document.getElementById('note_text_' + note.toString());
+        if (info_text != undefined)
+        {
+            info_text.remove();
+        }
+
+        if (create_note_text)
+        {
+            var info_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        }
+
         var info_rect = document.getElementById('note_info_' + note.toString());
         if (info_rect != undefined)
         {
@@ -1441,7 +1457,7 @@ class pianowin extends eventwin
         var y;
         var fill_color;
 
-        if (is_white)
+        if (is_white && !is_drum_channel)
         {
             width = this._info_width;
             height = this._white_note_height;
@@ -1456,10 +1472,36 @@ class pianowin extends eventwin
         }
         else
         {
-            width = parseInt(this._info_width * 2 / 3);
             height = this._line_height;
             y = this._track_y + (this.note2line(note) * this._line_height);
-            fill_color = this._black_key_color;
+            if (is_drum_channel)
+            {
+                width = this._info_width;
+                fill_color = this._white_key_color;
+            }
+            else
+            {
+                width = parseInt(this._info_width * 2 / 3);
+                fill_color = this._black_key_color;
+            }
+        }
+
+
+        var fill_opacity = '1.0';
+        
+        if (create_note_text)
+        {
+            info_text.id = 'note_text_' + note.toString();
+            info_text.setAttribute("x", 10);
+            info_text.setAttribute("y", y + height - 2);
+            info_text.setAttribute("style", "fill:black;font-size:12px;font-weight:bold;");
+            if (is_drum_channel)
+            {
+                info_text.textContent = synth_object.drumname(note);
+                fill_opacity = 0.3;
+            }
+
+            this._info_canvas.appendChild(info_text);
         }
 
         info_rect.id = 'note_info_' + note.toString();
@@ -1467,7 +1509,7 @@ class pianowin extends eventwin
         info_rect.setAttribute("width", width);
         info_rect.setAttribute("x", 0);
         info_rect.setAttribute("y", y);
-        info_rect.setAttribute("style", "fill:" + fill_color + ";stroke:black;stroke-width:1;fill-opacity:1.0;stroke-opacity:1.0");
+        info_rect.setAttribute("style", "fill:" + fill_color + ";stroke:black;stroke-width:1;fill-opacity:" + fill_opacity + ";stroke-opacity:1.0");
         info_rect.addEventListener('mousedown', this.note_mousedownhandler);
         info_rect.addEventListener('mouseup', this.note_mouseuphandler);
         info_rect.addEventListener('mouseover', this.note_mouseoverhandler);
