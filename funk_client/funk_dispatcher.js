@@ -136,7 +136,7 @@ document.addEventListener("keyup", keyuphandler);
 var global_edit_elements = [];
 var global_edit_track_index = -1;
     
-function edit_track_name(track_index, name, channel, new_track)
+function edit_track_info(track_index, name, channel, patch_index, new_track)
 {
     while ((elem = global_edit_elements.pop()))
     {
@@ -150,22 +150,49 @@ function edit_track_name(track_index, name, channel, new_track)
     input.setAttribute('type', 'text');
     input.id = 'new_track_name';
     input.setAttribute("value",name);
-    var selector = document.createElement("SELECT");
+
+    var channel_selector = document.createElement("SELECT");
     var channels = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
-    var selected_index = 0;
+    var selected_channel_index = 0;
     var index;
     for (index in channels)
     {
         var option = document.createElement("option");
         option.text = channels[index].toString();
-        selector.add(option);
+        channel_selector.add(option);
         if (index == channel)
         {
-            selected_index = index;
+            selected_channel_index = index;
         }
     }
-    selector.selectedIndex = selected_index;
-    selector.id = 'edit_track_channel_select';
+    channel_selector.selectedIndex = selected_channel_index;
+    channel_selector.id = 'edit_track_channel_select';
+
+    var patch_selector = document.createElement("SELECT");
+    var patches;
+    if (channel != 9)
+    {
+        patches = synth_object.voices;
+    }
+    else
+    {
+        patches = synth_object.drumsets;
+    }
+    var selected_patch_index = 0;
+    for (var i = 0; i < patches.length; i++)
+    {
+        var option = document.createElement("option");
+        var patch = patches[i];
+        option.text = patch.name;
+        patch_selector.add(option);
+        if (patch.index == patch_index)
+        {
+            selected_patch_index = i;
+        }
+    }
+    patch_selector.selectedIndex = selected_patch_index;
+    patch_selector.id = 'edit_track_patch_select';
+
     var save = document.createElement("button");
     save.innerText = "Save";
     if (!new_track)
@@ -184,14 +211,16 @@ function edit_track_name(track_index, name, channel, new_track)
     remove.onclick = remove_track_info;
     global_edit_elements.push(label);
     global_edit_elements.push(input);
-    global_edit_elements.push(selector);
+    global_edit_elements.push(channel_selector);
+    global_edit_elements.push(patch_selector);
     global_edit_elements.push(save);
     global_edit_elements.push(cancel);
     global_edit_elements.push(remove);
     var menu = document.getElementById("topmenu");
     menu.appendChild(label);
     menu.appendChild(input);
-    menu.appendChild(selector);
+    menu.appendChild(channel_selector);
+    menu.appendChild(patch_selector);
     menu.appendChild(save);
     menu.appendChild(cancel);
     menu.appendChild(remove);

@@ -137,6 +137,7 @@ class pianowin extends eventwin
         this.create_rulers();
         this.fill_track_info();
         this.fill_channel_info();
+        this.fill_patch_info();
         this.create_menu();
 
         var wh = this._tracks_canvas.getClientRects()[0];
@@ -157,6 +158,8 @@ class pianowin extends eventwin
         this.fill_note_events();
         this.fill_track_info();
         this.fill_channel_info();
+        this.fill_patch_info();
+        this.create_menu();
         this.fill_note_info();
     }
     
@@ -1162,12 +1165,23 @@ class pianowin extends eventwin
             track_info_element.remove();
         }
 
+        var trackname;
+        
+        if (this._track_index > 0)
+        {
+            trackname = this._track_index.toString() + ' ' + this._song.tracknames[this._track_index];
+        }
+        else
+        {
+            trackname = '0 Master';
+        }
+
         track_info_element = document.createElementNS("http://www.w3.org/2000/svg", "text");
         track_info_element.id = 'pw_track_info';
         track_info_element.setAttribute("x", 2);
-        track_info_element.setAttribute("y", 14);
+        track_info_element.setAttribute("y", 12);
         track_info_element.setAttribute("style", "fill:black;font-size:14px;font-weight:bold");
-        track_info_element.textContent = this._track_index.toString() + ' ' + this._song.tracknames[this._track_index];
+        track_info_element.textContent = trackname;
         this._menu_canvas.appendChild(track_info_element);        
     }
     
@@ -1182,12 +1196,43 @@ class pianowin extends eventwin
         channel_info_element = document.createElementNS("http://www.w3.org/2000/svg", "text");
         channel_info_element.id = 'pw_channel_info';
         channel_info_element.setAttribute("x", 2);
-        channel_info_element.setAttribute("y", 14 + 12);
+        channel_info_element.setAttribute("y", 12 + 12);
         channel_info_element.setAttribute("style", "fill:black;font-size:12px;font-weight:normal");
         channel_info_element.textContent = 'Channel ' + (this._song.channels[this._track_index] + 1);
         this._menu_canvas.appendChild(channel_info_element);        
     }
     
+    
+    fill_patch_info()
+    {
+        var patch_info_element = document.getElementById("pw_patch_info");
+        if (patch_info_element != undefined)
+        {
+            patch_info_element.remove();
+        }
+        
+        var is_drum_channel = this._song.is_drum_channel(this._track_index);
+        var patch = this._song.patch(this._track_index);
+        var patchname;
+
+        if (!is_drum_channel)
+        {
+            patchname = synth_object.patchname(patch);
+        }
+        else
+        {
+            patchname = synth_object.drumsetname(patch);
+        }
+
+        patch_info_element = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        patch_info_element.id = 'pw_patch_info';
+        patch_info_element.setAttribute("x", 2);
+        patch_info_element.setAttribute("y", 12 + 12 + 12);
+        patch_info_element.setAttribute("style", "fill:black;font-size:12px;font-weight:normal");
+        patch_info_element.textContent = patchname;
+        this._menu_canvas.appendChild(patch_info_element);        
+    }
+
     
     remove_track_events()
     {

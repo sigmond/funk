@@ -50,6 +50,8 @@ class funk_song
         this.get_tracknames();
         this._channels = [];
         this.get_channels();
+        this._patches = [];
+        this.get_patches();
         this._tempos = [];
         this.get_tempos();
         this.get_song_length_ticks();
@@ -119,6 +121,11 @@ class funk_song
         return this._channels;
     }
 
+    get patches()
+    {
+        return this._patches;
+    }
+
     get tempos()
     {
         return this._tempos;
@@ -137,6 +144,11 @@ class funk_song
     trackname(track_index)
     {
         return this._tracknames[track_index];
+    }
+
+    patch(track_index)
+    {
+        return this._patches[track_index];
     }
     
     generate_bars()
@@ -209,6 +221,30 @@ class funk_song
                 }
             }
             this._channels.push(channel);
+        }
+    }
+
+
+    get_patches()
+    {
+        for (const track of this._tracks)
+        {
+            var bank = -1;
+            var program = -1;
+            
+            for (const event of track['events'])
+            {
+                if ((event['type'] == 'control_change') && (event['control'] == 0))
+                {
+                    bank = event['value'];
+                }
+
+                if (event['type'] == 'program_change')
+                {
+                    program = event['program'];
+                }
+            }
+            this._patches.push({'bank' : bank, 'program' : program});
         }
     }
 

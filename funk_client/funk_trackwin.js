@@ -782,10 +782,10 @@ class trackwin extends eventwin
     track_info_clickhandler(event)
     {
         let svg = event.currentTarget;
-        output('track_info_clickhandler, name=' + svg.dataset.name + ', index=' + svg.dataset.index + ', channel=' + svg.dataset.channel);
+        output('track_info_clickhandler, name=' + svg.dataset.name + ', index=' + svg.dataset.index + ', channel=' + svg.dataset.channel + ', patch_index=' + svg.dataset.patch_index);
         if (svg.dataset.index != 0)
         {
-            edit_track_name(svg.dataset.index, svg.dataset.name, svg.dataset.channel, parseInt(svg.dataset.new_track));
+            edit_track_info(svg.dataset.index, svg.dataset.name, svg.dataset.channel, svg.dataset.patch_index, parseInt(svg.dataset.new_track));
         }
     }
 
@@ -1329,11 +1329,13 @@ class trackwin extends eventwin
         {
             info_rect.dataset.channel = 0;
             info_rect.dataset.new_track = 1;
+            info_rect.dataset.patch_index = 0;
         }
         else
         {
             info_rect.dataset.channel = this._song.channels[track_index];
             info_rect.dataset.new_track = 0;
+            info_rect.dataset.patch_index = synth_object.patch_index(this._song.patch(track_index));
         }
         
         this._info_canvas.appendChild(info_rect);

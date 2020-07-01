@@ -24,6 +24,9 @@ class funk_synth
         this._drumsets = synth.drumsets;
         this._voices = synth.voices;
 
+        this.get_voices_dict();
+        this.get_drumsets_dict();
+
 //         output('voice 3: ' + this._voices[3]);
 //         output('drumname 30: ' + this._drumnames[30]);        
     }
@@ -31,6 +34,16 @@ class funk_synth
     get type()
     {
         return this._type;
+    }
+
+    get voices()
+    {
+        return this._voices;
+    }
+
+    get drumsets()
+    {
+        return this._drumsets;
     }
 
     drumname(note)
@@ -55,12 +68,12 @@ class funk_synth
 
     get num_voices()
     {
-        return object.keys(this._voices).length;
+        return this._voices.length;
     }
 
     get num_drumsets()
     {
-        return object.keys(this._drumsets).length;
+        return this._drumsets.length;
     }
 
     get num_drumnames()
@@ -73,6 +86,55 @@ class funk_synth
         return object.keys(this._controllers).length;
     }
 
+    patch_index(patch)
+    {
+        if ((patch.bank >= 0) && (patch.program >= 0))
+        {
+            return (patch.bank * 256) + patch.program;
+        }
+
+        return -1;
+    }
+
+    get_voices_dict()
+    {
+        this._voices_dict = {};
+        
+        for (const voice of this._voices)
+        {
+            this._voices_dict[voice.index] = voice.name;
+        }
+    }
+
+    get_drumsets_dict()
+    {
+        this._drumsets_dict = {};
+        
+        for (const drumset of this._drumsets)
+        {
+            this._drumsets_dict[drumset.index] = drumset.name;
+        }
+    }
+
+    patchname(patch)
+    {
+        if (this.patch_index(patch) >= 0)
+        {
+            return this._voices_dict[(patch.bank * 256) + patch.program];
+        }
+
+        return "";
+    }
+
+    drumsetname(patch)
+    {
+        if (this.patch_index(patch) >= 0)
+        {
+            return this._drumsets_dict[(patch.bank * 256) + patch.program];
+        }
+        
+        return "";
+    }
 }
 
 

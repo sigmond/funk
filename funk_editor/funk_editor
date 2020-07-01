@@ -65,7 +65,7 @@ class funk_editor():
     event_tracks_changed_since_load = False
     filename = ""
     midievent = None
-    synth_type = 'GM'
+    synth_type = 'GS'
     
     def __init__(self, zmq_path_in, zmq_path_out):
         
