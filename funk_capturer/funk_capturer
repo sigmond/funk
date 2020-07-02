@@ -189,7 +189,6 @@ def main():
         try:
             if capturer.inport != None:
                 midi_message = capturer.inport.receive()
-                midi_message.time = time.time()
                 capturer.send_rec_msg(capturer.pub_socket, midi_message)
             else:
                 time.sleep(1)

@@ -72,6 +72,7 @@ class funk_midievent():
                  }
         self.events[self.event_id] = event
         self.event_id += 1
+        return event
 
     def copy_event(self, event):
         event_copy = event.copy()
@@ -554,9 +555,11 @@ class funk_midievent():
             name_event = self.new_event('track_name')
             name_event['name'] = name
             bank_event = self.new_event('control_change')
+            bank_event['channel'] = channel
             bank_event['control'] = 0
             bank_event['value'] = bank
             program_event = self.new_event('program_change')
+            program_event['channel'] = channel
             program_event['program'] = program
             event_track = {'index' : track_index,
                            'name' : name,

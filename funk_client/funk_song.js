@@ -40,7 +40,7 @@ class funk_song
                 this._tracks.pop();
             }
         }
-        
+
         for (const track of tracks)
         {
             this._tracks[track.index] = track;
@@ -211,7 +211,7 @@ class funk_song
         for (const track of this._tracks)
         {
             var channel = -1;
-            
+
             for (const event of track['events'])
             {
                 if (event['channel'] !== undefined)

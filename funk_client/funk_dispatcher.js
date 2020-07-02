@@ -168,6 +168,7 @@ function edit_track_info(track_index, name, channel, patch_index, new_track)
     }
     channel_selector.selectedIndex = selected_channel_index;
     channel_selector.id = 'edit_track_channel_select';
+    channel_selector.onchange = channel_selector_onchange;
 
     var patch_selector = document.createElement("SELECT");
     if (channel != 9)
@@ -179,6 +180,10 @@ function edit_track_info(track_index, name, channel, patch_index, new_track)
         global_edit_track_patches = synth_object.drumsets;
     }
     var selected_patch_index = 0;
+
+    var option = document.createElement("option");
+    option.text = 'Select patch';
+    patch_selector.add(option);
     for (var i = 0; i < global_edit_track_patches.length; i++)
     {
         var option = document.createElement("option");
@@ -187,11 +192,12 @@ function edit_track_info(track_index, name, channel, patch_index, new_track)
         patch_selector.add(option);
         if (patch.index == patch_index)
         {
-            selected_patch_index = i;
+            selected_patch_index = i + 1;
         }
     }
     patch_selector.selectedIndex = selected_patch_index;
     patch_selector.id = 'edit_track_patch_select';
+    patch_selector.onchange = patch_selector_onchange;
 
     var save = document.createElement("button");
     save.innerText = "Save";
@@ -226,12 +232,64 @@ function edit_track_info(track_index, name, channel, patch_index, new_track)
     menu.appendChild(remove);
 }
 
+
+
+function channel_selector_onchange()
+{
+    var channel = parseInt(document.getElementById('edit_track_channel_select').value) - 1;
+    var patch_selector = document.getElementById('edit_track_patch_select');
+
+    for(var i = patch_selector.options.length - 1; i >= 0; i--)
+    {
+        patch_selector.remove(i);
+    }
+
+    if (channel != 9)
+    {
+        global_edit_track_patches = synth_object.voices;
+    }
+    else
+    {
+        global_edit_track_patches = synth_object.drumsets;
+    }
+
+    var option = document.createElement("option");
+    option.text = 'Select patch';
+    patch_selector.add(option);
+    for (var i = 0; i < global_edit_track_patches.length; i++)
+    {
+        var option = document.createElement("option");
+        var patch = global_edit_track_patches[i];
+        option.text = patch.name;
+        patch_selector.add(option);
+    }
+    patch_selector.selectedIndex = 0;
+}
+
+function get_patch_from_selector(id)
+{
+    var patch_index = document.getElementById(id).selectedIndex;
+    if (patch_index == 0)
+    {
+        patch_index = 1;
+    }
+
+    return parseInt(global_edit_track_patches[patch_index - 1].index);
+}
+
+function patch_selector_onchange()
+{
+    var new_channel = parseInt(document.getElementById('edit_track_channel_select').value) - 1;
+    var new_patch = get_patch_from_selector('edit_track_patch_select');
+    play_patch_change(new_channel, new_patch);
+}
+
+
 function save_track_info()
 {
     var new_name = document.getElementById('new_track_name').value;
     var new_channel = parseInt(document.getElementById('edit_track_channel_select').value) - 1;
-    var patch_index = document.getElementById('edit_track_patch_select').selectedIndex;
-    var new_patch = parseInt(global_edit_track_patches[patch_index].index);
+    var new_patch = get_patch_from_selector('edit_track_patch_select');
     output('save_track_info ' + new_name + ' channel ' + new_channel + ' patch ' + new_patch);
     while ((elem = global_edit_elements.pop()))
     {
@@ -239,6 +297,7 @@ function save_track_info()
     }
     global_disable_keydownhandler = false;
     change_track_info(parseInt(global_edit_track_index), new_name, new_channel, new_patch);
+    play_patch_change(new_channel, new_patch);
     global_edit_track_index = -1;
     global_edit_track_patches = [];
 }
@@ -247,8 +306,7 @@ function save_new_track_info()
 {
     var new_name = document.getElementById('new_track_name').value;
     var new_channel = parseInt(document.getElementById('edit_track_channel_select').value) - 1;
-    var patch_index = document.getElementById('edit_track_patch_select').selectedIndex;
-    var new_patch = parseInt(global_edit_track_patches[patch_index].index);
+    var new_patch = get_patch_from_selector('edit_track_patch_select');
     output('save_new_track_info ' + new_name + ' channel ' + new_channel + ' patch ' + new_patch);
     while ((elem = global_edit_elements.pop()))
     {
@@ -256,6 +314,7 @@ function save_new_track_info()
     }
     global_disable_keydownhandler = false;
     create_new_track(parseInt(global_edit_track_index), new_name, parseInt(new_channel), new_patch);
+    play_patch_change(new_channel, new_patch);
     global_edit_track_index = -1;
 }
 
@@ -532,6 +591,47 @@ function play_note(channel, note, velocity)
     json_message = JSON.stringify(msg);
 
     ws_ctrl.send(json_message);
+}
+
+function control_change(channel, control, value)
+{ 
+    var cmd;
+    var msg;
+    var control_change;
+    
+    control_change = {"type" : "control_change", "channel" : channel, "control" : control, "value" : value, "time" : 0};    
+
+    cmd = { "command" : "play_event", "midi_event" : control_change };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function program_change(channel, program)
+{ 
+    var cmd;
+    var msg;
+    var program_change;
+    
+    program_change = {"type" : "program_change", "channel" : channel, "program" : program, "time" : 0};
+
+    cmd = { "command" : "play_event", "midi_event" : program_change };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function play_patch_change(channel, patch)
+{ 
+    var bank = parseInt(patch / 256);
+    var program = patch % 256;
+    
+    control_change(channel, 0, bank);
+    program_change(channel, program);
 }
 
 function list_input_ports()
