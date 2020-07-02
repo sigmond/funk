@@ -63,6 +63,16 @@ class funk_midievent():
 
         return event_track, last_track_tick
 
+    def new_event(self, type):
+        event = {'type': type,
+                 'start' : 0,
+                 'end': 0,
+                 'length' : 0,
+                 'id' : self.event_id
+                 }
+        self.events[self.event_id] = event
+        self.event_id += 1
+
     def copy_event(self, event):
         event_copy = event.copy()
         event_copy['id'] = self.event_id
@@ -472,9 +482,6 @@ class funk_midievent():
             event['end'] += tick_shift
             if 'note' in event:
                 event['note'] += note_shift
-            event['id'] = self.event_id
-            self.events[self.event_id] = event
-            self.event_id += 1
             events_to_paste.append(event)
             
         changed_events = event_file['tracks'][track_index]['events']
@@ -499,15 +506,9 @@ class funk_midievent():
         # loop through events in event-track, adjust event with same id as note
         for event in event_track['events']:
             if event['id'] == note_id:
-                changed_event = self.copy_event(event)
-                changed_event['end'] = end_tick
-                del self.events[note_id]
-                changed_event['id'] = self.event_id
-                self.events[self.event_id] = changed_event
-                self.event_id += 1
-                changed_events.append(changed_event)
-            else:
-                changed_events.append(event)                
+                event['end'] = end_tick
+            changed_events.append(event)
+            
         event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])
         affected_tracks.append(event_file['tracks'][track_index])
         
@@ -528,44 +529,38 @@ class funk_midievent():
         # loop through events in event-track, adjust event with same id as note
         for event in event_track['events']:
             if event['id'] == note_id:
-                changed_event = self.copy_event(event)
                 if value > 127:
                     value = 127
                 if value < 0:
                     value = 0
-                changed_event['velocity'] = value
-                del self.events[note_id]
-                changed_event['id'] = self.event_id
-                self.events[self.event_id] = changed_event
-                self.event_id += 1
-                changed_events.append(changed_event)
-            else:
-                changed_events.append(event)                
+                event['velocity'] = value
+            changed_events.append(event)
         event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])
         affected_tracks.append(event_file['tracks'][track_index])
         
         self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
 
-    def change_track_info(self, event_file, track_index, name, channel, create_track = False):
+    def change_track_info(self, event_file, track_index, name, channel, patch, create_track = False):
         print('change_track_info')
         affected_tracks = []
         # loop through affected tracks
         original_tracks = []
 
+        bank = int(patch / 256)
+        program = patch % 256
+
         if create_track:
-            name_event = {'type': 'track_name',
-                          'name' : name,
-                          'start' : 0,
-                          'end': 0,
-                          'length' : 0,
-                          'id' : self.event_id
-                          }
-            self.events[self.event_id] = name_event
-            self.event_id += 1
+            name_event = self.new_event('track_name')
+            name_event['name'] = name
+            bank_event = self.new_event('control_change')
+            bank_event['control'] = 0
+            bank_event['value'] = bank
+            program_event = self.new_event('program_change')
+            program_event['program'] = program
             event_track = {'index' : track_index,
                            'name' : name,
-                           'events' : [name_event]
+                           'events' : [name_event, bank_event, program_event]
                            }
 
             event_file['tracks'].append(event_track)
@@ -578,23 +573,15 @@ class funk_midievent():
         # loop through events in event-track, change track-name event and set channel on all events
         for event in event_track['events']:
             if event['type'] == 'track_name':
-                changed_event = self.copy_event(event)
-                changed_event['name'] = name
-                del self.events[changed_event['id']]
-                changed_event['id'] = self.event_id
-                self.events[self.event_id] = changed_event
-                self.event_id += 1
-                changed_events.append(changed_event)
+                event['name'] = name
+            elif event['type'] == 'control_change' and event['control'] == 0:
+                event['value'] = bank
+            elif event['type'] == 'program_change':
+                event['program'] = program
             elif 'channel' in event and event['channel'] != channel:
-                changed_event = self.copy_event(event)
-                changed_event['channel'] = channel
-                del self.events[changed_event['id']]
-                changed_event['id'] = self.event_id
-                self.events[self.event_id] = changed_event
-                self.event_id += 1
-                changed_events.append(changed_event)
-            else:
-                changed_events.append(event)
+                event['channel'] = channel
+
+            changed_events.append(event)
                 
         event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])
         event_file['tracks'][track_index]['name'] = name

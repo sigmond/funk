@@ -308,7 +308,8 @@ class funk_editor():
         track_index = msg['track_index']
         name = msg['name']
         channel = msg['channel']
-        affected_tracks = self.midievent.change_track_info(self.event_file, track_index, name, channel)
+        patch = msg['patch']
+        affected_tracks = self.midievent.change_track_info(self.event_file, track_index, name, channel, patch)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks
@@ -319,7 +320,8 @@ class funk_editor():
         track_index = msg['track_index']
         name = msg['name']
         channel = msg['channel']
-        affected_tracks = self.midievent.change_track_info(self.event_file, track_index, name, channel, True)
+        patch = msg['patch']
+        affected_tracks = self.midievent.change_track_info(self.event_file, track_index, name, channel, patch, True)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks

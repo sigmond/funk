@@ -477,7 +477,8 @@ class funk_controller():
         obj = {'command': 'change_track_info',
                'track_index' : msg['track_index'],
                'name' : msg['name'],
-               'channel' : msg['channel']
+               'channel' : msg['channel'],
+               'patch' : msg['patch']
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
@@ -487,7 +488,8 @@ class funk_controller():
         obj = {'command': 'create_new_track',
                'track_index' : msg['track_index'],
                'name' : msg['name'],
-               'channel' : msg['channel']
+               'channel' : msg['channel'],
+               'patch' : msg['patch']
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)

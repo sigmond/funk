@@ -135,6 +135,7 @@ document.addEventListener("keyup", keyuphandler);
 
 var global_edit_elements = [];
 var global_edit_track_index = -1;
+var global_edit_track_patches = [];
     
 function edit_track_info(track_index, name, channel, patch_index, new_track)
 {
@@ -169,20 +170,19 @@ function edit_track_info(track_index, name, channel, patch_index, new_track)
     channel_selector.id = 'edit_track_channel_select';
 
     var patch_selector = document.createElement("SELECT");
-    var patches;
     if (channel != 9)
     {
-        patches = synth_object.voices;
+        global_edit_track_patches = synth_object.voices;
     }
     else
     {
-        patches = synth_object.drumsets;
+        global_edit_track_patches = synth_object.drumsets;
     }
     var selected_patch_index = 0;
-    for (var i = 0; i < patches.length; i++)
+    for (var i = 0; i < global_edit_track_patches.length; i++)
     {
         var option = document.createElement("option");
-        var patch = patches[i];
+        var patch = global_edit_track_patches[i];
         option.text = patch.name;
         patch_selector.add(option);
         if (patch.index == patch_index)
@@ -230,27 +230,32 @@ function save_track_info()
 {
     var new_name = document.getElementById('new_track_name').value;
     var new_channel = parseInt(document.getElementById('edit_track_channel_select').value) - 1;
-    output('save_track_info ' + new_name + ' channel ' + new_channel);
+    var patch_index = document.getElementById('edit_track_patch_select').selectedIndex;
+    var new_patch = parseInt(global_edit_track_patches[patch_index].index);
+    output('save_track_info ' + new_name + ' channel ' + new_channel + ' patch ' + new_patch);
     while ((elem = global_edit_elements.pop()))
     {
         elem.remove();
     }
     global_disable_keydownhandler = false;
-    change_track_info(parseInt(global_edit_track_index), new_name, new_channel);
+    change_track_info(parseInt(global_edit_track_index), new_name, new_channel, new_patch);
     global_edit_track_index = -1;
+    global_edit_track_patches = [];
 }
 
 function save_new_track_info()
 {
     var new_name = document.getElementById('new_track_name').value;
     var new_channel = parseInt(document.getElementById('edit_track_channel_select').value) - 1;
-    output('save_new_track_info ' + new_name + ' channel ' + new_channel);
+    var patch_index = document.getElementById('edit_track_patch_select').selectedIndex;
+    var new_patch = parseInt(global_edit_track_patches[patch_index].index);
+    output('save_new_track_info ' + new_name + ' channel ' + new_channel + ' patch ' + new_patch);
     while ((elem = global_edit_elements.pop()))
     {
         elem.remove();
     }
     global_disable_keydownhandler = false;
-    create_new_track(parseInt(global_edit_track_index), new_name, parseInt(new_channel));
+    create_new_track(parseInt(global_edit_track_index), new_name, parseInt(new_channel), new_patch);
     global_edit_track_index = -1;
 }
 
@@ -988,7 +993,7 @@ function redo_last_notes_edit()
     ws_ctrl.send(json_message);
 }
 
-function change_track_info(track_index, new_name, new_channel)
+function change_track_info(track_index, new_name, new_channel, new_patch)
 {
     var cmd;
     var msg;    
@@ -997,7 +1002,8 @@ function change_track_info(track_index, new_name, new_channel)
         "command" : "change_track_info",
         "track_index" : track_index,
         "name" : new_name,
-        "channel" : new_channel
+        "channel" : new_channel,
+        "patch" : new_patch
     };
     msg = { "topic" : "controller", "msg" : cmd };
     
@@ -1006,7 +1012,7 @@ function change_track_info(track_index, new_name, new_channel)
     ws_ctrl.send(json_message);
 }
 
-function create_new_track(track_index, new_name, new_channel)
+function create_new_track(track_index, new_name, new_channel, new_patch)
 {
     var cmd;
     var msg;    
@@ -1015,7 +1021,8 @@ function create_new_track(track_index, new_name, new_channel)
         "command" : "create_new_track",
         "track_index" : track_index,
         "name" : new_name,
-        "channel" : new_channel
+        "channel" : new_channel,
+        "patch" : new_patch
     };
     msg = { "topic" : "controller", "msg" : cmd };
     
