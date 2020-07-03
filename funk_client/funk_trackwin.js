@@ -20,7 +20,7 @@ class trackwin extends eventwin
     {
         super(prefix, menu_frame, rulers_frame, info_frame, tracks_frame, song);
 
-        this._pixels_per_tick = 0.04;
+        this._pixels_per_tick = 0.05;
         this._line_height = 20;
         
         this._button_padding = 4;
@@ -1302,11 +1302,15 @@ class trackwin extends eventwin
         info_name_text.setAttribute("style", "fill:black;font-size:12px;font-weight:bold");
         if (track_index == 0)
         {
-            info_name_text.textContent = track_index.toString() + ' Master';
+            info_name_text.textContent = '   Master';
+        }
+        else if (track_index == this._song.tracks.length)
+        {
+            info_name_text.textContent = trackname;
         }
         else
         {
-            info_name_text.textContent = track_index.toString() + ' ' + trackname;
+            info_name_text.textContent = (this._song.channels[track_index] + 1).toString() + ' ' + trackname;
         }
         
         this._info_canvas.appendChild(info_name_text);

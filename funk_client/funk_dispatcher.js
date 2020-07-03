@@ -150,6 +150,7 @@ function edit_track_info(track_index, name, channel, patch_index, new_track)
     var input = document.createElement("input");
     input.setAttribute('type', 'text');
     input.id = 'new_track_name';
+    input.size = 10;
     input.setAttribute("value",name);
 
     var channel_selector = document.createElement("SELECT");

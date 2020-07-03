@@ -20,12 +20,12 @@ class pianowin extends eventwin
     {
         super(prefix, menu_frame, rulers_frame, info_frame, tracks_frame, song);
 
-        this._pixels_per_tick = 0.3;
+        this._pixels_per_tick = 0.4;
 
         this._note_snap = 16;
         this._tick_snap_width = (this._song.ticks_per_beat * 4) / this._note_snap;
 
-        this._line_height = 12;
+        this._line_height = 14;
 
         this._white_notes = [0, 2, 4, 5, 7, 9, 11];
         this._white_note_height = (this._line_height * 12) / this._white_notes.length;
@@ -1167,13 +1167,13 @@ class pianowin extends eventwin
 
         var trackname;
         
-        if (this._track_index > 0)
+        if (this._track_index == 0)
         {
-            trackname = this._track_index.toString() + ' ' + this._song.tracknames[this._track_index];
+            trackname = 'T0: Master';
         }
         else
         {
-            trackname = '0 Master';
+            trackname = 'T' + this._track_index.toString() + ': ' + this._song.tracknames[this._track_index];
         }
 
         track_info_element = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -1198,7 +1198,7 @@ class pianowin extends eventwin
         channel_info_element.setAttribute("x", 2);
         channel_info_element.setAttribute("y", 12 + 12);
         channel_info_element.setAttribute("style", "fill:black;font-size:12px;font-weight:normal");
-        channel_info_element.textContent = 'Channel ' + (this._song.channels[this._track_index] + 1);
+        channel_info_element.textContent = 'Ch: ' + (this._song.channels[this._track_index] + 1);
         this._menu_canvas.appendChild(channel_info_element);        
     }
     
@@ -1228,7 +1228,7 @@ class pianowin extends eventwin
         patch_info_element.id = 'pw_patch_info';
         patch_info_element.setAttribute("x", 2);
         patch_info_element.setAttribute("y", 12 + 12 + 12);
-        patch_info_element.setAttribute("style", "fill:black;font-size:12px;font-weight:normal");
+        patch_info_element.setAttribute("style", "fill:black;font-size:12px;font-weight:bold");
         patch_info_element.textContent = patchname;
         this._menu_canvas.appendChild(patch_info_element);        
     }

@@ -24,7 +24,7 @@ class eventwin
         this._track_y = 0;
         this._tracks_zoom_x = 1.0;
         this._tracks_zoom_y = 1.0;
-        this._info_width = 100;        
+        this._info_width = 150;        
 
         this._bg_color = "blue";
         
