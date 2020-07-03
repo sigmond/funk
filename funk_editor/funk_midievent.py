@@ -320,7 +320,12 @@ class funk_midievent():
         # repetitive copy needed?
         if from_ticks_length < to_ticks_length:
             # yes
-            source_tracks = paste_tracks[:]
+            source_tracks = []
+            for index in range(0, from_tracks_length):
+                s_track = []
+                for event in paste_tracks[index]:
+                    s_track.append(self.copy_event(event))
+                source_tracks.append(s_track)
             for index in range(0, from_tracks_length):
                 copy_num = 1
                 forward_ticks = from_ticks_length * copy_num
