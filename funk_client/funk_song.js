@@ -30,6 +30,11 @@ class funk_song
         this._note_off_timer_function = null;
     }
 
+    update_filename(filename)
+    {
+        this._filename = filename;
+    }
+
     update_tracks(tracks, total_num_tracks)
     {
         if (total_num_tracks < this._tracks.length)

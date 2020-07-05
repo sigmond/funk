@@ -115,6 +115,8 @@ class funk_editor():
                 self.handle_open(msg)
             elif msg['command'] == 'save':
                 self.handle_save(msg)
+            elif msg['command'] == 'save_as':
+                self.handle_save_as(msg)
             elif msg['command'] == 'play':
                 self.handle_play(msg)
             elif msg['command'] == 'cut_tracks_area':
@@ -172,6 +174,21 @@ class funk_editor():
     def handle_save(self, msg):
         if msg['type'] ==  'file':
             self.log('saving ' + self.filename)
+            self.midi_file = self.midievent.events2file(self.event_file)
+            obj = {'command': 'download',
+                   'what': 'file',
+                   'name': self.filename,
+                   'obj': self.midi_file
+                   }
+            self.send_ctrl_msg('controller', obj)
+        else:
+            self.log('Unknown open type ' + repr(msg['type']))
+
+    def handle_save_as(self, msg):
+        if msg['type'] ==  'file':
+            self.filename = msg['filename']
+            self.log('saving ' + self.filename)
+            self.event_file['filename'] = self.filename
             self.midi_file = self.midievent.events2file(self.event_file)
             obj = {'command': 'download',
                    'what': 'file',

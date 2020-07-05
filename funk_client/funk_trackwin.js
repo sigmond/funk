@@ -132,6 +132,13 @@ class trackwin extends eventwin
         this._info_canvas.setAttribute("preserveAspectRatio", "none");
         this._info_canvas.setAttribute("viewBox", "0 0 " + this._info_width.toString() + ' ' + this._height.toString());
     }
+
+    update_file_info()
+    {
+        this.fill_song_info();
+        this.fill_tempo_info();
+        this.create_menu();
+    }
     
     update_track(track_index)
     {

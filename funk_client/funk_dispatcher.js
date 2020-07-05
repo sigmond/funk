@@ -37,6 +37,8 @@ const key_right = 39;
 const key_left = 37;
 
 
+var global_file_name = 'noname.mid';
+
 var global_disable_keydownhandler = false;
 
 var global_ctrl_down = false;
@@ -368,7 +370,11 @@ function ctrl_onmessage(e)
       }
       else if (data['topic'] == 'error')
       {
-          output(data['msg']);
+          output(data['msg']['msg']);
+      }
+      else if (data['topic'] == 'log')
+      {
+          output(data['msg']['msg']);
       }
 };
 
@@ -461,13 +467,21 @@ function open_midi_file(filename, content)
 }
 
 
-function save_midi_file()
+function save_midi_file(filename=false)
 { 
     var cmd;
     var msg;
     var json_message;
-
-    cmd = { "command" : "save", "what" : "file" };
+    
+    if (filename)
+    {
+        cmd = { "command" : "save_as", "what" : "file", "filename" : filename };
+    }
+    else
+    {
+        cmd = { "command" : "save", "what" : "file" };
+    }
+    
     msg = { "topic" : "controller", "msg" : cmd };
     
     json_message = JSON.stringify(msg);
@@ -475,6 +489,55 @@ function save_midi_file()
     ws_ctrl.send(json_message);
 }
 
+
+function save_midi_file_as()
+{ 
+    edit_file_name(global_file_name);
+}
+
+function edit_file_name(proposal)
+{
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+    
+    global_disable_keydownhandler = true;
+    var label = document.createTextNode("File name:");
+    var input = document.createElement("input");
+    input.setAttribute('type', 'text');
+    input.id = 'new_file_name';
+    input.size = 20;
+    input.setAttribute("value", proposal);
+    var save = document.createElement("button");
+    save.innerText = "Save";
+    save.onclick = save_file_name_edit;
+    var cancel = document.createElement("button");
+    cancel.innerText = "Cancel";
+    cancel.onclick = cancel_edit;
+
+    global_edit_elements.push(label);
+    global_edit_elements.push(input);
+    global_edit_elements.push(save);
+    global_edit_elements.push(cancel);
+
+    var menu = document.getElementById("topmenu");
+    menu.appendChild(label);
+    menu.appendChild(input);
+    menu.appendChild(save);
+    menu.appendChild(cancel);
+}
+
+function save_file_name_edit()
+{
+    var new_name = document.getElementById('new_file_name').value;
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+    global_disable_keydownhandler = false;
+    save_midi_file(new_name);
+}
 
 function select_midi_file()
 {    
@@ -512,6 +575,9 @@ function download(filename, content)
     a.download = filename;
     a.click();
 }
+
+
+
 
 function play_midi_file(start)
 { 
@@ -825,6 +891,8 @@ function handle_editor_file_loaded(msg)
     output("File length (ticks): " + msg['file']['length_ticks']);
     output("Tracks: " + msg['file']['tracks'].length);
 
+    global_file_name = msg['filename'];
+
     var song = new funk_song(msg['filename'], msg['file']['ticks_per_beat'], msg['file']['tracks']);
 
     var trackwin_tracks_frame = document.getElementById("trackwin_tracks_container");
@@ -884,7 +952,10 @@ function base64_decode(b64) {
 function handle_editor_download(msg)
 {    
     decoded = base64_decode(msg['content']);
-    download(msg['name'], decoded);    
+    download(msg['name'], decoded);
+    global_file_name = msg['name'];
+    trackwin_object._song.update_filename(msg['name']);
+    trackwin_object.update_file_info();
 }
 
 

@@ -106,6 +106,9 @@ class funk_controller():
             elif msg['command'] == 'save':
                 # client wants to get hold of something (e.g. a file)
                 self.handle_save(msg)
+            elif msg['command'] == 'save_as':
+                # client wants to get hold of something (e.g. a file)
+                self.handle_save_as(msg)
             elif msg['command'] == 'download':
                 # someone (e.g. the editor) wants to send something (e.g. a file)
                 # to the client for saving
@@ -275,6 +278,20 @@ class funk_controller():
         if msg['what'] == 'file':
             obj = {'command': 'save',
                    'type': 'file'
+                   }
+        else:
+            self.log('unknown "what" ' + repr(what))
+            print('unknown "what" ' + repr(what))
+            return
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_save_as(self, msg):
+        print('handle_save_as')
+        if msg['what'] == 'file':
+            obj = {'command': 'save_as',
+                   'type': 'file',
+                   'filename' : msg['filename']
                    }
         else:
             self.log('unknown "what" ' + repr(what))

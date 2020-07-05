@@ -111,7 +111,7 @@ class funk_midievent():
         return message
 
     def events2file(self, event_file):
-        #print('events2file')
+        print('events2file')
         # Do the inverse of file2events()...
         midi_file = mido.MidiFile(
                                   ticks_per_beat=event_file['ticks_per_beat']
