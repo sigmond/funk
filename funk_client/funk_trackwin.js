@@ -148,6 +148,11 @@ class trackwin extends eventwin
             this.fill_track_events(track_index, track);
             this.create_track_info(track_index, this._song.tracknames[track_index]);
         }
+
+        if (track_index == 0)
+        {
+            this.update_file_info();
+        }
     }
 
     adjust_num_tracks(num_tracks)
@@ -796,6 +801,13 @@ class trackwin extends eventwin
         }
     }
 
+    track_menu_clickhandler(event)
+    {
+        let svg = event.currentTarget;
+        output('track_menu_clickhandler');
+        edit_tempo(trackwin_object._song.bpm());
+    }
+
     startAllSoloAnimation() {
         if(this._allSoloTimerFunction == null) {
             this._allSoloTimerFunction = setInterval(this.allSoloAnimate, 250);
@@ -1103,6 +1115,8 @@ class trackwin extends eventwin
         this._menu_box_element.setAttribute("x", 0);
         this._menu_box_element.setAttribute("y", 0);
         this._menu_box_element.setAttribute("style", "fill:" + this._menu_bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:1.0");
+        this._menu_box_element.addEventListener('click', this.track_menu_clickhandler);
+
         this._menu_canvas.appendChild(this._menu_box_element);
     }
 

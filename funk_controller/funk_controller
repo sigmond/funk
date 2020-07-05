@@ -109,6 +109,9 @@ class funk_controller():
             elif msg['command'] == 'save_as':
                 # client wants to get hold of something (e.g. a file)
                 self.handle_save_as(msg)
+            elif msg['command'] == 'set_tempo':
+                # client wants to change tempo at a particular point in the song
+                self.handle_set_tempo(msg)
             elif msg['command'] == 'download':
                 # someone (e.g. the editor) wants to send something (e.g. a file)
                 # to the client for saving
@@ -297,6 +300,15 @@ class funk_controller():
             self.log('unknown "what" ' + repr(what))
             print('unknown "what" ' + repr(what))
             return
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_set_tempo(self, msg):
+        print('handle_set_tempo')
+        obj = {'command': 'set_tempo',
+               'tick': msg['tick'],
+               'bpm' : msg['bpm']
+               }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
         

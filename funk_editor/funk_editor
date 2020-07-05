@@ -117,6 +117,8 @@ class funk_editor():
                 self.handle_save(msg)
             elif msg['command'] == 'save_as':
                 self.handle_save_as(msg)
+            elif msg['command'] == 'set_tempo':
+                self.handle_set_tempo(msg)
             elif msg['command'] == 'play':
                 self.handle_play(msg)
             elif msg['command'] == 'cut_tracks_area':
@@ -198,6 +200,16 @@ class funk_editor():
             self.send_ctrl_msg('controller', obj)
         else:
             self.log('Unknown open type ' + repr(msg['type']))
+
+    def handle_set_tempo(self, msg):
+        print('editor got ' + repr(msg))
+        tick = msg['tick']
+        bpm = msg['bpm']
+        affected_tracks = self.midievent.set_tempo(self.event_file, tick, bpm)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
 
     def handle_play(self, msg):
         if msg['what'] ==  'file':

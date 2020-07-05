@@ -139,6 +139,68 @@ var global_edit_elements = [];
 var global_edit_track_index = -1;
 var global_edit_track_patches = [];
     
+
+function edit_tempo(bpm)
+{
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+    
+    global_disable_keydownhandler = true;
+    var label = document.createTextNode("Tempo (beats per minute):");
+    var input = document.createElement("input");
+    input.setAttribute('type', 'text');
+    input.id = 'beats_per_minute';
+    input.size = 10;
+    input.setAttribute("value", bpm);
+    var save = document.createElement("button");
+    save.innerText = "Save";
+    save.onclick = save_tempo_edit;
+    var cancel = document.createElement("button");
+    cancel.innerText = "Cancel";
+    cancel.onclick = cancel_edit;
+
+    global_edit_elements.push(label);
+    global_edit_elements.push(input);
+    global_edit_elements.push(save);
+    global_edit_elements.push(cancel);
+
+    var menu = document.getElementById("topmenu");
+    menu.appendChild(label);
+    menu.appendChild(input);
+    menu.appendChild(save);
+    menu.appendChild(cancel);
+}
+
+function save_tempo_edit()
+{
+    var beats_per_minute = parseInt(document.getElementById('beats_per_minute').value);
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+    global_disable_keydownhandler = false;
+    save_tempo(0, beats_per_minute);
+}
+
+
+function save_tempo(tick, bpm)
+{ 
+    var cmd;
+    var msg;
+    var json_message;
+    
+    cmd = { "command" : "set_tempo", "tick" : tick, "bpm" : bpm };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+
+
 function edit_track_info(track_index, name, channel, patch_index, new_track)
 {
     while ((elem = global_edit_elements.pop()))

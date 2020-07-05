@@ -243,6 +243,48 @@ class funk_midievent():
 
         return abstime, sorted(events, key = lambda i: i['start'])
 
+    def get_tempo_events(self, event_file):
+        tempo_events = []
+        for event in event_file['tracks'][0]['events']:
+            if event['type'] == 'set_tempo':
+                tempo_events.append(event)
+
+        return tempo_events    
+    
+    def set_tempo(self, event_file, tick, bpm):
+        print('set_tempo')
+
+        affected_tracks = []
+        original_tracks = []
+        changed_events = []
+
+        original_tracks.append(self.copy_event_track(event_file['tracks'][0]))
+
+        tempo_changed = False
+        # loop through events in master-track and change matching tempo event
+        for event in event_file['tracks'][0]['events']:
+            if event['type'] == 'set_tempo' and event['start'] == tick:
+                event['tempo'] = mido.bpm2tempo(bpm)
+                tempo_changed = True
+
+            changed_events.append(event)
+
+        if not tempo_changed:
+            # create new tempo event
+            tempo_event = self.new_event('set_tempo')
+            tempo_event['tempo'] = mido.bpm2tempo(bpm)
+            tempo_event['start'] = tick
+            tempo_event['end'] = tick
+            tempo_event['length'] = 0
+            changed_events.append(tempo_event)
+                
+        event_file['tracks'][0]['events'] = sorted(changed_events, key = lambda i: i['start'])
+        affected_tracks.append(event_file['tracks'][0])
+
+        self.undo_tracks_edit_stack.insert(0, original_tracks)
+        return affected_tracks
+
+
     def cut_tracks_area(self, event_file, area, remove_space):
         print('cut_tracks_area')
         affected_tracks = []
@@ -618,14 +660,6 @@ class funk_midievent():
         self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
 
-    def get_tempos(self, event_file):
-        tempos = []
-        for event in event_file['tracks'][0]['events']:
-            if event['type'] == 'set_tempo':
-                tempos.append(event)
-
-        return tempos
-    
     def track_recorded(self, event_file, record_area, midi_track):
         print('track_recorded')
 
