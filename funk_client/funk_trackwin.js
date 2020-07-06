@@ -27,6 +27,10 @@ class trackwin extends eventwin
         this._button_width = this._line_height - (2 * this._button_padding);
         this._button_height = this._line_height - (2 * this._button_padding);
         this._button_width_space = this._button_width + (2 * this._button_padding);
+        this._pot_left = this._info_width - (3 * this._button_width_space) + this._button_padding;
+        this._pot_right = this._pot_left + this._button_width;
+        this._pot_center_x = (this._pot_right + this._pot_left) / 2;
+        this._pot_radius = this._button_height / 2;
         this._solo_button_left = this._info_width - (2 * this._button_width_space) + this._button_padding;
         this._solo_button_right = this._solo_button_left + this._button_width;
         this._mute_button_left = this._info_width - this._button_width_space + this._button_padding;
@@ -44,6 +48,16 @@ class trackwin extends eventwin
 
         this._solo_state = [];
         this._mute_state = [];
+
+        this._track_pot_states = 
+            [
+        {'type' : 'vol', 'color' : 'lightblue'},
+        {'type' : 'pan', 'color' : 'red'},
+        {'type' : 'rev', 'color' : 'green'},
+        {'type' : 'cho','color' : 'yellow'}
+            ];
+        
+        this._track_pot_state_index = 0;
         
         this._allSoloTimerFunction = null;
         this._all_solo_highlighted = false;
@@ -147,6 +161,7 @@ class trackwin extends eventwin
             var track = this._song.tracks[track_index];
             this.fill_track_events(track_index, track);
             this.create_track_info(track_index, this._song.tracknames[track_index]);
+            this.create_track_potmeter(track_index, this._track_pot_state_index);
         }
 
         if (track_index == 0)
@@ -303,6 +318,12 @@ class trackwin extends eventwin
 
             trackwin_object.tracks_handle_wheel(x, y, event.deltaY);
         }
+    }
+
+    pot_wheelhandler(event)
+    {
+        let svg = event.currentTarget;
+        trackwin_object.pot_handle_wheel(svg, event.deltaY);
     }
 
     rulers_scrollhandler()
@@ -983,6 +1004,7 @@ class trackwin extends eventwin
             {
                 info_width = info_width_tmp;
             }
+            this.create_track_potmeter(track_index, this._track_pot_state_index);
             track_index++;
         }
 
@@ -1375,6 +1397,136 @@ class trackwin extends eventwin
         }
         
         return width;
+    }
+
+    create_track_potmeter(track_index, pot_state_index)
+    {
+        var cx = this._pot_center_x;
+        var cy = this._track_y + (track_index * this._line_height) + this._button_padding + (this._button_height / 2);
+        var r = this._pot_radius;
+        var pot_state;
+        var id;
+        var label;
+        var pot;
+        
+        if (track_index == 0)
+        {
+            pot_state = this._track_pot_states[0];
+            label = 'Master volume';
+        }
+        else
+        {
+            pot_state = this._track_pot_states[pot_state_index];
+            label = this._song.tracknames[track_index];
+        }
+
+        id = 'track_' + pot_state.type + '_' + track_index.toString()
+        pot = this.potmeter_create(this._info_canvas, cx, cy, r, pot_state.color, id, label);
+
+        var value;
+        switch (pot_state_index)
+        {
+            case 0:
+                value = this._song.volumes[track_index];
+                break;
+            case 1:
+                value = this._song.pans[track_index];
+                break;
+            case 2:
+                value = this._song.reverbs[track_index];
+                break;
+            case 3:
+                value = this._song.choruses[track_index];
+                break;
+            default:
+                return;
+        }
+
+        var pot_line = this.potmeter_set_value(this._info_canvas, id, value, label);    
+
+        pot.dataset.track_index = track_index;
+        pot.dataset.pot_state_index = pot_state_index;
+        pot.addEventListener('wheel', function(ev) {
+                                 ev.preventDefault();
+                                 trackwin_object.pot_wheelhandler(ev);
+                                 return false;
+                             }, false);
+        pot.addEventListener('mouseover', this.pot_mouseoverhandler);
+        pot.addEventListener('mouseout', this.pot_mouseouthandler);
+
+        pot_line.dataset.track_index = track_index;
+        pot_line.dataset.pot_state_index = pot_state_index;
+        pot_line.addEventListener('wheel', function(ev) {
+                                      ev.preventDefault();
+                                      trackwin_object.pot_wheelhandler(ev);
+                                      return false;
+                                  }, false);
+        pot_line.addEventListener('mouseover', this.pot_mouseoverhandler);
+        pot_line.addEventListener('mouseout', this.pot_mouseouthandler);
+    }
+
+    pot_handle_wheel(svg, delta_y)
+    {
+        var track_index = parseInt(svg.dataset.track_index);
+        var pot_state_index = parseInt(svg.dataset.pot_state_index);
+        var id = svg.dataset.id;
+        var value;
+
+        switch (pot_state_index)
+        {
+            case 0:
+                value = this._song.volumes[track_index];
+                break;
+            case 1:
+                value = this._song.pans[track_index];
+                break;
+            case 2:
+                value = this._song.reverbs[track_index];
+                break;
+            case 3:
+                value = this._song.choruses[track_index];
+                break;
+            default:
+                return;
+        }
+
+        if (delta_y < 0)
+        {
+            value += 5;
+        }
+        else
+        {
+            value -= 5;
+        }
+
+        if (value >= 127)
+        {
+            value = 127;
+        }
+        else if (value < 0)
+        {
+            value = 0;
+        }
+
+        switch (pot_state_index)
+        {
+            case 0:
+                this._song.volumes[track_index] = value;
+                break;
+            case 1:
+                this._song.pans[track_index] = value;
+                break;
+            case 2:
+                this._song.reverbs[track_index] = value;
+                break;
+            case 3:
+                this._song.choruses[track_index] = value;
+                break;
+            default:
+                return;
+        }
+
+        this.potmeter_set_value(this._info_canvas, id, value);
     }
 
     remove_track_events(track_index)

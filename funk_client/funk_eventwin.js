@@ -579,6 +579,85 @@ class eventwin
         this._playhead_element.setAttribute("x1", xpos);
         this._playhead_element.setAttribute("x2", xpos);
     }
+
+    potmeter_create(parent, x, y, r, color, id, label)
+    {
+        var pot_line = document.getElementById(id + '_line');
+        if (pot_line)
+        {
+            pot_line.remove();
+        }
+        
+        var pot = document.getElementById(id);
+        if (pot)
+        {
+            pot.remove();
+        }
+        
+        pot = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
+        pot.id = id;
+        pot.setAttributeNS(null, 'cx', x);
+        pot.setAttributeNS(null, 'cy', y);
+        pot.setAttributeNS(null, 'r', r);
+        pot.setAttributeNS(null, 'style', 'fill: ' + color + '; stroke: black; stroke-width: 1px;');
+        pot.dataset.label = label;
+        pot.dataset.id = id;
+        parent.appendChild(pot);
+        return pot;
+    }
+
+    potmeter_highlight(pot, on)
+    {
+        if (on)
+        {
+            pot.style.fillOpacity = 0.5;
+        }
+        else
+        {
+            pot.style.fillOpacity = 1.0;
+        }
+    }
+
+    potmeter_set_value(parent, id, value, label = false)
+    {
+        var pot = document.getElementById(id);
+        var x1 = parseInt(pot.getAttribute("cx"));
+        var y1 = parseInt(pot.getAttribute("cy"));
+        var r = parseInt(pot.getAttribute("r")) + 2;
+        const val_pr_deg = 270/128;
+        const min_deg = 225;
+        const max_deg = -45;
+        var deg = min_deg - (value * val_pr_deg);
+        var rad = deg * (Math.PI / 180);
+        var x2 = x1 + (Math.cos(rad) * r);
+        var y2 = y1 - (Math.sin(rad) * r);
+        
+        var pot_line = document.getElementById(id + '_line');
+        if (!pot_line)
+        {
+            pot_line = document.createElementNS("http://www.w3.org/2000/svg", 'line');
+            pot_line.id = id + '_line';
+            pot_line.setAttribute("x1", x1);
+            pot_line.setAttribute("x2", x2);
+            pot_line.setAttribute("y1", y1);
+            pot_line.setAttribute("y2", y2);
+            pot_line.setAttribute("style", "stroke:black;stroke-width:2;");
+            if (label)
+            {
+                pot_line.dataset.label = label;
+            }
+            pot_line.dataset.id = id;
+            parent.appendChild(pot_line);
+        }
+        else
+        {
+            pot_line.setAttribute("x2", x2);
+            pot_line.setAttribute("y2", y2);
+        }
+
+        return pot_line;
+    }
+    
 }
     
 

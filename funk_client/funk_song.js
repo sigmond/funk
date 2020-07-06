@@ -57,6 +57,14 @@ class funk_song
         this.get_channels();
         this._patches = [];
         this.get_patches();
+        this._volumes = [];
+        this.get_volumes();
+        this._pans = [];
+        this.get_pans();
+        this._reverbs = [];
+        this.get_reverbs();
+        this._choruses = [];
+        this.get_choruses();
         this._tempos = [];
         this.get_tempos();
         this.get_song_length_ticks();
@@ -129,6 +137,26 @@ class funk_song
     get patches()
     {
         return this._patches;
+    }
+
+    get volumes()
+    {
+        return this._volumes;
+    }
+
+    get pans()
+    {
+        return this._pans;
+    }
+
+    get reverbs()
+    {
+        return this._reverbs;
+    }
+
+    get choruses()
+    {
+        return this._choruses;
     }
 
     get tempos()
@@ -226,6 +254,81 @@ class funk_song
                 }
             }
             this._channels.push(channel);
+        }
+    }
+
+
+    get_volumes()
+    {
+        for (const track of this._tracks)
+        {
+            var volume = 100;
+
+            for (const event of track['events'])
+            {
+                if ((event['type'] == 'control_change') && (event['control'] == 7))
+                {
+                    volume = event['value'];
+                    break;
+                }
+            }
+            this._volumes.push(volume);
+        }
+    }
+
+
+    get_pans()
+    {
+        for (const track of this._tracks)
+        {
+            var pan = 64;
+
+            for (const event of track['events'])
+            {
+                if ((event['type'] == 'control_change') && (event['control'] == 10))
+                {
+                    pan = event['value'];
+                    break;
+                }
+            }
+            this._pans.push(pan);
+        }
+    }
+
+    get_reverbs()
+    {
+        for (const track of this._tracks)
+        {
+            var reverb = 40;
+
+            for (const event of track['events'])
+            {
+                if ((event['type'] == 'control_change') && (event['control'] == 91))
+                {
+                    reverb = event['value'];
+                    break;
+                }
+            }
+            this._reverbs.push(reverb);
+        }
+    }
+
+
+    get_choruses()
+    {
+        for (const track of this._tracks)
+        {
+            var chorus = 0;
+
+            for (const event of track['events'])
+            {
+                if ((event['type'] == 'control_change') && (event['control'] == 93))
+                {
+                    chorus = event['value'];
+                    break;
+                }
+            }
+            this._choruses.push(chorus);
         }
     }
 
