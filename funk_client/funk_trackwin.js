@@ -39,10 +39,10 @@ class trackwin extends eventwin
         this._button_opacity = "1.0";
 
         this._bg_color = "blue";
-        this._solo_color = "lawngreen";
-        this._solo_engaged_color = "lawngreen";
+        this._solo_color = "lightgreen";
+        this._solo_engaged_color = "green";
         this._mute_color = "lightsalmon";
-        this._mute_engaged_color = "lightsalmon";
+        this._mute_engaged_color = "indianred";
         this._playhead_color = "darkred";
         this._menu_bg_color = "black";
 
@@ -53,8 +53,8 @@ class trackwin extends eventwin
             [
         {'type' : 'vol', 'color' : 'lightblue'},
         {'type' : 'pan', 'color' : 'red'},
-        {'type' : 'rev', 'color' : 'green'},
-        {'type' : 'cho','color' : 'yellow'}
+        {'type' : 'rev', 'color' : 'yellow'},
+        {'type' : 'cho','color' : 'lightgreen'}
             ];
         
         this._track_pot_state_index = 0;
@@ -320,12 +320,30 @@ class trackwin extends eventwin
         }
     }
 
+    pot_mouseoverhandler(event)
+    {
+        let svg = event.currentTarget;
+        trackwin_object.potmeter_highlight(svg, true);
+    }
+
+    pot_mouseouthandler(event)
+    {
+        let svg = event.currentTarget;
+        trackwin_object.potmeter_highlight(svg, false);
+    }
+
     pot_wheelhandler(event)
     {
         let svg = event.currentTarget;
         trackwin_object.pot_handle_wheel(svg, event.deltaY);
     }
 
+    pot_clickhandler(event)
+    {
+        let svg = event.currentTarget;
+        trackwin_object.pot_handle_wheel(svg, -25);
+    }
+    
     rulers_scrollhandler()
     {
         var tracks_element = document.getElementById("trackwin_tracks_container");
@@ -404,7 +422,7 @@ class trackwin extends eventwin
     solo_mouseoverhandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.fillOpacity = 0.05;
+        svg.style.fillOpacity = 0.5;
     }
 
     solo_mouseouthandler(event)
@@ -425,7 +443,7 @@ class trackwin extends eventwin
     mute_mouseoverhandler(event)
     {
         let svg = event.currentTarget;
-        svg.style.fillOpacity = 0.05;
+        svg.style.fillOpacity = 0.5;
     }
 
     mute_mouseouthandler(event)
@@ -1404,48 +1422,45 @@ class trackwin extends eventwin
         var cx = this._pot_center_x;
         var cy = this._track_y + (track_index * this._line_height) + this._button_padding + (this._button_height / 2);
         var r = this._pot_radius;
-        var pot_state;
+        var pot_state = this._track_pot_states[pot_state_index];
         var id;
-        var label;
         var pot;
+        var label;
         
-        if (track_index == 0)
-        {
-            pot_state = this._track_pot_states[0];
-            label = 'Master volume';
-        }
-        else
-        {
-            pot_state = this._track_pot_states[pot_state_index];
-            label = this._song.tracknames[track_index];
-        }
-
-        id = 'track_' + pot_state.type + '_' + track_index.toString()
-        pot = this.potmeter_create(this._info_canvas, cx, cy, r, pot_state.color, id, label);
+        id = 'track_pot_' + track_index.toString()
+        pot = this.potmeter_create(this._info_canvas, cx, cy, r, pot_state.color, id);
 
         var value;
         switch (pot_state_index)
         {
             case 0:
                 value = this._song.volumes[track_index];
+                label = "Vol";
                 break;
             case 1:
                 value = this._song.pans[track_index];
+                label = "Pan";
                 break;
             case 2:
                 value = this._song.reverbs[track_index];
+                label = "Rev";
                 break;
             case 3:
                 value = this._song.choruses[track_index];
+                label = "Cho";
                 break;
             default:
                 return;
         }
 
-        var pot_line = this.potmeter_set_value(this._info_canvas, id, value, label);    
+        if (track_index == 0)
+        {
+            value = 16 + (this._track_pot_state_index * 32);
+        }
 
         pot.dataset.track_index = track_index;
         pot.dataset.pot_state_index = pot_state_index;
+
         pot.addEventListener('wheel', function(ev) {
                                  ev.preventDefault();
                                  trackwin_object.pot_wheelhandler(ev);
@@ -1453,26 +1468,39 @@ class trackwin extends eventwin
                              }, false);
         pot.addEventListener('mouseover', this.pot_mouseoverhandler);
         pot.addEventListener('mouseout', this.pot_mouseouthandler);
+        if (track_index == 0)
+        {
+            pot.addEventListener('click', this.pot_clickhandler);
+        }
+        
+        var pot_line = this.potmeter_set_value(this._info_canvas, id, value);
+        if (pot_line)
+        {
+            pot_line.dataset.track_index = track_index;
+            pot_line.dataset.pot_state_index = pot_state_index;
+            pot_line.addEventListener('wheel', function(ev) {
+                                          ev.preventDefault();
+                                          trackwin_object.pot_wheelhandler(ev);
+                                          return false;
+                                      }, false);
+            pot_line.addEventListener('mouseover', this.pot_mouseoverhandler);
+            pot_line.addEventListener('mouseout', this.pot_mouseouthandler);
+        }
 
-        pot_line.dataset.track_index = track_index;
-        pot_line.dataset.pot_state_index = pot_state_index;
-        pot_line.addEventListener('wheel', function(ev) {
-                                      ev.preventDefault();
-                                      trackwin_object.pot_wheelhandler(ev);
-                                      return false;
-                                  }, false);
-        pot_line.addEventListener('mouseover', this.pot_mouseoverhandler);
-        pot_line.addEventListener('mouseout', this.pot_mouseouthandler);
+        if (track_index == 0)
+        {
+            this.create_pot_info_text(pot, label);
+        }
     }
 
     pot_handle_wheel(svg, delta_y)
     {
         var track_index = parseInt(svg.dataset.track_index);
-        var pot_state_index = parseInt(svg.dataset.pot_state_index);
         var id = svg.dataset.id;
         var value;
+        var label;
 
-        switch (pot_state_index)
+        switch (this._track_pot_state_index)
         {
             case 0:
                 value = this._song.volumes[track_index];
@@ -1492,43 +1520,106 @@ class trackwin extends eventwin
 
         if (delta_y < 0)
         {
-            value += 5;
+            if (track_index > 0)
+            {
+                value += global_ctrl_down ? 1 : 5;
+            }
+            else
+            {
+                value = 16 + ((this._track_pot_state_index + 1) * 32);
+            }
         }
         else
         {
-            value -= 5;
+            if (track_index > 0)
+            {
+                value -= global_ctrl_down ? 1 : 5;
+            }
+            else
+            {
+                value = 16 + ((this._track_pot_state_index - 1) * 32);
+            }
         }
 
-        if (value >= 127)
+        if (track_index > 0)
         {
-            value = 127;
+            if (value >= 127)
+            {
+                value = 127;
+            }
+            else if (value < 0)
+            {
+                value = 0;
+            }
         }
-        else if (value < 0)
+        else
         {
-            value = 0;
-        }
-
-        switch (pot_state_index)
-        {
-            case 0:
-                this._song.volumes[track_index] = value;
-                break;
-            case 1:
-                this._song.pans[track_index] = value;
-                break;
-            case 2:
-                this._song.reverbs[track_index] = value;
-                break;
-            case 3:
-                this._song.choruses[track_index] = value;
-                break;
-            default:
-                return;
+            if (value > 112)
+            {
+                value = 16;
+            }
+            else if (value < 16)
+            {
+                value = 112;
+            }
         }
 
-        this.potmeter_set_value(this._info_canvas, id, value);
+        if (track_index > 0)
+        {
+            switch (this._track_pot_state_index)
+            {
+                case 0:
+                    this._song.volumes[track_index] = value;
+                    break;
+                case 1:
+                    this._song.pans[track_index] = value;
+                    break;
+                case 2:
+                    this._song.reverbs[track_index] = value;
+                    break;
+                case 3:
+                    this._song.choruses[track_index] = value;
+                    break;
+                default:
+                    return;
+            }
+
+            this.potmeter_set_value(this._info_canvas, id, value);
+            this.potmeter_highlight(svg, true);
+        }
+        else
+        {
+            this.potmeter_set_value(this._info_canvas, id, value);
+            this._track_pot_state_index = parseInt(value / 32);
+            var i = 0;
+            for (const track of this._song.tracks)
+            {
+                this.create_track_potmeter(i, this._track_pot_state_index);
+                i++;
+            }
+            var pot_element = document.getElementById(svg.dataset.id);
+            this.create_pot_info_text(pot_element, this._track_pot_states[this._track_pot_state_index].type);
+        }
+
     }
 
+    create_pot_info_text(pot_element, label)
+    {
+        var pot_info_text_id = 'master_pot_info_text';
+        var pot_info_text = document.getElementById(pot_info_text_id);
+        if (pot_info_text)
+        {
+            pot_info_text.remove()
+        }
+        pot_info_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        pot_info_text.id = pot_info_text_id;
+        pot_info_text.setAttribute("x", pot_element.getAttribute("cx") - 30);
+        pot_info_text.setAttribute("y", parseInt(pot_element.getAttribute("cy")) + (this._button_height / 2) - this._button_padding);
+        pot_info_text.setAttribute("style", "fill:black;font-size:12px;font-weight:bold;");
+        pot_info_text.textContent = first_letter_uppercase(label);
+        this._info_canvas.appendChild(pot_info_text);
+    }
+    
     remove_track_events(track_index)
     {
         var event_element;

@@ -580,7 +580,7 @@ class eventwin
         this._playhead_element.setAttribute("x2", xpos);
     }
 
-    potmeter_create(parent, x, y, r, color, id, label)
+    potmeter_create(parent, x, y, r, color, id)
     {
         var pot_line = document.getElementById(id + '_line');
         if (pot_line)
@@ -600,30 +600,56 @@ class eventwin
         pot.setAttributeNS(null, 'cy', y);
         pot.setAttributeNS(null, 'r', r);
         pot.setAttributeNS(null, 'style', 'fill: ' + color + '; stroke: black; stroke-width: 1px;');
-        pot.dataset.label = label;
         pot.dataset.id = id;
         parent.appendChild(pot);
         return pot;
     }
 
-    potmeter_highlight(pot, on)
+    potmeter_highlight(pot_or_line, on)
     {
+        var pot_element = document.getElementById(pot_or_line.dataset.id);
         if (on)
         {
-            pot.style.fillOpacity = 0.5;
+            pot_element.style.strokeWidth = 2;
         }
         else
         {
-            pot.style.fillOpacity = 1.0;
+            pot_element.style.strokeWidth = 1;
         }
+
+        if (pot_or_line.dataset.track_index == 0)
+        {
+            return;
+        }
+
+        var pot_text_id = pot_element.dataset.id + '_text';
+        var pot_text = document.getElementById(pot_text_id);
+        if (pot_text)
+        {
+            pot_text.remove()
+        }
+        
+        if (!on)
+        {
+            return;
+        }
+
+        pot_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        pot_text.id = pot_text_id;
+        pot_text.setAttribute("x", pot_element.getAttribute("cx") - 27);
+        pot_text.setAttribute("y", pot_element.getAttribute("cy"));
+        pot_text.setAttribute("style", "fill:black;font-size:12px;font-weight:bold;");
+        pot_text.textContent = pot_element.dataset.value;
+        this._info_canvas.appendChild(pot_text);
     }
 
-    potmeter_set_value(parent, id, value, label = false)
+    potmeter_set_value(parent, id, value)
     {
         var pot = document.getElementById(id);
         var x1 = parseInt(pot.getAttribute("cx"));
         var y1 = parseInt(pot.getAttribute("cy"));
         var r = parseInt(pot.getAttribute("r")) + 2;
+        var master_track = (parseInt(pot.dataset.track_index) == 0);
         const val_pr_deg = 270/128;
         const min_deg = 225;
         const max_deg = -45;
@@ -633,26 +659,31 @@ class eventwin
         var y2 = y1 - (Math.sin(rad) * r);
         
         var pot_line = document.getElementById(id + '_line');
+
         if (!pot_line)
         {
-            pot_line = document.createElementNS("http://www.w3.org/2000/svg", 'line');
-            pot_line.id = id + '_line';
-            pot_line.setAttribute("x1", x1);
-            pot_line.setAttribute("x2", x2);
-            pot_line.setAttribute("y1", y1);
-            pot_line.setAttribute("y2", y2);
-            pot_line.setAttribute("style", "stroke:black;stroke-width:2;");
-            if (label)
+            if (!master_track)
             {
-                pot_line.dataset.label = label;
+                pot_line = document.createElementNS("http://www.w3.org/2000/svg", 'line');
+                pot_line.id = id + '_line';
+                pot_line.setAttribute("x1", x1);
+                pot_line.setAttribute("x2", x2);
+                pot_line.setAttribute("y1", y1);
+                pot_line.setAttribute("y2", y2);
+                pot_line.setAttribute("style", "stroke:black;stroke-width:2;");
+                pot_line.dataset.id = id;
+                parent.appendChild(pot_line);
             }
-            pot_line.dataset.id = id;
-            parent.appendChild(pot_line);
+            pot.dataset.value = value;
         }
         else
         {
-            pot_line.setAttribute("x2", x2);
-            pot_line.setAttribute("y2", y2);
+            if (!master_track)
+            {
+                pot_line.setAttribute("x2", x2);
+                pot_line.setAttribute("y2", y2);
+            }
+            pot.dataset.value = value;
         }
 
         return pot_line;
