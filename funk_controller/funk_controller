@@ -209,6 +209,9 @@ class funk_controller():
             elif msg['command'] == 'change_track_info':
                 # someone (e.g. the client) wants to change track info
                 self.handle_change_track_info(msg)
+            elif msg['command'] == 'change_track_control':
+                # someone (e.g. the client) wants to change track controller value
+                self.handle_change_track_control(msg)
             elif msg['command'] == 'create_new_track':
                 # someone (e.g. the client) wants to create new track
                 self.handle_create_new_track(msg)
@@ -508,6 +511,17 @@ class funk_controller():
                'name' : msg['name'],
                'channel' : msg['channel'],
                'patch' : msg['patch']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_change_track_control(self, msg):
+        print('handle_change_track_control')
+        obj = {'command': 'change_track_control',
+               'track_index' : msg['track_index'],
+               'channel' : msg['channel'],
+               'control' : msg['control'],
+               'value' : msg['value']
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)

@@ -722,7 +722,7 @@ function play_note(channel, note, velocity)
     ws_ctrl.send(json_message);
 }
 
-function control_change(channel, control, value)
+function play_control_change(channel, control, value)
 { 
     var cmd;
     var msg;
@@ -738,7 +738,7 @@ function control_change(channel, control, value)
     ws_ctrl.send(json_message);
 }
 
-function program_change(channel, program)
+function play_program_change(channel, program)
 { 
     var cmd;
     var msg;
@@ -759,8 +759,8 @@ function play_patch_change(channel, patch)
     var bank = parseInt(patch / 256);
     var program = patch % 256;
     
-    control_change(channel, 0, bank);
-    program_change(channel, program);
+    play_control_change(channel, 0, bank);
+    play_program_change(channel, program);
 }
 
 function list_input_ports()
@@ -1238,6 +1238,25 @@ function change_track_info(track_index, new_name, new_channel, new_patch)
         "name" : new_name,
         "channel" : new_channel,
         "patch" : new_patch
+    };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function change_track_control(track_index, channel, control, value)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { 
+        "command" : "change_track_control",
+        "track_index" : track_index,
+        "channel" : channel,
+        "control" : control,
+        "value" : value
     };
     msg = { "topic" : "controller", "msg" : cmd };
     

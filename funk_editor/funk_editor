@@ -145,6 +145,8 @@ class funk_editor():
                 self.handle_redo_last_notes_edit(msg)
             elif msg['command'] == 'change_track_info':
                 self.handle_change_track_info(msg)
+            elif msg['command'] == 'change_track_control':
+                self.handle_change_track_control(msg)
             elif msg['command'] == 'create_new_track':
                 self.handle_create_new_track(msg)
             elif msg['command'] == 'remove_track':
@@ -344,6 +346,19 @@ class funk_editor():
             self.event_tracks_changed_since_load = affected_tracks
             self.load_file_to_player()
 
+    def handle_change_track_control(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        control = msg['control']
+        channel = msg['channel']
+        value = msg['value']
+        affected_tracks = self.midievent.change_track_control(self.event_file, track_index, channel, control, value)
+        if affected_tracks:
+            # the client already has changed the control, no need to tell
+            self.event_tracks_changed_since_load = affected_tracks
+            # just update the midi file, client has already sent the control change
+            self.update_midi_file_if_needed()
+
     def handle_create_new_track(self, msg):
         print('editor got ' + repr(msg))
         track_index = msg['track_index']
@@ -378,11 +393,13 @@ class funk_editor():
             self.event_tracks_changed_since_load = affected_tracks
             self.load_file_to_player()
 
-
-    def load_file_to_player(self):
+    def update_midi_file_if_needed(self):
         if self.event_tracks_changed_since_load:
             for track in self.event_tracks_changed_since_load:
                 self.midi_file.tracks[track['index']] = self.midievent.events2track(track)
+                
+    def load_file_to_player(self):
+        self.update_midi_file_if_needed()
         obj = {'command': 'load',
                'what': 'file',
                'obj': self.midi_file

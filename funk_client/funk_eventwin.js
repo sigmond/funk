@@ -636,10 +636,32 @@ class eventwin
 
         pot_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         pot_text.id = pot_text_id;
-        pot_text.setAttribute("x", pot_element.getAttribute("cx") - 27);
+        pot_text.setAttribute("x", pot_element.getAttribute("cx") - pot_element.getAttribute("r") - 2);
         pot_text.setAttribute("y", pot_element.getAttribute("cy"));
-        pot_text.setAttribute("style", "fill:black;font-size:12px;font-weight:bold;");
-        pot_text.textContent = pot_element.dataset.value;
+        pot_text.setAttribute("style", "fill:black;font-size:12px;font-weight:bold;text-anchor:end");
+        if (pot_element.dataset.pot_state_index == 1)
+        {
+            var pan = parseInt(pot_element.dataset.value) - 64;
+            var pan_text;
+            if (pan > 0)
+            {
+                pan_text = 'R' + pan.toString();
+            }
+            else if (pan < 0)
+            {
+                pan_text = 'L' + Math.abs(pan).toString();
+            }
+            else
+            {
+                pan_text = pan.toString();
+            }
+
+            pot_text.textContent = pan_text;
+        }
+        else
+        {
+            pot_text.textContent = pot_element.dataset.value;
+        }
         this._info_canvas.appendChild(pot_text);
     }
 

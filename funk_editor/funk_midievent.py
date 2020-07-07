@@ -621,17 +621,37 @@ class funk_midievent():
         changed_events = []
 
         # loop through events in event-track, change track-name event and set channel on all events
+        found_name = False
+        found_patch = False
         for event in event_track['events']:
             if event['type'] == 'track_name':
                 event['name'] = name
+                found_name = True
             elif event['type'] == 'control_change' and event['control'] == 0:
                 event['value'] = bank
             elif event['type'] == 'program_change':
                 event['program'] = program
-            elif 'channel' in event and event['channel'] != channel:
+                found_patch = True
+                
+            if 'channel' in event:
                 event['channel'] = channel
 
             changed_events.append(event)
+
+        if not found_name:
+            name_event = self.new_event('track_name')
+            name_event['name'] = name
+            changed_events.append(name_event)
+        if not found_patch:
+            bank_event = self.new_event('control_change')
+            bank_event['channel'] = channel
+            bank_event['control'] = 0
+            bank_event['value'] = bank
+            program_event = self.new_event('program_change')
+            program_event['channel'] = channel
+            program_event['program'] = program
+            changed_events.append(bank_event)
+            changed_events.append(program_event)
                 
         event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])
         event_file['tracks'][track_index]['name'] = name
@@ -639,6 +659,40 @@ class funk_midievent():
 
         if not create_track:
             self.undo_tracks_edit_stack.insert(0, original_tracks)
+        return affected_tracks
+
+    def change_track_control(self, event_file, track_index, channel, control, value):
+        print('change_track_control')
+        affected_tracks = []
+        # loop through affected tracks
+        #original_tracks = []
+
+        event_track = event_file['tracks'][track_index]
+        #original_tracks.append(self.copy_event_track(event_track))
+            
+        changed_events = []
+
+        # loop through events in event-track, change control
+        found = False
+        for event in event_track['events']:
+            if event['type'] == 'control_change' and event['control'] == control and event['start'] == 0:
+                event['value'] = value
+                found = True
+
+            changed_events.append(event)
+
+        if not found:
+            control_event = self.new_event('control_change')
+            control_event['channel'] = channel
+            control_event['control'] = control
+            control_event['value'] = value
+            changed_events.append(control_event)
+            
+                
+        event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])
+        affected_tracks.append(event_file['tracks'][track_index])
+
+        #self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
 
     def remove_track(self, event_file, track_index):

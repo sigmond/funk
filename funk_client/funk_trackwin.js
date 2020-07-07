@@ -51,10 +51,10 @@ class trackwin extends eventwin
 
         this._track_pot_states = 
             [
-        {'type' : 'vol', 'color' : 'lightblue'},
-        {'type' : 'pan', 'color' : 'red'},
-        {'type' : 'rev', 'color' : 'yellow'},
-        {'type' : 'cho','color' : 'lightgreen'}
+        {'type' : 'vol', 'control' : 7, 'color' : 'lightblue'},
+        {'type' : 'pan', 'control' : 10, 'color' : 'red'},
+        {'type' : 'rev', 'control' : 91, 'color' : 'yellow'},
+        {'type' : 'cho', 'control' : 93, 'color' : 'lightgreen'}
             ];
         
         this._track_pot_state_index = 0;
@@ -1419,6 +1419,17 @@ class trackwin extends eventwin
 
     create_track_potmeter(track_index, pot_state_index)
     {
+        var channel = this._song.channels[track_index];
+
+        for (var i = 0; i < track_index; i++)
+        {
+            if (this._song.channels[i] == channel)
+            {
+                // this channel already has a control pot
+                return;
+            }
+        }
+
         var cx = this._pot_center_x;
         var cy = this._track_y + (track_index * this._line_height) + this._button_padding + (this._button_height / 2);
         var r = this._pot_radius;
@@ -1518,11 +1529,13 @@ class trackwin extends eventwin
                 return;
         }
 
+        var step = global_ctrl_down ? 1 : 5;
+
         if (delta_y < 0)
         {
             if (track_index > 0)
             {
-                value += global_ctrl_down ? 1 : 5;
+                value += step;
             }
             else
             {
@@ -1533,7 +1546,7 @@ class trackwin extends eventwin
         {
             if (track_index > 0)
             {
-                value -= global_ctrl_down ? 1 : 5;
+                value -= step;
             }
             else
             {
@@ -1547,9 +1560,16 @@ class trackwin extends eventwin
             {
                 value = 127;
             }
-            else if (value < 0)
+            else if (value <= 0)
             {
-                value = 0;
+                if (this._track_pot_state_index == 1)
+                {
+                    value = 1;
+                }
+                else
+                {
+                    value = 0;
+                }
             }
         }
         else
@@ -1586,6 +1606,7 @@ class trackwin extends eventwin
 
             this.potmeter_set_value(this._info_canvas, id, value);
             this.potmeter_highlight(svg, true);
+            this.track_control_changed(track_index, this._track_pot_states[this._track_pot_state_index], value);
         }
         else
         {
@@ -1619,6 +1640,14 @@ class trackwin extends eventwin
         pot_info_text.textContent = first_letter_uppercase(label);
         this._info_canvas.appendChild(pot_info_text);
     }
+
+    track_control_changed(track_index, pot_state, value)
+    {
+        var channel = this._song.channels[track_index]
+        play_control_change(channel, pot_state.control, value);
+        change_track_control(track_index, channel, pot_state.control, value);
+    }
+    
     
     remove_track_events(track_index)
     {
