@@ -133,6 +133,7 @@ class trackwin extends eventwin
         this._track_event_elements = [];
         this._selected_notes = [];
 
+        this._ruler_elements = [];
         this._num_painted_tracks = this.create_tracks(0);
         this.create_rulers();
         this.fill_song_info();
@@ -149,6 +150,7 @@ class trackwin extends eventwin
 
     update_file_info()
     {
+        this.create_rulers();
         this.fill_song_info();
         this.fill_tempo_info();
         this.create_menu();
@@ -1044,12 +1046,24 @@ class trackwin extends eventwin
         return track_index;
     }
 
+    remove_ruler_elements()
+    {
+        var ruler_element;
+        
+        while ((ruler_element = this._ruler_elements.pop()))
+        {
+            ruler_element.remove();
+        }
+    }
+    
     create_rulers()
     {
         if (this._rulers_box_element)
         {
             this._rulers_box_element.remove();
         }
+
+        this.remove_ruler_elements();
 
         var tick;
         var next_seconds = 0;
@@ -1069,6 +1083,7 @@ class trackwin extends eventwin
                 ruler_line.setAttribute("y1", 1);
                 ruler_line.setAttribute("y2", (this._ruler_height / 2) - 1);
                 ruler_line.setAttribute("style", "stroke:black;stroke-width:1;");
+                this._ruler_elements.push(ruler_line);
                 this._rulers_canvas.appendChild(ruler_line);
                                         
                 var ruler_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -1085,6 +1100,7 @@ class trackwin extends eventwin
                 }
                 
                 ruler_text.textContent = mins.toString() + ':' + secs_string;
+                this._ruler_elements.push(ruler_text);
                 this._rulers_canvas.appendChild(ruler_text);
 
                 next_seconds += 5;
@@ -1105,6 +1121,7 @@ class trackwin extends eventwin
             ruler_line.setAttribute("y1", (this._ruler_height / 2) + 1);
             ruler_line.setAttribute("y2", (this._ruler_height) - 2);
             ruler_line.setAttribute("style", "stroke:black;stroke-width:1;");
+            this._ruler_elements.push(ruler_line);
             this._rulers_canvas.appendChild(ruler_line);
 
             var ruler_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -1113,6 +1130,7 @@ class trackwin extends eventwin
             ruler_text.setAttribute("y", 24);
             ruler_text.setAttribute("style", "fill:black;font-size:12px");
             ruler_text.textContent = (bar_index + 1).toString();
+            this._ruler_elements.push(ruler_text);
             this._rulers_canvas.appendChild(ruler_text);
 
             bar_index++;

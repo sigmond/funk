@@ -133,6 +133,7 @@ class pianowin extends eventwin
         this._track_index = 1;
 
         this.create_track();
+        this._ruler_elements = [];
         this.create_rulers();
         this.fill_track_info();
         this.fill_channel_info();
@@ -160,6 +161,7 @@ class pianowin extends eventwin
     update_track(track_index)
     {
         this._track_index = track_index;
+        this.create_rulers();
         this.fill_note_events();
         this.fill_track_info();
         this.fill_channel_info();
@@ -1033,6 +1035,15 @@ class pianowin extends eventwin
         }
     }
 
+    remove_ruler_elements()
+    {
+        var ruler_element;
+        
+        while ((ruler_element = this._ruler_elements.pop()))
+        {
+            ruler_element.remove();
+        }
+    }
 
     create_rulers()
     {
@@ -1041,6 +1052,8 @@ class pianowin extends eventwin
             this._rulers_box_element.remove();
         }
         
+        this.remove_ruler_elements();
+
         var tick;
         var next_seconds = 0;
         
@@ -1066,6 +1079,7 @@ class pianowin extends eventwin
                 {
                     ruler_line.setAttribute("style", "stroke:black;stroke-width:1;stroke-opacity:0.5");
                 }
+                this._ruler_elements.push(ruler_line);
                 this._rulers_canvas.appendChild(ruler_line);
                                         
                 var ruler_text = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -1082,6 +1096,7 @@ class pianowin extends eventwin
                 }
                 
                 ruler_text.textContent = mins.toString() + ':' + secs_string;
+                this._ruler_elements.push(ruler_text);
                 this._rulers_canvas.appendChild(ruler_text);
 
                 next_seconds += 1;
@@ -1102,6 +1117,7 @@ class pianowin extends eventwin
             ruler_line.setAttribute("y1", (this._ruler_height / 2) + 1);
             ruler_line.setAttribute("y2", (this._ruler_height) - 2);
             ruler_line.setAttribute("style", "stroke:black;stroke-width:1;");
+            this._ruler_elements.push(ruler_line);
             this._rulers_canvas.appendChild(ruler_line);
 
             var i;
@@ -1115,6 +1131,7 @@ class pianowin extends eventwin
                 ruler_line.setAttribute("y1", (this._ruler_height / 2) + 1);
                 ruler_line.setAttribute("y2", (this._ruler_height) - 2);
                 ruler_line.setAttribute("style", "stroke:black;stroke-width:1;stroke-opacity:0.5");
+                this._ruler_elements.push(ruler_line);
                 this._rulers_canvas.appendChild(ruler_line);
             }
 
@@ -1124,6 +1141,7 @@ class pianowin extends eventwin
             ruler_text.setAttribute("y", 24);
             ruler_text.setAttribute("style", "fill:black;font-size:12px");
             ruler_text.textContent = (bar_index + 1).toString();
+            this._ruler_elements.push(ruler_text);
             this._rulers_canvas.appendChild(ruler_text);
 
             bar_index++;
