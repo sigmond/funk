@@ -189,6 +189,14 @@ class funk_player():
             # convert message to absolute time (needed for track number lookup)
             msg.time = input_tick
             
+            # if reset message, yield and wait 50 ms
+            if msg.type == 'sysex':
+                if msg.data == (126, 127, 9, 1) or msg.data == (65, 16, 66, 18, 64, 0, 127, 0, 65):
+                    print ('Got RESET message')
+                    yield msg
+                    time.sleep(0.05)
+                    continue
+                    
             # if tempo changes, recalculate the sleep time
             if msg.type == 'set_tempo':
                 tempo = msg.tempo

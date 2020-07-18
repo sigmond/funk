@@ -243,6 +243,16 @@ class funk_midievent():
 
         return abstime, sorted(events, key = lambda i: i['start'])
 
+    def get_synth_type(self, event_file, synths):
+        for event in event_file['tracks'][0]['events']:
+            if event['type'] == 'sysex':
+                for key in synths.keys():
+                    if synths[key]['reset'] == event['data']:
+                        return key
+
+        return None
+        
+
     def get_tempo_events(self, event_file):
         tempo_events = []
         for event in event_file['tracks'][0]['events']:

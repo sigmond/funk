@@ -65,7 +65,7 @@ class funk_editor():
     event_tracks_changed_since_load = False
     filename = ""
     midievent = None
-    synth_type = 'GS'
+    synth_type = 'GM'
     
     def __init__(self, zmq_path_in, zmq_path_out):
         
@@ -173,6 +173,8 @@ class funk_editor():
             self.filename = msg['name']
             self.midi_file = msg['obj']
             self.event_file = self.midievent.file2events(self.midi_file, self.filename)
+            self.synth_type = self.midievent.get_synth_type(self.event_file, synths)
+            print ('synth type = ' + self.synth_type)
             # event file and midi file is the same:
             self.event_tracks_changed_since_load = False
             self.load_file_to_player()

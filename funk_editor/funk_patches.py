@@ -1093,11 +1093,13 @@ synths = {
     'GM' : { 'voices' : gm_voices,
              'drumnames' : gm_drumnames,
              'drumsets' : gm_drumsets,
-             'controllers' : ctrlnames
+             'controllers' : ctrlnames,
+             'reset' : [126, 127, 9, 1]
              },
     'GS' : { 'voices' : gs_voices,
              'drumnames' : gm_drumnames,
              'drumsets' : gs_drumsets,
-             'controllers' : ctrlnames
+             'controllers' : ctrlnames,
+             'reset' : [65, 16, 66, 18, 64, 0, 127, 0, 65]
              }
     }
