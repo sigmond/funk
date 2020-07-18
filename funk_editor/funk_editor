@@ -125,6 +125,8 @@ class funk_editor():
                 self.handle_cut_tracks_area(msg)
             elif msg['command'] == 'paste_tracks_area':
                 self.handle_paste_tracks_area(msg)
+            elif msg['command'] == 'quantize_tracks_area':
+                self.handle_quantize_tracks_area(msg)
             elif msg['command'] == 'undo_last_tracks_edit':
                 self.handle_undo_last_tracks_edit(msg)
             elif msg['command'] == 'redo_last_tracks_edit':
@@ -135,6 +137,8 @@ class funk_editor():
                 self.handle_cut_notes(msg)
             elif msg['command'] == 'paste_notes':
                 self.handle_paste_notes(msg)
+            elif msg['command'] == 'quantize_notes':
+                self.handle_quantize_notes(msg)
             elif msg['command'] == 'set_note_end':
                 self.handle_set_note_end(msg)
             elif msg['command'] == 'set_note_velocity':
@@ -247,6 +251,16 @@ class funk_editor():
             self.event_tracks_changed_since_load = affected_tracks
             self.load_file_to_player()
 
+    def handle_quantize_tracks_area(self, msg):
+        print('editor got ' + repr(msg))
+        area = msg['area']
+        snap_ticks = msg['snap_ticks']
+        affected_tracks = self.midievent.quantize_tracks_area(self.event_file, area, snap_ticks)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
     def handle_undo_last_tracks_edit(self, msg):
         print('editor got ' + repr(msg))
         affected_tracks = self.midievent.undo_tracks_edit(self.event_file)
@@ -291,6 +305,17 @@ class funk_editor():
         cut_or_copy = msg['cut_or_copy']
         notes = msg['notes']
         affected_tracks = self.midievent.paste_notes(self.event_file, track_index, tick, note, cut_or_copy, notes)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
+    def handle_quantize_notes(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        notes = msg['notes']
+        snap_ticks = msg['snap_ticks']
+        affected_tracks = self.midievent.quantize_notes(self.event_file, track_index, notes, snap_ticks)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks

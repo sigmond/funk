@@ -433,6 +433,33 @@ class funk_midievent():
         self.undo_tracks_edit_stack.insert(0, original_tracks)
         return affected_tracks
         
+    def quantize_tracks_area(self, event_file, area, snap_ticks):
+        print('quantize_tracks_area')
+        affected_tracks = []
+        # loop through affected tracks
+        original_tracks = []
+
+        for track_index in range(area['track_start'], area['track_stop']):
+            event_track = event_file['tracks'][track_index]
+            original_tracks.append(self.copy_event_track(event_track))
+            
+            changed_events = []
+            # loop through events in event-track, quantize events with starttime >= tick_start and < tick_stop
+            for event in event_track['events']:
+                if ((event['start'] >= area['tick_start']) and (event['start'] < area['tick_stop'])):
+                    tick_adjustment = self.quantize_tick_adjustment(event['start'], snap_ticks)
+                    event['start'] += tick_adjustment
+                    event['end'] += tick_adjustment
+                
+            changed_events = event_track['events']
+            event_track['events'] = sorted(changed_events, key = lambda i: i['start'])
+
+            event_file['tracks'][track_index]['events'] = changed_events
+            affected_tracks.append(event_file['tracks'][track_index])
+            
+        self.undo_tracks_edit_stack.insert(0, original_tracks)
+        return affected_tracks
+        
     def undo_tracks_edit(self, event_file):
         if not self.undo_tracks_edit_stack:
             return []
@@ -534,6 +561,42 @@ class funk_midievent():
             
         changed_events = event_file['tracks'][track_index]['events']
         changed_events.extend(events_to_paste)        
+        event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])
+        affected_tracks.append(event_file['tracks'][track_index])
+        
+        self.undo_tracks_edit_stack.insert(0, original_tracks)
+        return affected_tracks
+
+    def quantize_tick_adjustment(self, tick, snap_ticks):
+        over_ticks = tick % snap_ticks
+        snap_below = tick - over_ticks
+        snap_above = snap_below + snap_ticks
+        if over_ticks > (snap_ticks / 2):
+            return snap_above - tick
+        else:
+            return snap_below - tick
+
+    def quantize_notes(self, event_file, track_index, notes, snap_ticks):
+        print('quantize_notes')
+        affected_tracks = []
+        # loop through affected tracks
+        original_tracks = []
+
+        event_track = event_file['tracks'][track_index]
+        original_tracks.append(self.copy_event_track(event_track))
+
+        # move in time and note
+        # find events
+        note_events = []
+        for id in notes:
+            note_events.append(self.events[id])
+
+        for event in note_events:
+            tick_adjustment = self.quantize_tick_adjustment(event['start'], snap_ticks)
+            event['start'] += tick_adjustment
+            event['end'] += tick_adjustment
+            
+        changed_events = event_file['tracks'][track_index]['events']
         event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])
         affected_tracks.append(event_file['tracks'][track_index])
         

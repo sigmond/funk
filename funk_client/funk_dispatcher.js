@@ -23,6 +23,7 @@ const key_home = 36;
 const key_end = 35;
 const key_space = 32;
 const key_p = 80;
+const key_q = 81;
 const key_x = 88;
 const key_c = 67;
 const key_v = 86;
@@ -97,6 +98,7 @@ function keydownhandler(event)
     }
     else if (
              (event.keyCode == key_p) || // position playhead
+             (event.keyCode == key_q) || // quantize selected events
              (event.keyCode == key_x) || // ctrl-x = cut leave space, ctrl-shift-x = cut remove space
              (event.keyCode == key_c) || // ctrl-c = copy
              (event.keyCode == key_v) || // ctrl-v = paste overwrite, ctrl-shift-v = paste insert
@@ -197,6 +199,69 @@ function save_tempo(tick, bpm)
     json_message = JSON.stringify(msg);
 
     ws_ctrl.send(json_message);
+}
+
+
+
+function edit_note_snap(note_snap)
+{
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+    
+    global_disable_keydownhandler = true;
+    var label = document.createTextNode("Note snap:");
+
+    var snap_selector = document.createElement("SELECT");
+    var snaps = [4,6,8,12,16,24,32,120];
+    var notes = ['1/4 note', '1/6 note', '1/8 note', '1/12 note', '1/16 note', '1/24 note', '1/32 note', 'Fine'];
+    var selected_snap_index = 0;
+    var i;
+    for (i = 0; i < snaps.length; i++)
+    {
+        var option = document.createElement("option");
+        option.text = notes[i];
+        option.value = snaps[i];
+        snap_selector.add(option);
+        if (snaps[i] == note_snap)
+        {
+            selected_snap_index = i;
+        }
+    }
+    snap_selector.selectedIndex = selected_snap_index;
+    snap_selector.id = 'edit_note_snap_select';
+    snap_selector.onchange = snap_selector_onchange;
+
+    var cancel = document.createElement("button");
+    cancel.innerText = "Cancel";
+    cancel.onclick = cancel_edit;
+
+    global_edit_elements.push(label);
+    global_edit_elements.push(snap_selector);
+    global_edit_elements.push(cancel);
+
+    var menu = document.getElementById("topmenu");
+    menu.appendChild(label);
+    menu.appendChild(snap_selector);
+    menu.appendChild(cancel);
+}
+
+function snap_selector_onchange()
+{
+    var note_snap = parseInt(document.getElementById('edit_note_snap_select').value);
+    while ((elem = global_edit_elements.pop()))
+    {
+        elem.remove();
+    }
+    global_disable_keydownhandler = false;
+    save_note_snap(note_snap);
+}
+
+
+function save_note_snap(note_snap)
+{ 
+    pianowin_object.set_note_snap(note_snap);
 }
 
 
@@ -1072,6 +1137,19 @@ function paste_tracks_area(from, to, insert_space, merge, cut_or_copy)
     ws_ctrl.send(json_message);
 }
 
+function quantize_tracks_area(area, snap_ticks)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { "command" : "quantize_tracks_area", "area" : area, "snap_ticks" : snap_ticks };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
 function undo_last_tracks_edit()
 {
     var cmd;
@@ -1157,6 +1235,24 @@ function paste_notes_at_mouse(notes, tick, note, cut_or_copy, track_index)
         "tick" : tick,
         "note" : note,
         "cut_or_copy" : cut_or_copy
+    };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
+function quantize_notes(notes, track_index, snap_ticks)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { 
+        "command" : "quantize_notes",
+        "track_index" : track_index,
+        "notes" : notes,
+        "snap_ticks" : snap_ticks
     };
     msg = { "topic" : "controller", "msg" : cmd };
     

@@ -22,8 +22,7 @@ class pianowin extends eventwin
 
         this._pixels_per_tick = 0.4;
 
-        this._note_snap = 16;
-        this._tick_snap_width = (this._song.ticks_per_beat * 4) / this._note_snap;
+        this.set_note_snap(16);
 
         this._line_height = 14;
 
@@ -152,6 +151,12 @@ class pianowin extends eventwin
         this._info_canvas.setAttribute("viewBox", "0 0 " + this._info_width.toString() + ' ' + this._height.toString());
     }
 
+    set_note_snap(note_snap)
+    {
+        this._note_snap = note_snap;
+        this._tick_snap_width = (this._song.ticks_per_beat * 4) / this._note_snap;
+    }
+    
     update_track(track_index)
     {
         this._track_index = track_index;
@@ -256,6 +261,13 @@ class pianowin extends eventwin
         
             pianowin_object.tracks_handle_wheel(x, y, event.deltaY);
         }
+    }
+
+    track_menu_clickhandler(event)
+    {
+        let svg = event.currentTarget;
+        output('track_menu_clickhandler (pianowin)');
+        edit_note_snap(pianowin_object._note_snap);
     }
 
 
@@ -1153,6 +1165,7 @@ class pianowin extends eventwin
         this._menu_box_element.setAttribute("x", 0);
         this._menu_box_element.setAttribute("y", 0);
         this._menu_box_element.setAttribute("style", "fill:" + this._menu_bg_color + ";stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:1.0");
+        this._menu_box_element.addEventListener('click', this.track_menu_clickhandler);
         this._menu_canvas.appendChild(this._menu_box_element);        
     }
     
@@ -1752,6 +1765,32 @@ class pianowin extends eventwin
         }
     } 
 
+    handle_quantize(tick)
+    {
+        if (!this._selected_notes)
+        {
+            return;
+        }
+
+        var notes = [];
+        for (const note of this._selected_notes)
+        {
+            notes.push(note.id);
+        }
+
+        quantize_notes(
+                       notes,
+                       this._track_index,
+                       this._tick_snap_width
+                      );
+        
+        if (this._select_element)
+        {
+            this._select_element.remove();
+            this._select_element = null;
+        }
+    }
+    
     handle_set_note_end(note_id, end_tick)
     {
         set_note_end(this._track_index, note_id, end_tick);

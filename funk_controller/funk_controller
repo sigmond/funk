@@ -179,6 +179,9 @@ class funk_controller():
             elif msg['command'] == 'paste_tracks_area':
                 # someone (e.g. the client) wants to paste an area into a midi file
                 self.handle_paste_tracks_area(msg)
+            elif msg['command'] == 'quantize_tracks_area':
+                # someone (e.g. the client) wants to quantize an area in a midi file
+                self.handle_quantize_tracks_area(msg)
             elif msg['command'] == 'undo_last_tracks_edit':
                 # someone (e.g. the client) wants to undo last edit
                 self.handle_undo_last_tracks_edit(msg)
@@ -194,6 +197,9 @@ class funk_controller():
             elif msg['command'] == 'paste_notes':
                 # someone (e.g. the client) wants to paste notes into a midi track
                 self.handle_paste_notes(msg)
+            elif msg['command'] == 'quantize_notes':
+                # someone (e.g. the client) wants to quantize notes
+                self.handle_quantize_notes(msg)
             elif msg['command'] == 'set_note_end':
                 # someone (e.g. the client) wants to set note end of a note
                 self.handle_set_note_end(msg)
@@ -420,6 +426,15 @@ class funk_controller():
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
         
+    def handle_quantize_tracks_area(self, msg):
+        print('handle_quantize_tracks_area')
+        obj = {'command': 'quantize_tracks_area',
+               'area' : msg['area'],
+               'snap_ticks' : msg['snap_ticks']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
     def handle_undo_last_tracks_edit(self, msg):
         print('handle_undo_last_tracks_edit')
         obj = {'command': 'undo_last_tracks_edit'
@@ -466,6 +481,16 @@ class funk_controller():
                'note' : note,
                'cut_or_copy' : msg['cut_or_copy'],
                'notes' : msg['notes']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_quantize_notes(self, msg):
+        print('handle_quantize_notes')
+        obj = {'command': 'quantize_notes',
+               'track_index' : msg['track_index'],
+               'notes' : msg['notes'],
+               'snap_ticks' : msg['snap_ticks']
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)

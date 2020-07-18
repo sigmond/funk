@@ -192,6 +192,10 @@ class eventwin
                 {
                     this.handle_paste_insert_merge(this._mouse_at_tick, false, true);
                 }
+                else if (key == key_q)
+                {
+                    this.handle_quantize(this._mouse_at_tick);
+                }
                 else if (key == key_z)
                 {
                     this.handle_undo(this._mouse_at_tick);

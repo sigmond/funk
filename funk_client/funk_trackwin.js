@@ -1798,6 +1798,22 @@ class trackwin extends eventwin
         this._select_element = null;
     }    
     
+    handle_quantize(tick)
+    {
+        if (!this._select_element)
+        {
+            return;
+        }
+        
+        quantize_tracks_area(
+                             this.select_tick_track_area(),
+                             pianowin_object._tick_snap_width
+                            );
+        
+        this._select_element.remove();
+        this._select_element = null;
+    }    
+    
     handle_undo(tick)
     {
         undo_last_tracks_edit();
