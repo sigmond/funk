@@ -1791,6 +1791,44 @@ class pianowin extends eventwin
         }
     }
     
+    handle_nudge_notes(key)
+    {
+        if (!this._selected_notes)
+        {
+            return;
+        }
+
+        var notes = [];
+        for (const note of this._selected_notes)
+        {
+            notes.push(note.id);
+        }
+
+        var direction;
+        switch (key)
+        {
+            case key_left:
+                direction = "left";
+                break;
+            case key_right:
+                direction = "right";
+                break;
+            case key_up:
+                direction = "up";
+                break;
+            case key_down:
+                direction = "down";
+                break;                
+        }
+
+        nudge_notes(
+                    notes,
+                    this._track_index,
+                    this._tick_snap_width,
+                    direction
+                   );        
+    }
+    
     handle_set_note_end(note_id, end_tick)
     {
         set_note_end(this._track_index, note_id, end_tick);

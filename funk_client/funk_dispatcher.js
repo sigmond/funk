@@ -1261,6 +1261,25 @@ function quantize_notes(notes, track_index, snap_ticks)
     ws_ctrl.send(json_message);
 }
 
+function nudge_notes(notes, track_index, snap_ticks, direction)
+{
+    var cmd;
+    var msg;    
+
+    cmd = { 
+        "command" : "nudge_notes",
+        "track_index" : track_index,
+        "notes" : notes,
+        "snap_ticks" : snap_ticks,
+        "direction" : direction
+    };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
 function set_note_end(track_index, note, tick)
 {
     var cmd;

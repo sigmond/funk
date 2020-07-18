@@ -139,6 +139,8 @@ class funk_editor():
                 self.handle_paste_notes(msg)
             elif msg['command'] == 'quantize_notes':
                 self.handle_quantize_notes(msg)
+            elif msg['command'] == 'nudge_notes':
+                self.handle_nudge_notes(msg)
             elif msg['command'] == 'set_note_end':
                 self.handle_set_note_end(msg)
             elif msg['command'] == 'set_note_velocity':
@@ -316,6 +318,18 @@ class funk_editor():
         notes = msg['notes']
         snap_ticks = msg['snap_ticks']
         affected_tracks = self.midievent.quantize_notes(self.event_file, track_index, notes, snap_ticks)
+        if affected_tracks:
+            self.client_tracks_changed(affected_tracks)
+            self.event_tracks_changed_since_load = affected_tracks
+            self.load_file_to_player()
+
+    def handle_nudge_notes(self, msg):
+        print('editor got ' + repr(msg))
+        track_index = msg['track_index']
+        notes = msg['notes']
+        snap_ticks = msg['snap_ticks']
+        direction = msg['direction']
+        affected_tracks = self.midievent.nudge_notes(self.event_file, track_index, notes, snap_ticks, direction)
         if affected_tracks:
             self.client_tracks_changed(affected_tracks)
             self.event_tracks_changed_since_load = affected_tracks

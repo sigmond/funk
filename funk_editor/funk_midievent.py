@@ -585,7 +585,6 @@ class funk_midievent():
         event_track = event_file['tracks'][track_index]
         original_tracks.append(self.copy_event_track(event_track))
 
-        # move in time and note
         # find events
         note_events = []
         for id in notes:
@@ -595,6 +594,44 @@ class funk_midievent():
             tick_adjustment = self.quantize_tick_adjustment(event['start'], snap_ticks)
             event['start'] += tick_adjustment
             event['end'] += tick_adjustment
+            
+        changed_events = event_file['tracks'][track_index]['events']
+        event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])
+        affected_tracks.append(event_file['tracks'][track_index])
+        
+        self.undo_tracks_edit_stack.insert(0, original_tracks)
+        return affected_tracks
+
+    def nudge_notes(self, event_file, track_index, notes, snap_ticks, direction):
+        print('nudge_notes')
+        affected_tracks = []
+        # loop through affected tracks
+        original_tracks = []
+
+        event_track = event_file['tracks'][track_index]
+        original_tracks.append(self.copy_event_track(event_track))
+
+        # find events
+        note_events = []
+        for id in notes:
+            note_events.append(self.events[id])
+
+        tick_adjustment = 0
+        note_adjustment = 0
+        if direction == 'left':
+            tick_adjustment = -snap_ticks
+        elif direction == 'right':
+            tick_adjustment = snap_ticks
+        elif direction == 'up':
+            note_adjustment = 1
+        elif direction == 'down':
+            note_adjustment = -1
+            
+        for event in note_events:
+            event['start'] += tick_adjustment
+            event['end'] += tick_adjustment
+            if 'note' in event:
+                event['note'] += note_adjustment
             
         changed_events = event_file['tracks'][track_index]['events']
         event_file['tracks'][track_index]['events'] = sorted(changed_events, key = lambda i: i['start'])

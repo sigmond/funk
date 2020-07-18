@@ -200,6 +200,9 @@ class funk_controller():
             elif msg['command'] == 'quantize_notes':
                 # someone (e.g. the client) wants to quantize notes
                 self.handle_quantize_notes(msg)
+            elif msg['command'] == 'nudge_notes':
+                # someone (e.g. the client) wants to nudge notes
+                self.handle_nudge_notes(msg)
             elif msg['command'] == 'set_note_end':
                 # someone (e.g. the client) wants to set note end of a note
                 self.handle_set_note_end(msg)
@@ -491,6 +494,17 @@ class funk_controller():
                'track_index' : msg['track_index'],
                'notes' : msg['notes'],
                'snap_ticks' : msg['snap_ticks']
+               }
+        print('Calling send_bus_msg')
+        self.com.send_bus_msg('editor', obj)
+        
+    def handle_nudge_notes(self, msg):
+        print('handle_nudge_notes')
+        obj = {'command': 'nudge_notes',
+               'track_index' : msg['track_index'],
+               'notes' : msg['notes'],
+               'snap_ticks' : msg['snap_ticks'],
+               'direction' : msg['direction']
                }
         print('Calling send_bus_msg')
         self.com.send_bus_msg('editor', obj)
