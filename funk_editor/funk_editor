@@ -111,7 +111,9 @@ class funk_editor():
         print('Got ctrl message')
         print('topic ' + repr(topic) + ' msg ' + repr(msg))
         if topic == 'editor':
-            if msg['command'] == 'open':
+            if msg['command'] == 'new':
+                self.handle_new(msg)
+            elif msg['command'] == 'open':
                 self.handle_open(msg)
             elif msg['command'] == 'save':
                 self.handle_save(msg)
@@ -166,6 +168,22 @@ class funk_editor():
             if ctrl_msg['command'] == 'quit':
                 print ('Quitting')
                 exit(0)
+
+    def handle_new(self, msg):
+        if msg['type'] ==  'file':
+            self.log('new file ' + msg['name'])
+            self.filename = msg['name']
+            self.event_file = self.midievent.new_event_file(self.filename, synths['GS'])
+            self.synth_type = self.midievent.get_synth_type(self.event_file, synths)
+            print ('synth type = ' + self.synth_type)
+            self.midi_file = self.midievent.events2file(self.event_file)
+            # event file and midi file is the same:
+            self.event_tracks_changed_since_load = False
+            self.load_file_to_player()
+            self.client_load_synth()
+            self.client_file_loaded()
+        else:
+            self.log('Unknown open type ' + repr(msg['type']))
 
     def handle_open(self, msg):
         if msg['type'] ==  'file':

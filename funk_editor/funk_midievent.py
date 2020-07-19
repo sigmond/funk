@@ -88,6 +88,28 @@ class funk_midievent():
             track_copy['events'].append(self.copy_event(event))
         return track_copy
 
+    def new_event_file(self, filename, synth):
+        message = {'filename' : filename,
+                   'length_seconds': 60 * 3,
+                   'ticks_per_beat': 120,
+                   'tracks' : []
+                   }
+        
+        reset_event = self.new_event('sysex')
+        reset_event['data'] = synth['reset']
+
+        tempo_event = self.new_event('set_tempo')
+        tempo_event['tempo'] = mido.bpm2tempo(100)
+
+        event_track = {'index' : 0,
+                       'name' : '',
+                       'events' : [reset_event, tempo_event]
+                       }
+        message['tracks'].append(event_track)
+        message['length_ticks'] = mido.second2tick(message['length_seconds'], message['ticks_per_beat'], tempo_event['tempo'])
+        return message
+        
+
     def file2events(self, midi_obj, filename):
         if isinstance(midi_obj, MidiFile):
             midi_file = midi_obj

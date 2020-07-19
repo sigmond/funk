@@ -575,6 +575,20 @@ function output(str) {
     log.innerHTML = escaped + "<br>" + log.innerHTML;
 }
 
+function new_midi_file(filename='noname.mid')
+{ 
+    var cmd;
+    var msg;
+    var json_message;
+    
+    cmd = { "command" : "new", "what" : "file", "name" : filename };
+    msg = { "topic" : "controller", "msg" : cmd };
+    
+    json_message = JSON.stringify(msg);
+
+    ws_ctrl.send(json_message);
+}
+
 function open_midi_file(filename, content)
 { 
     var cmd;
