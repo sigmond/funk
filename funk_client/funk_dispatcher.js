@@ -1034,7 +1034,7 @@ function handle_editor_file_loaded(msg)
 
     global_file_name = msg['filename'];
 
-    var song = new funk_song(msg['filename'], msg['file']['ticks_per_beat'], msg['file']['tracks']);
+    var song = new funk_song(msg['filename'], msg['file']['ticks_per_beat'], msg['file']['tracks'], msg['file']['length_ticks']);
 
     var trackwin_tracks_frame = document.getElementById("trackwin_tracks_container");
     var trackwin_info_frame = document.getElementById("trackwin_info_container");

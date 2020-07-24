@@ -130,7 +130,14 @@ class pianowin extends eventwin
         this._velocity_add_per_line_big = -10;
         this._event_highlight_text_element = null;
         
-        this._track_index = 1;
+        if (this._song.tracks.length > 1)
+        {
+            this._track_index = 1;
+        }
+        else
+        {
+            this._track_index = 0;
+        }
 
         this.create_track();
         this._ruler_elements = [];

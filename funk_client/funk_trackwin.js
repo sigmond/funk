@@ -22,6 +22,8 @@ class trackwin extends eventwin
 
         this._pixels_per_tick = 0.05;
         this._line_height = 20;
+
+        this._tracks_width = 0;
         
         this._button_padding = 4;
         this._button_width = this._line_height - (2 * this._button_padding);
@@ -1244,7 +1246,14 @@ class trackwin extends eventwin
             bar_index++;
         }
 
-        return x;
+        if (x > this._tracks_width)
+        {
+            return x;
+        }
+        else
+        {
+            return this._tracks_width;
+        }
     }
 
     create_track_lines()
