@@ -48,8 +48,8 @@ class trackwin extends eventwin
         this._playhead_color = "darkred";
         this._menu_bg_color = "black";
 
-        this._solo_state = [];
-        this._mute_state = [];
+        this._solo_state = this._song.solo_state;
+        this._mute_state = this._song.mute_state;
 
         this._track_pot_states = 
             [
@@ -880,7 +880,21 @@ class trackwin extends eventwin
             this._all_solo_highlighted = true;
         }
     }
-    
+
+
+    change_solo_style(svg, on)
+    {
+        if (on)
+        {
+            svg.style.strokeWidth = 0;
+            svg.style.fill = this._solo_engaged_color;
+        }
+        else
+        {
+            svg.style.strokeWidth = 1;
+            svg.style.fill = this._solo_color;
+        }
+    }
 
     handle_solo_click(svg, track_index)
     {
@@ -893,8 +907,7 @@ class trackwin extends eventwin
                 for (i = 0; i < this._song.tracks.length; i++)
                 {
                     var svg = document.getElementById("track_solo_" + i.toString());
-                    svg.style.strokeWidth = 1;
-                    svg.style.fill = this._solo_color;
+                    this.change_solo_style(svg, false);
                     this._solo_state[i] = 0;
                 }                
                 this.stopAllSoloAnimation();
@@ -908,14 +921,12 @@ class trackwin extends eventwin
                 all_solo.style.strokeWidth = 0;
                 this.startAllSoloAnimation();
 
-                svg.style.strokeWidth = 0;
-                svg.style.fill = this._solo_engaged_color;
+                this.change_solo_style(svg, true);
                 this._solo_state[track_index] = 1;
             }
             else
             {
-                svg.style.strokeWidth = 1;
-                svg.style.fill = this._solo_color;
+                this.change_solo_style(svg, false);
                 this._solo_state[track_index] = 0;
                 if (!this._solo_state.includes(1))
                 {
@@ -929,18 +940,30 @@ class trackwin extends eventwin
         this.handle_solo_mute_state_changed();
     }
 
-    handle_mute_click(svg, track_index)
+    change_mute_style(svg, on)
     {
-        if (!this._mute_state[track_index])
+        if (on)
         {
             svg.style.strokeWidth = 0;
             svg.style.fill = this._mute_engaged_color;
-            this._mute_state[track_index] = 1;
         }
         else
         {
             svg.style.strokeWidth = 1;
             svg.style.fill = this._mute_color;
+        }
+    }
+
+    handle_mute_click(svg, track_index)
+    {
+        if (!this._mute_state[track_index])
+        {
+            this.change_mute_style(svg, true);
+            this._mute_state[track_index] = 1;
+        }
+        else
+        {
+            this.change_mute_style(svg, false);
             this._mute_state[track_index] = 0;
         }
 
@@ -1003,16 +1026,12 @@ class trackwin extends eventwin
         this._tracks_width = track_width + 100;
         this._height = (this._line_height * (this._song.tracks.length + 1)) + this._track_y;        
 
-        this._solo_state = [];
-        this._mute_state = [];
-        track_index = 0;
-        for (const track of this._song.tracks)
-        {
-            this.fill_track_events(track_index, track);
-            this._solo_state.push(0);
-            this._mute_state.push(0);
-            track_index++;
-        }
+         track_index = 0;
+         for (const track of this._song.tracks)
+         {
+             this.fill_track_events(track_index, track);
+             track_index++;
+         }
 
 
         track_index = 0;
@@ -1029,6 +1048,13 @@ class trackwin extends eventwin
             this.create_track_potmeter(track_index, this._track_pot_state_index);
             track_index++;
         }
+
+        if (this._solo_state.includes(1))
+        {
+            this.startAllSoloAnimation();
+        }
+
+        this.handle_solo_mute_state_changed();
 
         this.create_track_info(track_index, 'New Track', true);
 
@@ -1439,6 +1465,18 @@ class trackwin extends eventwin
             {
                 this._info_canvas.appendChild(this.create_mute_button(track_index));
             }
+        }
+
+        var svg = document.getElementById("track_solo_" + track_index.toString());
+        if (svg)
+        {
+            this.change_solo_style(svg, this._solo_state[track_index]);
+        }        
+        
+        var svg = document.getElementById("track_mute_" + track_index.toString());
+        if (svg)
+        {
+            this.change_mute_style(svg, this._mute_state[track_index]);
         }
         
         return width;

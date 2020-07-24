@@ -80,6 +80,10 @@ class funk_song
             }
         }
 
+        this._solo_state = [];
+        this._mute_state = [];
+        this.get_track_states();
+
         this._bars = [];
         this.generate_bars();
     }
@@ -167,6 +171,16 @@ class funk_song
     get choruses()
     {
         return this._choruses;
+    }
+
+    get solo_state()
+    {
+        return this._solo_state;
+    }
+
+    get mute_state()
+    {
+        return this._mute_state;
     }
 
     get tempos()
@@ -363,6 +377,65 @@ class funk_song
                 }
             }
             this._patches.push({'bank' : bank, 'program' : program});
+        }
+    }
+
+
+    get_track_states()
+    {
+        for (const track of this._tracks)
+        {
+            var solo = 0;
+            var mute = 0;
+
+            for (const event of track['events'])
+            {
+                if (event['type'] == 'sequencer_specific')
+                {
+                    var data = event['data'];
+                    if (
+                        (data[0] == 74) && // J
+                        (data[1] == 65) && // A
+                        (data[2] == 90) && // Z
+                        (data[3] == 50)    // 2
+                       )
+                    {
+                        // Jazz++ track state
+                        switch (data[6])
+                        {
+                            case 0:
+                                solo = 0;
+                                mute = 0;
+                                break;
+                            case 1:
+                                solo = 0;
+                                mute = 1;
+                                break;
+                            case 2:
+                                solo = 1;
+                                mute = 0;
+                                break;
+                            case 3:
+                                solo = 1;
+                                mute = 1;
+                                break;
+                        }
+                        break;
+                    }
+                    else if (
+                        (data[0] == 'F') && 
+                        (data[1] == 'U') && 
+                        (data[2] == 'N') && 
+                        (data[3] == 'K')
+                       )
+                    {
+                        // Funk track state
+                        break;
+                    }
+                }
+            }
+            this._solo_state.push(solo);
+            this._mute_state.push(mute);
         }
     }
 
